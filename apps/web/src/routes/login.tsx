@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "#shared/components/LanguageSwitcher";
@@ -90,6 +90,9 @@ const LoginForm = React.memo(
 						<Button type="submit" className="w-full" disabled={loading}>
 							{loading ? t("common.loading") : t("auth.signIn")}
 						</Button>
+						<Link to="/login-phone" className="text-sm text-muted-foreground">
+							Worker? Sign in with phone
+						</Link>
 					</CardFooter>
 				</form>
 			</Card>
