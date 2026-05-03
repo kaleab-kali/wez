@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.turbo/
+
+# Environment
+*.env
+!*.env.example
+!*.env.production.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+!.vscode/extensions.json
+.idea/
+
+# Prisma
+apps/api/prisma/*.db
+apps/api/prisma/migrations/
+
+# Logs
+logs/
+*.log
+!logs/.gitkeep
+pm2-*.log
+apps/api/logs/*.log
+
+# Test
+coverage/
+
+# Generated
+apps/web/src/routeTree.gen.ts
+.claude/settings.local.json
+apps/api/src/generated/
+
+# Playwright CLI
+.playwright-cli/
+
+# TanStack generated
+apps/web/.tanstack/
+
+# Claude local skills (symlinks)
+.claude/skills/
+.playwright-mcp/
+
+# Local credentials snapshot (contains seeded passwords)
+.scaffold-credentials.txt
+
+# Windows / Cygwin crash dumps
+*.stackdump
+
+# Local test artifacts
+*.png

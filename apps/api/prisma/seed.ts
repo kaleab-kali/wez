@@ -1,0 +1,187 @@
+import "dotenv/config";
+import { adminAuth } from "../src/modules/admin/auth/admin-auth.config";
+import { auth } from "../src/modules/auth/auth.config";
+import { prisma } from "../src/shared/database/prisma-instance";
+
+const seed = async () => {
+	const adminEmail = process.env.SUPER_ADMIN_EMAIL;
+	const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
+	const adminName = process.env.SUPER_ADMIN_NAME || "Platform Admin";
+
+	if (!adminEmail || !adminPassword) {
+		console.error("SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD must be set in .env");
+		process.exit(1);
+	}
+
+	const opsManagerEmail = "ops@wez.local";
+	const opsManagerPassword = "OpsManager#1Pass";
+
+	const supervisorEmail = "supervisor@wez.local";
+	const supervisorPassword = "Supervisor#1Pass";
+
+	const agentBoleEmail = "agent.bole@wez.local";
+	const agentBolePassword = "AgentBole#1Pass";
+	const agentMegenagnaEmail = "agent.megenagna@wez.local";
+	const agentMegenagnaPassword = "AgentMega#1Pass";
+
+	console.log("Seeding Wez baseline...");
+
+	console.log("Clearing existing data...");
+	// Order matters for FK constraints
+	await prisma.workerInterest.deleteMany();
+	await prisma.referral.deleteMany();
+	await prisma.placement.deleteMany();
+	await prisma.hireRequest.deleteMany();
+	await prisma.complaint.deleteMany();
+	await prisma.ticket.deleteMany();
+	await prisma.courseEnrollment.deleteMany();
+	await prisma.courseBatch.deleteMany();
+	await prisma.course.deleteMany();
+	await prisma.instructor.deleteMany();
+	await prisma.workerRole.deleteMany();
+	await prisma.worker.deleteMany();
+	await prisma.employer.deleteMany();
+	await prisma.job.deleteMany();
+	await prisma.role.deleteMany();
+	await prisma.agentAssignment.deleteMany();
+	await prisma.station.deleteMany();
+	await prisma.notification.deleteMany();
+	await prisma.notificationPreference.deleteMany();
+	await prisma.notificationTemplate.deleteMany();
+	await prisma.attachment.deleteMany();
+	await prisma.governmentReport.deleteMany();
+	await prisma.auditEvent.deleteMany();
+	await prisma.adminSession.deleteMany();
+	await prisma.adminAccount.deleteMany();
+	await prisma.adminVerification.deleteMany();
+	await prisma.adminUser.deleteMany();
+	await prisma.session.deleteMany();
+	await prisma.account.deleteMany();
+	await prisma.verification.deleteMany();
+	await prisma.user.deleteMany();
+	console.log("  cleared");
+
+	console.log(`Creating super admin: ${adminEmail}`);
+	const { user: superAdmin } = await adminAuth.api.signUpEmail({
+		body: { name: adminName, email: adminEmail, password: adminPassword },
+	});
+	await prisma.adminUser.update({
+		where: { id: superAdmin.id },
+		data: { role: "super_admin" },
+	});
+	console.log(`  super admin id: ${superAdmin.id}`);
+
+	console.log(`Creating ops manager: ${opsManagerEmail}`);
+	const { user: opsManager } = await adminAuth.api.signUpEmail({
+		body: { name: "Ops Manager", email: opsManagerEmail, password: opsManagerPassword },
+	});
+	await prisma.adminUser.update({
+		where: { id: opsManager.id },
+		data: { role: "ops_manager" },
+	});
+
+	console.log(`Creating supervisor: ${supervisorEmail}`);
+	const { user: supervisor } = await auth.api.signUpEmail({
+		body: { name: "Bole Station Supervisor", email: supervisorEmail, password: supervisorPassword },
+	});
+	await prisma.user.update({
+		where: { id: supervisor.id },
+		data: { role: "station_supervisor" },
+	});
+
+	console.log(`Creating agent (Bole): ${agentBoleEmail}`);
+	const { user: agentBole } = await auth.api.signUpEmail({
+		body: { name: "Hanna B.", email: agentBoleEmail, password: agentBolePassword },
+	});
+	await prisma.user.update({
+		where: { id: agentBole.id },
+		data: { role: "agent" },
+	});
+
+	console.log(`Creating agent (Megenagna): ${agentMegenagnaEmail}`);
+	const { user: agentMegenagna } = await auth.api.signUpEmail({
+		body: { name: "Dawit M.", email: agentMegenagnaEmail, password: agentMegenagnaPassword },
+	});
+	await prisma.user.update({
+		where: { id: agentMegenagna.id },
+		data: { role: "agent" },
+	});
+
+	console.log("Creating stations...");
+	const stationBole = await prisma.station.create({
+		data: {
+			name: "Bole Station",
+			woreda: "bole",
+			address: "Bole Subcity, Woreda 03, Addis Ababa",
+			phone: "+251115000001",
+			supervisorUserId: supervisor.id,
+		},
+	});
+	const stationMegenagna = await prisma.station.create({
+		data: {
+			name: "Megenagna Station",
+			woreda: "megenagna",
+			address: "Megenagna, Addis Ababa",
+			phone: "+251115000002",
+			supervisorUserId: supervisor.id,
+		},
+	});
+	console.log(`  ${stationBole.id} (Bole), ${stationMegenagna.id} (Megenagna)`);
+
+	console.log("Assigning agents...");
+	await prisma.agentAssignment.create({
+		data: { userId: agentBole.id, stationId: stationBole.id },
+	});
+	await prisma.agentAssignment.create({
+		data: { userId: agentMegenagna.id, stationId: stationMegenagna.id },
+	});
+
+	console.log("Seeding starter roles catalog...");
+	const roles = [
+		{ id: "house_maid", name: "House Maid", category: "domestic", commType: "flat", commValue: 1500, salaryMinCents: 200_000n, salaryMaxCents: 600_000n },
+		{ id: "nanny", name: "Nanny", category: "domestic", commType: "flat", commValue: 2000, salaryMinCents: 250_000n, salaryMaxCents: 700_000n },
+		{ id: "cook", name: "Cook", category: "domestic", commType: "flat", commValue: 1800, salaryMinCents: 300_000n, salaryMaxCents: 800_000n },
+		{ id: "barista", name: "Barista", category: "hospitality", commType: "percent", commValue: 10, salaryMinCents: 350_000n, salaryMaxCents: 900_000n },
+		{ id: "waiter", name: "Waiter / Waitress", category: "hospitality", commType: "percent", commValue: 10, salaryMinCents: 300_000n, salaryMaxCents: 800_000n },
+		{ id: "cleaner", name: "Cleaner", category: "facilities", commType: "flat", commValue: 1200, salaryMinCents: 200_000n, salaryMaxCents: 500_000n },
+		{ id: "guard", name: "Security Guard", category: "facilities", commType: "flat", commValue: 1500, salaryMinCents: 300_000n, salaryMaxCents: 700_000n },
+		{ id: "driver", name: "Driver", category: "transport", commType: "percent", commValue: 8, salaryMinCents: 500_000n, salaryMaxCents: 1_500_000n },
+	];
+	for (const r of roles) {
+		await prisma.role.create({ data: r });
+	}
+	console.log(`  ${roles.length} roles`);
+
+	console.log("Seeding notification templates...");
+	const templates = [
+		{ key: "auth.otp", channel: "sms", bodyEn: "Your Wez code: {{code}}. Valid 5 minutes.", bodyAm: "የዌዝ ኮድዎ: {{code}}። ለ5 ደቂቃ ያገለግላል።" },
+		{ key: "hire_request.created.worker", channel: "sms", bodyEn: "{{employerName}} requested to hire you for {{role}} at {{salary}} ETB. Visit your station to confirm.", bodyAm: "{{employerName}} ለ{{role}} ስራ በ{{salary}} ብር ሊቀጥሮት ጠይቋል። ለማረጋገጥ ጣቢያዎን ይጎብኙ።" },
+		{ key: "placement.finalized.worker", channel: "sms", bodyEn: "Placement confirmed at {{employerName}}. Salary {{salary}} ETB. Welcome.", bodyAm: "ምደባዎ ተረጋግጧል በ{{employerName}}። ደመወዝ {{salary}} ብር። እንኳን ደህና መጡ።" },
+	];
+	for (const t of templates) {
+		await prisma.notificationTemplate.create({ data: t });
+	}
+	console.log(`  ${templates.length} templates`);
+
+	console.log("\n=== Seed Complete ===");
+	console.log("");
+	console.log("HQ ADMIN CONSOLE — http://localhost:5180/admin-login");
+	console.log(`  super admin:  ${adminEmail} / ${adminPassword}`);
+	console.log(`  ops manager:  ${opsManagerEmail} / ${opsManagerPassword}`);
+	console.log("");
+	console.log("TENANT APP — http://localhost:5180/login");
+	console.log(`  supervisor:    ${supervisorEmail} / ${supervisorPassword}`);
+	console.log(`  agent (Bole):  ${agentBoleEmail} / ${agentBolePassword}`);
+	console.log(`  agent (Megen): ${agentMegenagnaEmail} / ${agentMegenagnaPassword}`);
+	console.log("");
+	console.log("====================\n");
+};
+
+seed()
+	.catch((e) => {
+		console.error("Seed failed:", e);
+		process.exit(1);
+	})
+	.finally(async () => {
+		await prisma.$disconnect();
+	});

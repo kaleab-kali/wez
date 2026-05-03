@@ -1,0 +1,37 @@
+{
+	"name": "wez",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "turbo dev",
+		"build": "turbo build",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"typecheck:api": "pnpm --filter api exec tsc --noEmit",
+		"typecheck:web": "pnpm --filter web exec tsc --noEmit",
+		"typecheck": "pnpm typecheck:api && pnpm typecheck:web",
+		"lint:ci": "pnpm db:generate && pnpm lint && pnpm typecheck",
+		"dev:api": "pnpm --filter api dev",
+		"dev:web": "pnpm --filter web dev",
+		"build:api": "pnpm --filter api build",
+		"build:web": "pnpm --filter web build",
+		"db:generate": "pnpm --filter api db:generate",
+		"db:migrate": "pnpm --filter api db:migrate",
+		"db:push": "pnpm --filter api db:push",
+		"db:studio": "pnpm --filter api db:studio",
+		"db:seed": "pnpm --filter api db:seed",
+		"pm2:start": "pm2 start ecosystem.config.cjs",
+		"pm2:stop": "pm2 stop ecosystem.config.cjs",
+		"pm2:restart": "pm2 restart ecosystem.config.cjs",
+		"pm2:logs": "pm2 logs"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.12",
+		"lefthook": "^2.1.5",
+		"turbo": "^2"
+	},
+	"packageManager": "pnpm@9.15.0",
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

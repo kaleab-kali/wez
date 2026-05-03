@@ -1,0 +1,73 @@
+name: Code Quality
+on: ["push", "workflow_dispatch"]
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Linter
+        run: pnpm lint
+
+  types:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+      - name: Typecheck API
+        run: pnpm --filter api exec tsc --noEmit
+      - name: Typecheck Web
+        run: pnpm --filter web exec tsc --noEmit
+
+  # Build job disabled per request. Re-enable by uncommenting.
+  # build:
+  #   name: Build
+  #   runs-on: ubuntu-latest
+  #   needs: [lint, types]
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Setup pnpm
+  #       uses: pnpm/action-setup@v4
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: pnpm
+  #     - name: Install
+  #       run: pnpm install --frozen-lockfile
+  #     - name: Generate Prisma Client
+  #       run: pnpm db:generate
+  #       env:
+  #         DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+  #     - name: Build
+  #       run: pnpm build
+  #       env:
+  #         DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+  #         BETTER_AUTH_SECRET: ci-dummy-secret
+  #         BETTER_AUTH_URL: http://localhost:3005
+  #         FRONTEND_URL: http://localhost:5180

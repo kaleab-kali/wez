@@ -1,0 +1,845 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// BETTER AUTH — TENANT (workers, employers, agents, supervisors)
+// Run `pnpm dlx @better-auth/cli generate` to update these
+// after changing auth.config.ts plugins.
+// ============================================================
+
+model User {
+  id            String    @id
+  name          String
+  email         String?   @unique
+  phone         String?   @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+
+  // Wez role: worker | employer_business | employer_household | agent | station_supervisor | instructor
+  role          String    @default("worker")
+
+  // Account state
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  failedLoginCount Int    @default(0)
+  lockedUntil   DateTime?
+  lastLoginAt   DateTime?
+  localePref    String    @default("en")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  sessions          Session[]
+  accounts          Account[]
+  workerProfile     Worker?         @relation("WorkerUser")
+  employerProfile   Employer?       @relation("EmployerUser")
+  agentAssignments  AgentAssignment[]
+  supervisedStations Station[]      @relation("StationSupervisor")
+  filedComplaints   Complaint[]     @relation("ComplaintFiler")
+  takenComplaints   Complaint[]     @relation("ComplaintTaker")
+  closedComplaints  Complaint[]     @relation("ComplaintCloser")
+  raisedTickets     Ticket[]        @relation("TicketRaiser")
+  assignedTickets   Ticket[]        @relation("TicketAssignee")
+  resolvedTickets   Ticket[]        @relation("TicketResolver")
+  finalizedPlacements Placement[]   @relation("PlacementFinalizer")
+  registeredWorkers Worker[]        @relation("WorkerRegisteringAgent")
+  registeredEmployers Employer[]    @relation("EmployerRegisteringAgent")
+  notifications     Notification[]
+  notificationPreferences NotificationPreference[]
+  instructorProfile Instructor?     @relation("InstructorUser")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("session")
+}
+
+model Account {
+  id           String    @id
+  accountId    String
+  providerId   String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String?
+  refreshToken String?
+  idToken      String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope        String?
+  password     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ============================================================
+// BETTER AUTH — HQ ADMIN (super admin, ops manager, compliance, etc.)
+// Separate Better Auth instance, separate tables.
+// ============================================================
+
+model AdminUser {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  // HQ role: super_admin | ops_manager | compliance_officer | hr_manager | finance_manager | it_manager | training_manager | support
+  role          String    @default("super_admin")
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      AdminSession[]
+  accounts      AdminAccount[]
+
+  @@map("admin_user")
+}
+
+model AdminSession {
+  id        String    @id
+  expiresAt DateTime
+  token     String    @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("admin_session")
+}
+
+model AdminAccount {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("admin_account")
+}
+
+model AdminVerification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("admin_verification")
+}
+
+// ============================================================
+// PLATFORM INFRASTRUCTURE
+// ============================================================
+
+model PlatformSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+model CronJobRun {
+  id                String    @id @default(cuid())
+  jobName           String
+  status            String
+  startedAt         DateTime  @default(now())
+  finishedAt        DateTime?
+  durationMs        Int?
+  summary           String?
+  errorMessage      String?
+  triggeredByUserId String?
+
+  @@index([jobName, startedAt])
+  @@map("cron_job_run")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyPrefix   String    @unique
+  keyHash     String
+  scopes      String[]
+  createdById String?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([revokedAt])
+  @@map("api_key")
+}
+
+// ============================================================
+// IDEMPOTENCY
+// ============================================================
+
+model IdempotencyKey {
+  key            String
+  userId         String
+  endpointHash   String
+  responseStatus Int
+  responseBody   String
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@id([key, userId, endpointHash])
+  @@index([expiresAt])
+  @@map("idempotency_key")
+}
+
+// ============================================================
+// AUDIT EVENTS (immutable)
+// ============================================================
+
+model AuditEvent {
+  id          String    @id @default(uuid())
+  actorId     String?
+  actorRole   String
+  action      String
+  targetType  String?
+  targetId    String?
+  stationId   String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("audit_event")
+}
+
+// ============================================================
+// WEZ DOMAIN — Roles & Stations
+// ============================================================
+
+model Role {
+  id              String        @id
+  name            String
+  category        String
+  commType        String
+  commValue       Int
+  salaryMinCents  BigInt
+  salaryMaxCents  BigInt
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  workers         WorkerRole[]
+  jobs            Job[]
+  hireRequests    HireRequest[]
+  placements      Placement[]
+
+  @@map("role")
+}
+
+model Station {
+  id                 String    @id @default(uuid())
+  name               String
+  woreda             String
+  address            String
+  phone              String?
+  active             Boolean   @default(true)
+  supervisorUserId   String?
+  supervisor         User?     @relation("StationSupervisor", fields: [supervisorUserId], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  agentAssignments   AgentAssignment[]
+  hireRequests       HireRequest[]
+  placements         Placement[]
+  complaints         Complaint[]
+  workersRegistered  Worker[]  @relation("WorkerRegisteringStation")
+
+  @@map("station")
+}
+
+model AgentAssignment {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stationId   String
+  station     Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  active      Boolean   @default(true)
+  assignedAt  DateTime  @default(now())
+  removedAt   DateTime?
+
+  @@index([userId, active])
+  @@index([stationId, active])
+  @@map("agent_assignment")
+}
+
+// ============================================================
+// WEZ DOMAIN — Workers
+// ============================================================
+
+model Worker {
+  id                       String    @id @default(uuid())
+  userId                   String?   @unique
+  user                     User?     @relation("WorkerUser", fields: [userId], references: [id])
+  fullName                 String
+  fayda                    String
+  phone                    String
+  dateOfBirth              DateTime?
+  gender                   String
+  area                     String
+  bio                      String?
+  religion                 String?
+  languages                String[]  @default([])
+  experienceYears          Int       @default(0)
+  // basic | verified | trained | trusted
+  tier                     String    @default("basic")
+  // none | notice | warning | suspended
+  hopFlag                  String    @default("none")
+  hasHealthCard            Boolean   @default(false)
+  hasPoliceClearance       Boolean   @default(false)
+  tin                      String?
+  available                Boolean   @default(true)
+  registeredByAgentId      String?
+  registeringAgent         User?     @relation("WorkerRegisteringAgent", fields: [registeredByAgentId], references: [id])
+  registeredAtStationId    String?
+  registeringStation       Station?  @relation("WorkerRegisteringStation", fields: [registeredAtStationId], references: [id])
+  ratingAverage            Decimal?  @db.Decimal(3, 2)
+  placementsCount          Int       @default(0)
+  photoAttachmentId        String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  deletedAt                DateTime?
+
+  workerRoles              WorkerRole[]
+  hireRequests             HireRequest[]
+  placements               Placement[]
+  enrollments              CourseEnrollment[]
+  interests                WorkerInterest[]
+  referrals                Referral[]
+
+  @@unique([fayda])
+  @@index([phone])
+  @@index([area])
+  @@index([tier, available])
+  @@index([languages], type: Gin)
+  @@map("worker")
+}
+
+model WorkerRole {
+  workerId String
+  worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  roleId   String
+  role     Role   @relation(fields: [roleId], references: [id])
+
+  @@id([workerId, roleId])
+  @@index([roleId])
+  @@map("worker_role")
+}
+
+// ============================================================
+// WEZ DOMAIN — Employers
+// ============================================================
+
+model Employer {
+  id                       String    @id @default(uuid())
+  userId                   String?   @unique
+  user                     User?     @relation("EmployerUser", fields: [userId], references: [id])
+  // business | household
+  type                     String
+  name                     String
+  contactName              String?
+  phone                    String
+  email                    String?
+  area                     String
+  tin                      String?
+  businessLicense          String?
+  fayda                    String?
+  // green | yellow | orange | red
+  rating                   String    @default("green")
+  placementsCount          Int       @default(0)
+  complaintsCount          Int       @default(0)
+  registeredByAgentId      String?
+  registeringAgent         User?     @relation("EmployerRegisteringAgent", fields: [registeredByAgentId], references: [id])
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  deletedAt                DateTime?
+
+  jobs                     Job[]
+  hireRequests             HireRequest[]
+  placements               Placement[]
+  referrals                Referral[]
+
+  @@index([type, rating])
+  @@index([phone])
+  @@map("employer")
+}
+
+// ============================================================
+// WEZ DOMAIN — Jobs
+// ============================================================
+
+model Job {
+  id                String    @id @default(uuid())
+  employerId        String
+  employer          Employer  @relation(fields: [employerId], references: [id])
+  roleId            String
+  role              Role      @relation(fields: [roleId], references: [id])
+  title             String
+  description       String
+  salaryMinCents    BigInt
+  salaryMaxCents    BigInt
+  location          String
+  // open | closed | filled
+  status            String    @default("open")
+  postedAt          DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  hireRequests      HireRequest[]
+  interests         WorkerInterest[]
+
+  @@index([employerId, status])
+  @@index([roleId, status])
+  @@index([location])
+  @@map("job")
+}
+
+// ============================================================
+// WEZ DOMAIN — Hire Requests + Referrals + Interests
+// ============================================================
+
+model HireRequest {
+  id                   String    @id @default(uuid())
+  employerId           String
+  employer             Employer  @relation(fields: [employerId], references: [id])
+  workerId             String
+  worker               Worker    @relation(fields: [workerId], references: [id])
+  roleId               String
+  role                 Role      @relation(fields: [roleId], references: [id])
+  jobId                String?
+  job                  Job?      @relation(fields: [jobId], references: [id])
+  proposedSalaryCents  BigInt
+  stationId            String
+  station              Station   @relation(fields: [stationId], references: [id])
+  // awaiting_visit | completed | cancelled | expired
+  status               String    @default("awaiting_visit")
+  // online | in_person
+  channel              String
+  note                 String?
+  sourceReferralId     String?
+  sourceReferral       Referral? @relation("ReferralHireRequest", fields: [sourceReferralId], references: [id])
+  expiresAt            DateTime
+  completedAt          DateTime?
+  cancelledAt          DateTime?
+  cancellationReason   String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  placement            Placement?
+
+  @@index([employerId, status])
+  @@index([workerId, status])
+  @@index([stationId, status])
+  @@index([expiresAt])
+  @@map("hire_request")
+}
+
+model Referral {
+  id           String    @id @default(uuid())
+  workerId     String
+  worker       Worker    @relation(fields: [workerId], references: [id])
+  employerId   String
+  employer     Employer  @relation(fields: [employerId], references: [id])
+  jobId        String?
+  agentId      String
+  note         String?
+  // pending_employer | converted | declined | expired
+  status       String    @default("pending_employer")
+  declineReason String?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  hireRequests HireRequest[] @relation("ReferralHireRequest")
+
+  @@index([employerId, status])
+  @@index([workerId])
+  @@index([expiresAt])
+  @@map("referral")
+}
+
+model WorkerInterest {
+  id         String    @id @default(uuid())
+  workerId   String
+  worker     Worker    @relation(fields: [workerId], references: [id])
+  jobId      String
+  job        Job       @relation(fields: [jobId], references: [id])
+  // open | contacted | closed_with_hire | closed_lost
+  status     String    @default("open")
+  closeReason String?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([workerId])
+  @@index([jobId, status])
+  @@map("worker_interest")
+}
+
+// ============================================================
+// WEZ DOMAIN — Placements
+// ============================================================
+
+model Placement {
+  id                    String       @id @default(uuid())
+  hireRequestId         String?      @unique
+  hireRequest           HireRequest? @relation(fields: [hireRequestId], references: [id])
+  workerId              String
+  worker                Worker       @relation(fields: [workerId], references: [id])
+  employerId            String
+  employer              Employer     @relation(fields: [employerId], references: [id])
+  roleId                String
+  role                  Role         @relation(fields: [roleId], references: [id])
+  stationId             String
+  station               Station      @relation(fields: [stationId], references: [id])
+  finalizedByAgentId    String
+  finalizedByAgent      User         @relation("PlacementFinalizer", fields: [finalizedByAgentId], references: [id])
+  startDate             DateTime     @db.Date
+  endDate               DateTime?    @db.Date
+  salaryCents           BigInt
+  commissionCents       BigInt
+  paymentMethod         String
+  paymentReference      String
+  paymentReceivedAt     DateTime
+  agreementPdfUrl       String?
+  // active | ended | disputed | cancelled
+  status                String       @default("active")
+  endedReason           String?
+  ratingByEmployer      Decimal?     @db.Decimal(2, 1)
+  ratingByWorker        Decimal?     @db.Decimal(2, 1)
+  ratingCommentByEmployer String?
+  ratingCommentByWorker String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  complaints            Complaint[]
+
+  @@index([workerId, status])
+  @@index([employerId, status])
+  @@index([roleId])
+  @@index([startDate])
+  @@index([stationId])
+  @@map("placement")
+}
+
+// ============================================================
+// WEZ DOMAIN — Complaints + Tickets
+// ============================================================
+
+model Complaint {
+  id                String    @id @default(uuid())
+  // worker | employer
+  filedByType       String
+  filedById         String
+  filedByUserId     String?
+  filedByUser       User?     @relation("ComplaintFiler", fields: [filedByUserId], references: [id])
+  // worker | employer
+  againstType       String
+  againstId         String
+  placementId       String?
+  placement         Placement? @relation(fields: [placementId], references: [id])
+  stationId         String?
+  station           Station?  @relation(fields: [stationId], references: [id])
+  takenByAgentId    String?
+  takenByAgent      User?     @relation("ComplaintTaker", fields: [takenByAgentId], references: [id])
+  type              String
+  // low | medium | high
+  severity          String
+  description       String
+  // open | mediating | closed | referred_external
+  status            String    @default("open")
+  resolution        String?
+  // amicable | partial | failed
+  resolutionTag     String?
+  externalCaseId    String?
+  closedAt          DateTime?
+  closedById        String?
+  closedBy          User?     @relation("ComplaintCloser", fields: [closedById], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([againstType, againstId])
+  @@index([status])
+  @@index([severity])
+  @@index([filedByType, filedById])
+  @@map("complaint")
+}
+
+model Ticket {
+  id              String    @id @default(uuid())
+  raisedById      String
+  raisedBy        User      @relation("TicketRaiser", fields: [raisedById], references: [id])
+  // system_issue | policy_question | compliance_concern | finance_issue | training_request | hr_issue | other
+  category        String
+  title           String
+  description     String
+  // low | medium | high | urgent
+  priority        String
+  // open | in_progress | resolved | closed | escalated_higher
+  status          String    @default("open")
+  assignedToId    String?
+  assignedTo      User?     @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  resolution      String?
+  resolvedAt      DateTime?
+  resolvedById    String?
+  resolvedBy      User?     @relation("TicketResolver", fields: [resolvedById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status, priority])
+  @@index([assignedToId, status])
+  @@index([raisedById])
+  @@map("ticket")
+}
+
+// ============================================================
+// WEZ DOMAIN — Training (in-person Phase 1, online Phase 3)
+// ============================================================
+
+model Course {
+  id                  String   @id
+  name                String
+  category            String
+  description         String
+  // online | in_person | hybrid
+  mode                String
+  durationLabel       String
+  feeCents            BigInt
+  onlineModuleCount   Int      @default(0)
+  inPersonHours       Int      @default(0)
+  unlocksRoleIds      String[] @default([])
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  batches             CourseBatch[]
+  enrollments         CourseEnrollment[]
+
+  @@map("course")
+}
+
+model Instructor {
+  id          String    @id @default(uuid())
+  userId      String?   @unique
+  user        User?     @relation("InstructorUser", fields: [userId], references: [id])
+  name        String
+  expertise   String
+  bio         String?
+  phone       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  batches     CourseBatch[]
+
+  @@map("instructor")
+}
+
+model CourseBatch {
+  id            String     @id @default(uuid())
+  courseId      String
+  course        Course     @relation(fields: [courseId], references: [id])
+  instructorId  String?
+  instructor    Instructor? @relation(fields: [instructorId], references: [id])
+  startDate     DateTime   @db.Date
+  endDate       DateTime   @db.Date
+  seatsTotal    Int
+  seatsFilled   Int        @default(0)
+  location      String
+  // upcoming | in_progress | completed | cancelled
+  status        String     @default("upcoming")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  enrollments   CourseEnrollment[]
+
+  @@index([status, startDate])
+  @@map("course_batch")
+}
+
+model CourseEnrollment {
+  id                       String       @id @default(uuid())
+  workerId                 String
+  worker                   Worker       @relation(fields: [workerId], references: [id])
+  courseId                 String
+  course                   Course       @relation(fields: [courseId], references: [id])
+  batchId                  String?
+  batch                    CourseBatch? @relation(fields: [batchId], references: [id])
+  enrolledAt               DateTime     @default(now())
+  paymentReceived          Boolean      @default(false)
+  paymentReference         String?
+  onlineProgressPct        Int          @default(0)
+  inPersonAttendedHours    Decimal      @default(0) @db.Decimal(5, 2)
+  completedAt              DateTime?
+  passed                   Boolean?
+  certificateIssuedAt      DateTime?
+  certificateUrl           String?
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@unique([workerId, courseId])
+  @@index([workerId])
+  @@index([courseId, completedAt])
+  @@map("course_enrollment")
+}
+
+// ============================================================
+// WEZ DOMAIN — Notifications
+// ============================================================
+
+model Notification {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // sms | email | in_app | push
+  channel       String
+  templateKey   String
+  payload       Json
+  // pending | sent | failed | retry
+  status        String    @default("pending")
+  attempts      Int       @default(0)
+  sentAt        DateTime?
+  failedReason  String?
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([status, createdAt])
+  @@map("notification")
+}
+
+model NotificationPreference {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String
+  // sms | email | in_app | push
+  channel   String
+  enabled   Boolean @default(true)
+
+  @@unique([userId, category, channel])
+  @@map("notification_preference")
+}
+
+model NotificationTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  // sms | email | in_app | push
+  channel     String
+  subjectEn   String?
+  subjectAm   String?
+  bodyEn      String
+  bodyAm      String?
+  variables   String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notification_template")
+}
+
+// ============================================================
+// WEZ DOMAIN — Files
+// ============================================================
+
+model Attachment {
+  id            String    @id @default(uuid())
+  bucket        String
+  key           String
+  filename      String
+  mimeType      String
+  sizeBytes     Int
+  uploadedById  String?
+  ownerType     String?
+  ownerId       String?
+  // pending | scanning | clean | infected | deleted
+  status        String    @default("pending")
+  scannedAt     DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([ownerType, ownerId])
+  @@index([status])
+  @@map("attachment")
+}
+
+// ============================================================
+// WEZ DOMAIN — Government reports
+// ============================================================
+
+model GovernmentReport {
+  id          String    @id @default(uuid())
+  // erca_monthly | mols_quarterly | poessa_annual
+  type        String
+  periodStart DateTime  @db.Date
+  periodEnd   DateTime  @db.Date
+  format      String
+  fileUrl     String?
+  filedAt     DateTime?
+  filedReference String?
+  generatedById String
+  // pending | ready | filed | error
+  status      String    @default("pending")
+  errorMessage String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([type, periodStart, periodEnd])
+  @@index([type, status])
+  @@map("government_report")
+}

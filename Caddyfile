@@ -1,0 +1,23 @@
+{$DOMAIN} {
+    # API requests
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3005
+    }
+
+    # Static frontend files
+    handle {
+        root * /var/www/wez/apps/web/dist
+        file_server
+        try_files {path} /index.html
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    # Compression
+    encode gzip zstd
+}

@@ -1,0 +1,156 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": [
+			"apps/**",
+			"package.json",
+			"biome.json",
+			"tsconfig.json",
+			"!!**/node_modules",
+			"!!**/dist",
+			"!!**/build",
+			"!!**/coverage",
+			"!!**/generated",
+			"!!**/components/ui"
+		],
+		"ignoreUnknown": true
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 120
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"enabled": true,
+			"quoteStyle": "double"
+		},
+		"linter": {
+			"enabled": true
+		}
+	},
+	"json": {
+		"formatter": {
+			"enabled": true
+		},
+		"linter": {
+			"enabled": false
+		},
+		"parser": {
+			"allowComments": true
+		}
+	},
+	"css": {
+		"formatter": {
+			"enabled": true
+		},
+		"linter": {
+			"enabled": true
+		},
+		"parser": {
+			"cssModules": true,
+			"tailwindDirectives": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["apps/api/**"],
+			"javascript": {
+				"parser": {
+					"unsafeParameterDecoratorsEnabled": true
+				}
+			},
+			"linter": {
+				"rules": {
+					"style": {
+						"useImportType": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["apps/web/src/**/*.tsx"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noArrayIndexKey": "off"
+					},
+					"style": {
+						"useFilenamingConvention": {
+							"options": {
+								"strictCase": true,
+								"requireAscii": true,
+								"filenameCases": ["PascalCase"]
+							}
+						}
+					}
+				}
+			}
+		}
+	],
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"style": {
+				"noDefaultExport": "off",
+				"useNamingConvention": {
+					"options": {
+						"strictCase": false,
+						"requireAscii": true
+					}
+				},
+				"useFilenamingConvention": {
+					"options": {
+						"strictCase": true,
+						"requireAscii": true,
+						"filenameCases": ["kebab-case"]
+					}
+				},
+				"useTemplate": "error"
+			},
+			"a11y": {
+				"noStaticElementInteractions": "off",
+				"useSemanticElements": "off"
+			},
+			"correctness": {
+				"noNodejsModules": "off",
+				"noUndeclaredDependencies": "off",
+				"useUniqueElementIds": "off",
+				"useParseIntRadix": "error"
+			},
+			"suspicious": {
+				"noReactSpecificProps": "off",
+				"noConsole": "off",
+				"noUnknownAtRules": "off"
+			},
+			"performance": {
+				"useTopLevelRegex": "off",
+				"noNamespaceImport": "off"
+			},
+			"complexity": {
+				"noUselessFragments": "error",
+				"noUselessEmptyExport": "off",
+				"noImportantStyles": "off",
+				"noExcessiveCognitiveComplexity": {
+					"level": "error",
+					"options": {
+						"maxAllowedComplexity": 30
+					}
+				}
+			}
+		}
+	}
+}
