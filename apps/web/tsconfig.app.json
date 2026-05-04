@@ -28,7 +28,8 @@
 			"@/*": ["./src/*"],
 			"#features/*": ["./src/features/*"],
 			"#shared/*": ["./src/shared/*"],
-			"#routes/*": ["./src/routes/*"]
+			"#routes/*": ["./src/routes/*"],
+			"#components/*": ["./src/components/*"]
 		}
 	},
 	"include": ["src"]

@@ -56,3 +56,10 @@ apps/web/.tanstack/
 
 # Local test artifacts
 *.png
+
+# Local agent artifacts
+.agents/
+skills-lock.json
+
+# Bulk seed payloads (developer-local)
+bulk-workers.json

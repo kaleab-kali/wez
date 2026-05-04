@@ -8,7 +8,11 @@ import { AdminModule } from "#modules/admin/admin.module";
 import { AuthModule } from "#modules/auth/auth.module";
 import { ErrorReportingModule } from "#modules/error-reporting/error-reporting.module";
 import { HealthModule } from "#modules/health/health.module";
+import { LookupsModule } from "#modules/lookups/lookups.module";
 import { NotificationModule } from "#modules/notification/notification.module";
+import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
+import { StationsModule } from "#modules/stations/stations.module";
+import { WorkersModule } from "#modules/workers/workers.module";
 import { PrismaModule } from "#shared/database/prisma.module";
 import { EmailModule } from "#shared/email/email.module";
 import { DomainEventBusModule } from "#shared/events/domain-event.bus";
@@ -32,6 +36,10 @@ import { StorageModule } from "#shared/storage/storage.module";
 		AuthModule,
 		AdminModule,
 		NotificationModule,
+		StationsModule,
+		RoleCatalogModule,
+		LookupsModule,
+		WorkersModule,
 		ErrorReportingModule,
 	],
 	providers: [

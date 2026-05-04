@@ -1,6 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import React from "react";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import { TopBar } from "@/components/layout/TopBar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin")({
@@ -24,10 +27,10 @@ const AccessDenied = React.memo(
 	() => (
 		<div className="flex min-h-screen items-center justify-center">
 			<div className="text-center space-y-4">
-				<h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+				<h1 className="text-2xl font-bold text-destructive">Access denied</h1>
 				<p className="text-muted-foreground">HQ admin authentication required.</p>
 				<a href="/admin-login" className="text-primary underline">
-					Go to Admin Login
+					Go to admin login
 				</a>
 			</div>
 		</div>
@@ -36,19 +39,34 @@ const AccessDenied = React.memo(
 );
 AccessDenied.displayName = "AccessDenied";
 
+const AdminBanner = React.memo(
+	() => (
+		<div className="border-b border-destructive/30 bg-destructive/5 px-6 py-2">
+			<p className="text-xs font-medium text-destructive uppercase tracking-wider">
+				Super admin mode — platform-level data
+			</p>
+		</div>
+	),
+	() => true,
+);
+AdminBanner.displayName = "AdminBanner";
+
 function AdminLayout() {
 	const { data: session, isPending, isError } = useAdminSession();
 
 	if (isPending) return <AdminLoadingScreen />;
 	if (isError || !session?.user) return <AccessDenied />;
 
-	// Phase 1A: minimal admin layout. Phase 1C+ adds Wez HQ sidebar (Stations, Users, Workers, Roles config, etc.).
 	return (
-		<div className="min-h-screen p-6">
-			<div className="mb-6 border-b pb-4">
-				<p className="text-xs font-medium text-destructive uppercase tracking-wider">HQ Admin Console</p>
-			</div>
-			<Outlet />
-		</div>
+		<SidebarProvider>
+			<AdminSidebar />
+			<SidebarInset className="min-w-0 overflow-x-hidden">
+				<TopBar />
+				<AdminBanner />
+				<main className="flex-1 p-6 min-w-0">
+					<Outlet />
+				</main>
+			</SidebarInset>
+		</SidebarProvider>
 	);
 }

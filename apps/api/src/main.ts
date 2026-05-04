@@ -1,5 +1,10 @@
 import * as path from "node:path";
 import { RequestMethod, ValidationPipe, VERSION_NEUTRAL, VersioningType } from "@nestjs/common";
+
+// Serialize BigInt as string in all JSON responses (Wez money columns).
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
+	return this.toString();
+};
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
