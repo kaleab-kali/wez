@@ -1,0 +1,39 @@
+export type HireRequestStatus = "awaiting_visit" | "completed" | "cancelled" | "expired";
+export type HireRequestChannel = "online" | "in_person";
+
+export interface HireRequest {
+	id: string;
+	employerId: string;
+	workerId: string;
+	roleId: string;
+	jobId: string | null;
+	proposedSalaryCents: bigint;
+	stationId: string;
+	status: HireRequestStatus;
+	channel: HireRequestChannel;
+	note: string | null;
+	sourceReferralId: string | null;
+	expiresAt: Date;
+	completedAt: Date | null;
+	cancelledAt: Date | null;
+	cancellationReason: string | null;
+	createdAt: Date;
+	updatedAt: Date;
+}
+
+export type NewHireRequest = Omit<HireRequest, "id" | "completedAt" | "cancelledAt" | "cancellationReason" | "createdAt" | "updatedAt">;
+export type HireRequestPatch = Partial<{
+	status: HireRequestStatus;
+	completedAt: Date;
+	cancelledAt: Date;
+	cancellationReason: string;
+}>;
+
+export interface HireRequestFilter {
+	employerId?: string;
+	workerId?: string;
+	stationId?: string;
+	status?: HireRequestStatus;
+	page?: number;
+	limit?: number;
+}

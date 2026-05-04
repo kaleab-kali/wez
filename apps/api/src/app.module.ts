@@ -6,8 +6,11 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AdminModule } from "#modules/admin/admin.module";
 import { AuthModule } from "#modules/auth/auth.module";
+import { EmployersModule } from "#modules/employers/employers.module";
 import { ErrorReportingModule } from "#modules/error-reporting/error-reporting.module";
 import { HealthModule } from "#modules/health/health.module";
+import { HireRequestsModule } from "#modules/hire-requests/hire-requests.module";
+import { JobsModule } from "#modules/jobs/jobs.module";
 import { LookupsModule } from "#modules/lookups/lookups.module";
 import { NotificationModule } from "#modules/notification/notification.module";
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
@@ -40,6 +43,9 @@ import { StorageModule } from "#shared/storage/storage.module";
 		RoleCatalogModule,
 		LookupsModule,
 		WorkersModule,
+		EmployersModule,
+		JobsModule,
+		HireRequestsModule,
 		ErrorReportingModule,
 	],
 	providers: [

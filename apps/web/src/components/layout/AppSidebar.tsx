@@ -1,5 +1,7 @@
 import {
+	ContactBookIcon,
 	DashboardSquare01Icon,
+	NoteEditIcon,
 	UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -29,22 +31,30 @@ type NavItem = {
 };
 
 const NAV_ITEMS: Record<string, ReadonlyArray<NavItem>> = {
-	worker: [{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon }],
+	worker: [
+		{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon },
+	],
 	employer_business: [
 		{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon },
 		{ labelKey: "nav.workers", to: "/workers", icon: UserMultipleIcon },
+		{ labelKey: "nav.hireRequests", to: "/hire-requests", icon: NoteEditIcon },
 	],
 	employer_household: [
 		{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon },
 		{ labelKey: "nav.workers", to: "/workers", icon: UserMultipleIcon },
+		{ labelKey: "nav.hireRequests", to: "/hire-requests", icon: NoteEditIcon },
 	],
 	agent: [
 		{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon },
 		{ labelKey: "nav.workers", to: "/workers", icon: UserMultipleIcon },
+		{ labelKey: "nav.employers", to: "/employers", icon: ContactBookIcon },
+		{ labelKey: "nav.hireRequests", to: "/hire-requests", icon: NoteEditIcon },
 	],
 	station_supervisor: [
 		{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon },
 		{ labelKey: "nav.workers", to: "/workers", icon: UserMultipleIcon },
+		{ labelKey: "nav.employers", to: "/employers", icon: ContactBookIcon },
+		{ labelKey: "nav.hireRequests", to: "/hire-requests", icon: NoteEditIcon },
 	],
 	instructor: [{ labelKey: "nav.dashboard", to: "/dashboard", icon: DashboardSquare01Icon }],
 };

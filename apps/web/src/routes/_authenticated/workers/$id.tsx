@@ -1,13 +1,174 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import React from "react";
 import { useTranslation } from "react-i18next";
+import { useEmployers } from "#features/employers/api/employer.queries";
+import { useCreateHireRequest } from "#features/hire-requests/api/hire-request.queries";
+import { usePublicStations } from "#features/stations/api/station.queries";
 import { useWorker } from "#features/workers/api/worker.queries";
+import { authClient } from "#shared/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/workers/$id")({
 	component: WorkerDetailPage,
 });
+
+const HireRequestForm = React.memo(
+	({ workerId, workerRoles, available }: { readonly workerId: string; readonly workerRoles: string[]; readonly available: boolean }) => {
+		const { t } = useTranslation();
+		const { data: session } = authClient.useSession();
+		const role = (session?.user as { role?: string } | undefined)?.role;
+		const isAgent = role === "agent" || role === "station_supervisor";
+
+		const create = useCreateHireRequest();
+		const { data: stations } = usePublicStations();
+		const { data: employersList } = useEmployers({ page: 1, limit: 100 });
+
+		const [employerId, setEmployerId] = React.useState("");
+		const [roleId, setRoleId] = React.useState(workerRoles[0] ?? "");
+		const [salary, setSalary] = React.useState(0);
+		const [stationId, setStationId] = React.useState("");
+		const [note, setNote] = React.useState("");
+		const [error, setError] = React.useState("");
+		const [open, setOpen] = React.useState(false);
+
+		const onSubmit = React.useCallback(
+			async (e: React.FormEvent) => {
+				e.preventDefault();
+				setError("");
+				try {
+					await create.mutateAsync({
+						workerId,
+						employerId: isAgent ? employerId : undefined,
+						roleId,
+						proposedSalaryCents: salary * 100,
+						stationId,
+						channel: isAgent ? "in_person" : "online",
+						note: note || undefined,
+					});
+					setOpen(false);
+				} catch (err) {
+					setError(err instanceof Error ? err.message : "Could not create");
+				}
+			},
+			[create, workerId, isAgent, employerId, roleId, salary, stationId, note],
+		);
+
+		if (!available) {
+			return (
+				<Button disabled variant="outline">
+					Worker busy
+				</Button>
+			);
+		}
+
+		if (!open) {
+			return <Button onClick={() => setOpen(true)}>{t("hireRequests.create")}</Button>;
+		}
+
+		return (
+			<Card className="w-full">
+				<CardHeader>
+					<CardTitle className="text-base">{t("hireRequests.create")}</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<form onSubmit={onSubmit} className="space-y-3">
+						{error && <div className="rounded bg-destructive/10 p-2 text-sm text-destructive">{error}</div>}
+						{isAgent && (
+							<div className="space-y-2">
+								<Label htmlFor="emp">Employer</Label>
+								<select
+									id="emp"
+									value={employerId}
+									onChange={(e) => setEmployerId(e.target.value)}
+									required
+									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+								>
+									<option value="">—</option>
+									{employersList?.data.map((em) => (
+										<option key={em.id} value={em.id}>
+											{em.name}
+										</option>
+									))}
+								</select>
+							</div>
+						)}
+						<div className="grid grid-cols-2 gap-3">
+							<div className="space-y-2">
+								<Label htmlFor="role">{t("workers.register.roles")}</Label>
+								<select
+									id="role"
+									value={roleId}
+									onChange={(e) => setRoleId(e.target.value)}
+									required
+									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+								>
+									{workerRoles.map((r) => (
+										<option key={r} value={r}>
+											{r}
+										</option>
+									))}
+								</select>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="sal">{t("hireRequests.proposedSalary")}</Label>
+								<Input
+									id="sal"
+									type="number"
+									min={0}
+									value={salary}
+									onChange={(e) => setSalary(Number(e.target.value))}
+									required
+								/>
+							</div>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="station">{t("hireRequests.station")}</Label>
+							<select
+								id="station"
+								value={stationId}
+								onChange={(e) => setStationId(e.target.value)}
+								required
+								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							>
+								<option value="">—</option>
+								{stations?.map((s) => (
+									<option key={s.id} value={s.id}>
+										{s.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="note">{t("hireRequests.note")}</Label>
+							<textarea
+								id="note"
+								value={note}
+								onChange={(e) => setNote(e.target.value)}
+								maxLength={500}
+								className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+							/>
+						</div>
+						<div className="flex justify-between">
+							<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+								{t("common.cancel")}
+							</Button>
+							<Button type="submit" disabled={create.isPending}>
+								{create.isPending ? t("common.saving") : t("hireRequests.submit")}
+							</Button>
+						</div>
+					</form>
+				</CardContent>
+			</Card>
+		);
+	},
+	(p, n) => p.workerId === n.workerId && p.available === n.available,
+);
+HireRequestForm.displayName = "HireRequestForm";
 
 function WorkerDetailPage() {
 	const { t } = useTranslation();
@@ -51,6 +212,8 @@ function WorkerDetailPage() {
 					</div>
 				</div>
 			</div>
+
+			<HireRequestForm workerId={w.id} workerRoles={w.roles} available={w.available} />
 
 			<Card>
 				<CardHeader>
