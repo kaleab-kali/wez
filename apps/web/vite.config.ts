@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => ({
 			"#features": path.resolve(__dirname, "./src/features"),
 			"#shared": path.resolve(__dirname, "./src/shared"),
 			"#routes": path.resolve(__dirname, "./src/routes"),
+			"#components": path.resolve(__dirname, "./src/components"),
 		},
 	},
 	server: {

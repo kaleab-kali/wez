@@ -21,30 +21,28 @@ const NAV_FOR_ROLE: Record<WezTenantRole, ReadonlyArray<NavItem>> = {
 		{ label: "Dashboard", to: "/dashboard", exact: true },
 		// { label: "Jobs", to: "/jobs" },           // Phase 1D
 		// { label: "Training", to: "/training" },    // Phase 1H
-		// { label: "Placements", to: "/my-placements" }, // Phase 1E
 	],
 	employer_business: [
 		{ label: "Dashboard", to: "/dashboard", exact: true },
-		// { label: "Browse Workers", to: "/workers" },        // Phase 1C
+		{ label: "Workers", to: "/workers" },
 		// { label: "Hire Requests", to: "/hire-requests" },   // Phase 1D
 		// { label: "Job Posts", to: "/jobs" },                // Phase 1D
 	],
 	employer_household: [
 		{ label: "Dashboard", to: "/dashboard", exact: true },
-		// { label: "Browse Workers", to: "/workers" },        // Phase 1C
-		// { label: "Hire Requests", to: "/hire-requests" },   // Phase 1D
+		{ label: "Workers", to: "/workers" },
 	],
 	agent: [
 		{ label: "Dashboard", to: "/dashboard", exact: true },
-		// { label: "Workers", to: "/agent/workers" },          // Phase 1C
-		// { label: "Employers", to: "/agent/employers" },      // Phase 1D
-		// { label: "Hire Requests", to: "/agent/hire-requests" }, // Phase 1D
-		// { label: "Placements", to: "/agent/placements" },    // Phase 1E
-		// { label: "Complaints", to: "/agent/complaints" },    // Phase 1F
+		{ label: "Workers", to: "/workers" },
+		// { label: "Employers", to: "/employers" },           // Phase 1D
+		// { label: "Hire Requests", to: "/hire-requests" },   // Phase 1D
+		// { label: "Placements", to: "/placements" },         // Phase 1E
+		// { label: "Complaints", to: "/complaints" },         // Phase 1F
 	],
 	station_supervisor: [
 		{ label: "Dashboard", to: "/dashboard", exact: true },
-		// Same as agent + escalation queue
+		{ label: "Workers", to: "/workers" },
 	],
 	instructor: [
 		{ label: "Dashboard", to: "/dashboard", exact: true },

@@ -45,6 +45,7 @@ const seed = async () => {
 	await prisma.role.deleteMany();
 	await prisma.agentAssignment.deleteMany();
 	await prisma.station.deleteMany();
+	await prisma.lookup.deleteMany();
 	await prisma.notification.deleteMany();
 	await prisma.notificationPreference.deleteMany();
 	await prisma.notificationTemplate.deleteMany();
@@ -151,6 +152,45 @@ const seed = async () => {
 		await prisma.role.create({ data: r });
 	}
 	console.log(`  ${roles.length} roles`);
+
+	console.log("Seeding lookups...");
+	const lookups: Array<{
+		kind: string;
+		value: string;
+		labelEn: string;
+		labelAm: string;
+		sortOrder: number;
+	}> = [
+		// languages
+		{ kind: "languages", value: "am", labelEn: "Amharic", labelAm: "አማርኛ", sortOrder: 1 },
+		{ kind: "languages", value: "en", labelEn: "English", labelAm: "እንግሊዝኛ", sortOrder: 2 },
+		{ kind: "languages", value: "om", labelEn: "Oromiffa", labelAm: "ኦሮምኛ", sortOrder: 3 },
+		{ kind: "languages", value: "ti", labelEn: "Tigrinya", labelAm: "ትግርኛ", sortOrder: 4 },
+		{ kind: "languages", value: "ar", labelEn: "Arabic", labelAm: "ዓረብኛ", sortOrder: 5 },
+		// woredas (Addis Ababa subset)
+		{ kind: "woredas", value: "bole", labelEn: "Bole", labelAm: "ቦሌ", sortOrder: 1 },
+		{ kind: "woredas", value: "megenagna", labelEn: "Megenagna", labelAm: "መገናኛ", sortOrder: 2 },
+		{ kind: "woredas", value: "kazanchis", labelEn: "Kazanchis", labelAm: "ካዛንቺስ", sortOrder: 3 },
+		{ kind: "woredas", value: "mexico", labelEn: "Mexico", labelAm: "ሜክሲኮ", sortOrder: 4 },
+		{ kind: "woredas", value: "summit", labelEn: "Summit", labelAm: "ሰሚት", sortOrder: 5 },
+		{ kind: "woredas", value: "kirkos", labelEn: "Kirkos", labelAm: "ቂርቆስ", sortOrder: 6 },
+		{ kind: "woredas", value: "lideta", labelEn: "Lideta", labelAm: "ልደታ", sortOrder: 7 },
+		{ kind: "woredas", value: "addis_ketema", labelEn: "Addis Ketema", labelAm: "አዲስ ከተማ", sortOrder: 8 },
+		{ kind: "woredas", value: "gulele", labelEn: "Gulele", labelAm: "ጉለሌ", sortOrder: 9 },
+		{ kind: "woredas", value: "yeka", labelEn: "Yeka", labelAm: "የካ", sortOrder: 10 },
+		{ kind: "woredas", value: "akaki_kaliti", labelEn: "Akaki Kaliti", labelAm: "አቃቂ ቃሊቲ", sortOrder: 11 },
+		{ kind: "woredas", value: "kolfe_keranio", labelEn: "Kolfe Keranio", labelAm: "ኮልፌ ቀራኒዮ", sortOrder: 12 },
+		// religions (opt-in)
+		{ kind: "religions", value: "orthodox", labelEn: "Orthodox", labelAm: "ኦርቶዶክስ", sortOrder: 1 },
+		{ kind: "religions", value: "muslim", labelEn: "Muslim", labelAm: "ሙስሊም", sortOrder: 2 },
+		{ kind: "religions", value: "protestant", labelEn: "Protestant", labelAm: "ፕሮቴስታንት", sortOrder: 3 },
+		{ kind: "religions", value: "catholic", labelEn: "Catholic", labelAm: "ካቶሊክ", sortOrder: 4 },
+		{ kind: "religions", value: "prefer_not_to_say", labelEn: "Prefer not to say", labelAm: "ላልመረጡ", sortOrder: 99 },
+	];
+	for (const l of lookups) {
+		await prisma.lookup.create({ data: l });
+	}
+	console.log(`  ${lookups.length} lookups`);
 
 	console.log("Seeding notification templates...");
 	const templates = [

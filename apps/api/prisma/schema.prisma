@@ -277,6 +277,26 @@ model AuditEvent {
 }
 
 // ============================================================
+// WEZ DOMAIN — HQ-managed Lookups (languages, woredas, religions, etc.)
+// ============================================================
+
+model Lookup {
+  id          String   @id @default(cuid())
+  kind        String
+  value       String
+  labelEn     String
+  labelAm     String?
+  sortOrder   Int      @default(0)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([kind, value])
+  @@index([kind, archived])
+  @@map("lookup")
+}
+
+// ============================================================
 // WEZ DOMAIN — Roles & Stations
 // ============================================================
 
