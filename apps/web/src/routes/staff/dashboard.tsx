@@ -7,13 +7,9 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { authClient } from "#shared/lib/auth-client";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-export const Route = createFileRoute("/staff/dashboard")({
-	component: DashboardPage,
-});
 
 const QuickAction = React.memo(
 	({
@@ -45,14 +41,13 @@ const QuickAction = React.memo(
 );
 QuickAction.displayName = "QuickAction";
 
-function DashboardPage() {
+const DashboardPage = React.memo(() => {
 	const { t } = useTranslation();
-	const { data: session } = authClient.useSession();
+	const { data: session } = useAdminSession();
 	const user = session?.user as { name?: string; role?: string } | undefined;
-	const role = user?.role ?? "worker";
+	const role = user?.role ?? "support";
 	const name = user?.name ?? "";
 	const isAgent = role === "agent" || role === "station_supervisor";
-	const isEmployer = role === "employer_business" || role === "employer_household";
 
 	return (
 		<div className="space-y-8 max-w-6xl">
@@ -66,34 +61,30 @@ function DashboardPage() {
 				</Badge>
 			</header>
 
-			{(isAgent || isEmployer) && (
+			{isAgent && (
 				<section className="space-y-3">
 					<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
 						{t("dashboard.quickActions")}
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 						<QuickAction
-							to="/workers"
+							to="/staff/workers"
 							title={t("dashboard.browseWorkersTitle")}
 							description={t("dashboard.browseWorkersDesc")}
 							icon={UserMultipleIcon}
 						/>
-						{isAgent && (
-							<>
-								<QuickAction
-									to="/workers/new"
-									title={t("dashboard.registerWorkerTitle")}
-									description={t("dashboard.registerWorkerDesc")}
-									icon={Edit01Icon}
-								/>
-								<QuickAction
-									to="/dashboard"
-									title={t("dashboard.placementsTitle")}
-									description={t("dashboard.placementsDesc")}
-									icon={Briefcase02Icon}
-								/>
-							</>
-						)}
+						<QuickAction
+							to="/staff/workers/new"
+							title={t("dashboard.registerWorkerTitle")}
+							description={t("dashboard.registerWorkerDesc")}
+							icon={Edit01Icon}
+						/>
+						<QuickAction
+							to="/staff/dashboard"
+							title={t("dashboard.placementsTitle")}
+							description={t("dashboard.placementsDesc")}
+							icon={Briefcase02Icon}
+						/>
 					</div>
 				</section>
 			)}
@@ -106,4 +97,9 @@ function DashboardPage() {
 			</Card>
 		</div>
 	);
-}
+});
+DashboardPage.displayName = "DashboardPage";
+
+export const Route = createFileRoute("/staff/dashboard")({
+	component: DashboardPage,
+});

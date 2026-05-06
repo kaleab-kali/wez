@@ -1,9 +1,11 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { PinoLogger } from "nestjs-pino";
 import { CreateErrorReportDto } from "./dto/create-error-report.dto";
 
 @ApiTags("Error Reporting")
+@AllowAnonymous()
 @Controller("error-reports")
 export class ErrorReportingController {
 	constructor(private readonly logger: PinoLogger) {

@@ -25,18 +25,27 @@ function HireRequestsPage() {
 	const [filter, setFilter] = React.useState<HireRequestFilter>({ page: 1, limit: 20 });
 	const { data, isLoading } = useHireRequests(filter);
 
-	const statusLabel = (s: HireRequest["status"]) => {
-		switch (s) {
-			case "awaiting_visit":
-				return t("hireRequests.statusAwaiting");
-			case "completed":
-				return t("hireRequests.statusCompleted");
-			case "cancelled":
-				return t("hireRequests.statusCancelled");
-			case "expired":
-				return t("hireRequests.statusExpired");
-		}
-	};
+	const requestTitle = React.useCallback((request: HireRequest) => {
+		const workerName = request.workerName ?? `Worker ${request.workerId.slice(0, 8)}`;
+		const employerName = request.employerName ?? `Employer ${request.employerId.slice(0, 8)}`;
+		return `${workerName} -> ${employerName}`;
+	}, []);
+
+	const statusLabel = React.useCallback(
+		(s: HireRequest["status"]) => {
+			switch (s) {
+				case "awaiting_visit":
+					return t("hireRequests.statusAwaiting");
+				case "completed":
+					return t("hireRequests.statusCompleted");
+				case "cancelled":
+					return t("hireRequests.statusCancelled");
+				case "expired":
+					return t("hireRequests.statusExpired");
+			}
+		},
+		[t],
+	);
 
 	return (
 		<div className="space-y-4 max-w-5xl">
@@ -47,7 +56,13 @@ function HireRequestsPage() {
 				</div>
 				<select
 					value={filter.status ?? ""}
-					onChange={(e) => setFilter({ ...filter, status: (e.target.value || undefined) as HireRequest["status"] | undefined, page: 1 })}
+					onChange={(e) =>
+						setFilter({
+							...filter,
+							status: (e.target.value || undefined) as HireRequest["status"] | undefined,
+							page: 1,
+						})
+					}
 					className="rounded-md border border-input bg-background px-3 py-2 text-sm"
 				>
 					<option value="">{t("common.any")}</option>
@@ -64,9 +79,9 @@ function HireRequestsPage() {
 						<CardHeader className="pb-3">
 							<div className="flex items-start justify-between gap-2">
 								<div className="min-w-0">
-									<CardTitle className="text-sm font-mono">{r.id.slice(0, 8)}</CardTitle>
+									<CardTitle className="text-sm">{requestTitle(r)}</CardTitle>
 									<p className="text-xs text-muted-foreground mt-1">
-										worker {r.workerId.slice(0, 8)} · employer {r.employerId.slice(0, 8)} · {r.roleId}
+										{r.roleName ?? r.roleId} - {r.stationName ?? r.stationId.slice(0, 8)} - request {r.id.slice(0, 8)}
 									</p>
 								</div>
 								<Badge variant={STATUS_VARIANT[r.status]}>{statusLabel(r.status)}</Badge>

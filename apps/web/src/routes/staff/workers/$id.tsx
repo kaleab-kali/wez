@@ -5,7 +5,7 @@ import { useEmployers } from "#features/employers/api/employer.queries";
 import { useCreateHireRequest } from "#features/hire-requests/api/hire-request.queries";
 import { usePublicStations } from "#features/stations/api/station.queries";
 import { useWorker } from "#features/workers/api/worker.queries";
-import { authClient } from "#shared/lib/auth-client";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,14 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/staff/workers/$id")({
-	component: WorkerDetailPage,
-});
-
 const HireRequestForm = React.memo(
 	({ workerId, workerRoles, available }: { readonly workerId: string; readonly workerRoles: string[]; readonly available: boolean }) => {
 		const { t } = useTranslation();
-		const { data: session } = authClient.useSession();
+		const { data: session } = useAdminSession();
 		const role = (session?.user as { role?: string } | undefined)?.role;
 		const isAgent = role === "agent" || role === "station_supervisor";
 
@@ -170,7 +166,7 @@ const HireRequestForm = React.memo(
 );
 HireRequestForm.displayName = "HireRequestForm";
 
-function WorkerDetailPage() {
+const WorkerDetailPage = React.memo(() => {
 	const { t } = useTranslation();
 	const { id } = Route.useParams();
 	const { data, isLoading } = useWorker(id);
@@ -189,7 +185,7 @@ function WorkerDetailPage() {
 	return (
 		<div className="max-w-3xl space-y-4">
 			<div>
-				<Link to="/workers" className="text-sm text-muted-foreground hover:text-foreground transition">
+				<Link to="/staff/workers" className="text-sm text-muted-foreground hover:text-foreground transition">
 					&larr; {t("workers.profile.backToWorkers")}
 				</Link>
 				<div className="mt-3 flex items-start justify-between flex-wrap gap-3">
@@ -302,4 +298,9 @@ function WorkerDetailPage() {
 			</Card>
 		</div>
 	);
-}
+});
+WorkerDetailPage.displayName = "WorkerDetailPage";
+
+export const Route = createFileRoute("/staff/workers/$id")({
+	component: WorkerDetailPage,
+});

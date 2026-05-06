@@ -1,7 +1,6 @@
 import { CanActivate, type ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { fromNodeHeaders } from "better-auth/node";
-import { auth } from "../auth.config";
+import { getSession } from "#shared/auth/session";
 import { hasPermission, type Permission } from "../permissions";
 
 export const PERMISSIONS_KEY = "permissions";
@@ -19,10 +18,10 @@ export class PermissionsGuard implements CanActivate {
 		if (!required || required.length === 0) return true;
 
 		const request = context.switchToHttp().getRequest();
-		const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+		const session = request.wezSession ?? await getSession(request);
 		if (!session?.user) throw new UnauthorizedException("Authentication required");
 
-		const role = (session.user as { role?: string }).role;
+		const role = session.user.role;
 		for (const perm of required) {
 			if (!hasPermission(role, perm)) {
 				throw new ForbiddenException({ code: "MISSING_PERMISSION", message: `Missing permission: ${perm}` });
@@ -31,6 +30,7 @@ export class PermissionsGuard implements CanActivate {
 
 		request.user = session.user;
 		request.session = session.session;
+		request.wezSession = session;
 		return true;
 	}
 }

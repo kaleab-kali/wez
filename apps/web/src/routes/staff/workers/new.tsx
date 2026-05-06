@@ -409,7 +409,7 @@ function NewWorkerPage() {
 				roles: state.roles,
 				stationId: state.stationId,
 			});
-			navigate({ to: "/workers/$id", params: { id: created.id } });
+			navigate({ to: "/staff/workers/$id", params: { id: created.id } });
 		} catch (err) {
 			setError(err instanceof Error ? err.message : t("common.error"));
 		}
@@ -431,7 +431,7 @@ function NewWorkerPage() {
 	return (
 		<div className="max-w-3xl space-y-4">
 			<div>
-				<Link to="/workers" className="text-sm text-muted-foreground hover:text-foreground transition">
+				<Link to="/staff/workers" className="text-sm text-muted-foreground hover:text-foreground transition">
 					&larr; {t("workers.profile.backToWorkers")}
 				</Link>
 				<h1 className="text-2xl font-bold tracking-tight mt-2">{t("workers.register.title")}</h1>

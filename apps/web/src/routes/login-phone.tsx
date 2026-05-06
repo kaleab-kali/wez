@@ -50,7 +50,7 @@ const PhoneLoginForm = React.memo(
 				try {
 					const res = await authClient.phoneNumber.verify({ phoneNumber: phone, code });
 					if (res.error) throw new Error(res.error.message ?? "Wrong code");
-					window.location.href = "/dashboard";
+					window.location.href = "/app/dashboard";
 				} catch (err) {
 					setError(err instanceof Error ? err.message : "Wrong code");
 				} finally {

@@ -44,7 +44,7 @@ export const AdminSidebar = React.memo(
 
 		const onSignOut = React.useCallback(async () => {
 			await adminAuthApi.logout();
-			window.location.href = "/staff-admin-login";
+			window.location.href = "/staff-login";
 		}, []);
 
 		return (

@@ -6,6 +6,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AdminModule } from "#modules/admin/admin.module";
 import { AuthModule } from "#modules/auth/auth.module";
+import { WezAuthGuard } from "#modules/auth/guards/wez-auth.guard";
 import { EmployersModule } from "#modules/employers/employers.module";
 import { ErrorReportingModule } from "#modules/error-reporting/error-reporting.module";
 import { HealthModule } from "#modules/health/health.module";
@@ -50,6 +51,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 	],
 	providers: [
 		{ provide: APP_FILTER, useClass: GlobalExceptionFilter },
+		{ provide: APP_GUARD, useClass: WezAuthGuard },
 		{ provide: APP_GUARD, useClass: ThrottlerGuard },
 	],
 })

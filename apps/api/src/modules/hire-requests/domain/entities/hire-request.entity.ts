@@ -4,11 +4,15 @@ export type HireRequestChannel = "online" | "in_person";
 export interface HireRequest {
 	id: string;
 	employerId: string;
+	employerName?: string;
 	workerId: string;
+	workerName?: string;
 	roleId: string;
+	roleName?: string;
 	jobId: string | null;
 	proposedSalaryCents: bigint;
 	stationId: string;
+	stationName?: string;
 	status: HireRequestStatus;
 	channel: HireRequestChannel;
 	note: string | null;

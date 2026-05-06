@@ -1,13 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { useEmployer } from "#features/employers/api/employer.queries";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-
-export const Route = createFileRoute("/staff/employers/$id")({
-	component: EmployerDetailPage,
-});
 
 const RATING_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
 	green: "default",
@@ -16,7 +13,7 @@ const RATING_VARIANT: Record<string, "default" | "secondary" | "outline" | "dest
 	red: "destructive",
 };
 
-function EmployerDetailPage() {
+const EmployerDetailPage = React.memo(() => {
 	const { t } = useTranslation();
 	const { id } = Route.useParams();
 	const { data: e, isLoading } = useEmployer(id);
@@ -27,7 +24,7 @@ function EmployerDetailPage() {
 	return (
 		<div className="max-w-3xl space-y-4">
 			<div>
-				<Link to="/employers" className="text-sm text-muted-foreground hover:text-foreground">
+				<Link to="/staff/employers" className="text-sm text-muted-foreground hover:text-foreground">
 					&larr; {t("employers.title")}
 				</Link>
 				<div className="mt-3 flex items-start justify-between flex-wrap gap-3">
@@ -106,4 +103,9 @@ function EmployerDetailPage() {
 			</Card>
 		</div>
 	);
-}
+});
+EmployerDetailPage.displayName = "EmployerDetailPage";
+
+export const Route = createFileRoute("/staff/employers/$id")({
+	component: EmployerDetailPage,
+});

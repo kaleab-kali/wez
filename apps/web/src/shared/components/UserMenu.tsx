@@ -32,7 +32,7 @@ export const UserMenu = React.memo(
 		}, [theme, setTheme]);
 
 		const handleSettings = React.useCallback(() => {
-			navigate({ to: "/dashboard" });
+			navigate({ to: "/app/dashboard" });
 		}, [navigate]);
 
 		const userName = session?.user?.name || t("common.user");

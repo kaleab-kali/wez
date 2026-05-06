@@ -56,7 +56,7 @@ function RegisterEmployerPage() {
 					businessLicense: type === "business" ? businessLicense : undefined,
 					fayda: type === "household" ? fayda : undefined,
 				});
-				navigate({ to: "/employers/$id", params: { id: created.id } });
+				navigate({ to: "/staff/employers/$id", params: { id: created.id } });
 			} catch (err) {
 				setError(err instanceof Error ? err.message : t("common.error"));
 			}
@@ -67,7 +67,7 @@ function RegisterEmployerPage() {
 	return (
 		<div className="max-w-2xl space-y-4">
 			<div>
-				<Link to="/employers" className="text-sm text-muted-foreground hover:text-foreground">
+				<Link to="/staff/employers" className="text-sm text-muted-foreground hover:text-foreground">
 					&larr; {t("employers.title")}
 				</Link>
 				<h1 className="text-2xl font-bold tracking-tight mt-2">{t("employers.register")}</h1>

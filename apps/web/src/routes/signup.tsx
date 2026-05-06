@@ -71,7 +71,7 @@ function EmployerSignupPage() {
 					fayda: type === "household" ? fayda : undefined,
 				});
 
-				navigate({ to: "/dashboard" });
+				navigate({ to: "/app/dashboard" });
 			} catch (err) {
 				setError(err instanceof Error ? err.message : t("common.error"));
 			} finally {

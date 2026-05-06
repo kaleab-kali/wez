@@ -13,11 +13,15 @@ import type { IHireRequestsRepository } from "../../domain/repositories/hire-req
 type Row = {
 	id: string;
 	employerId: string;
+	employer?: { name: string } | null;
 	workerId: string;
+	worker?: { fullName: string } | null;
 	roleId: string;
+	role?: { name: string } | null;
 	jobId: string | null;
 	proposedSalaryCents: bigint;
 	stationId: string;
+	station?: { name: string } | null;
 	status: string;
 	channel: string;
 	note: string | null;
@@ -30,14 +34,25 @@ type Row = {
 	updatedAt: Date;
 };
 
+const HIRE_REQUEST_SUMMARY_INCLUDE = {
+	employer: { select: { name: true } },
+	worker: { select: { fullName: true } },
+	role: { select: { name: true } },
+	station: { select: { name: true } },
+} as const;
+
 const toReq = (row: Row): HireRequest => ({
 	id: row.id,
 	employerId: row.employerId,
+	employerName: row.employer?.name,
 	workerId: row.workerId,
+	workerName: row.worker?.fullName,
 	roleId: row.roleId,
+	roleName: row.role?.name,
 	jobId: row.jobId,
 	proposedSalaryCents: row.proposedSalaryCents,
 	stationId: row.stationId,
+	stationName: row.station?.name,
 	status: row.status as HireRequestStatus,
 	channel: row.channel as HireRequestChannel,
 	note: row.note,
@@ -55,7 +70,10 @@ export class PrismaHireRequestsRepository implements IHireRequestsRepository {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async findById(id: string) {
-		const row = await this.prisma.hireRequest.findUnique({ where: { id } });
+		const row = await this.prisma.hireRequest.findUnique({
+			where: { id },
+			include: HIRE_REQUEST_SUMMARY_INCLUDE,
+		});
 		return row ? toReq(row as unknown as Row) : null;
 	}
 
@@ -74,12 +92,17 @@ export class PrismaHireRequestsRepository implements IHireRequestsRepository {
 				sourceReferralId: data.sourceReferralId,
 				expiresAt: data.expiresAt,
 			},
+			include: HIRE_REQUEST_SUMMARY_INCLUDE,
 		});
 		return toReq(row as unknown as Row);
 	}
 
 	async update(id: string, patch: HireRequestPatch) {
-		const row = await this.prisma.hireRequest.update({ where: { id }, data: patch });
+		const row = await this.prisma.hireRequest.update({
+			where: { id },
+			data: patch,
+			include: HIRE_REQUEST_SUMMARY_INCLUDE,
+		});
 		return toReq(row as unknown as Row);
 	}
 
@@ -96,6 +119,7 @@ export class PrismaHireRequestsRepository implements IHireRequestsRepository {
 		const [rows, total] = await Promise.all([
 			this.prisma.hireRequest.findMany({
 				where: where as never,
+				include: HIRE_REQUEST_SUMMARY_INCLUDE,
 				orderBy: { createdAt: "desc" },
 				skip: (page - 1) * limit,
 				take: limit,

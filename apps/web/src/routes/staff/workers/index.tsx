@@ -207,7 +207,7 @@ const WorkerCard = React.memo(
 		const { t } = useTranslation();
 		return (
 			<Link
-				to="/workers/$id"
+				to="/staff/workers/$id"
 				params={{ id: w.id }}
 				className="block group"
 			>
@@ -286,7 +286,7 @@ function WorkerBrowsePage() {
 						{t("workers.count", { count: total })}
 					</p>
 				</div>
-				<Link to="/workers/new">
+				<Link to="/staff/workers/new">
 					<Button>
 						<HugeiconsIcon icon={UserAdd01Icon} className="size-4 mr-2" />
 						{t("workers.registerCta")}

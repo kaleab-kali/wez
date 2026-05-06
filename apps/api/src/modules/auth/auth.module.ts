@@ -3,7 +3,7 @@ import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
 import { auth } from "./auth.config";
 
 @Module({
-	imports: [BetterAuthModule.forRoot({ auth })],
+	imports: [BetterAuthModule.forRoot({ auth, disableGlobalAuthGuard: true })],
 	exports: [BetterAuthModule],
 })
 export class AuthModule {}

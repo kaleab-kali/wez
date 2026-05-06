@@ -25,7 +25,7 @@ const EmployerCard = React.memo(
 	({ e }: { readonly e: Employer }) => {
 		const { t } = useTranslation();
 		return (
-			<Link to="/employers/$id" params={{ id: e.id }} className="block group">
+			<Link to="/staff/employers/$id" params={{ id: e.id }} className="block group">
 				<Card className="h-full transition-all group-hover:border-primary/40 group-hover:shadow-sm">
 					<CardHeader className="pb-3">
 						<div className="flex items-start justify-between gap-2">
@@ -73,7 +73,7 @@ function EmployersBrowsePage() {
 					<h1 className="text-2xl font-bold tracking-tight">{t("employers.title")}</h1>
 					<p className="text-sm text-muted-foreground mt-1">{data?.meta.total ?? 0}</p>
 				</div>
-				<Link to="/employers/new">
+				<Link to="/staff/employers/new">
 					<Button>
 						<HugeiconsIcon icon={UserAdd01Icon} className="size-4 mr-2" />
 						{t("employers.register")}

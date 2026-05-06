@@ -24,7 +24,7 @@ const AdminLoginForm = React.memo(
 				setLoading(true);
 				try {
 					await adminAuthApi.login(email, password);
-					window.location.href = "/staff-admin";
+					window.location.href = "/staff/dashboard";
 				} catch (err) {
 					setError(err instanceof Error ? err.message : "Invalid credentials");
 					setLoading(false);
@@ -42,15 +42,15 @@ const AdminLoginForm = React.memo(
 		}, []);
 
 		return (
-			<Card className="w-full max-w-sm border-destructive/20">
+			<Card className="w-full max-w-sm">
 				<CardHeader className="space-y-1">
 					<div className="flex items-center justify-center mb-2">
-						<div className="rounded-lg bg-destructive/10 p-2">
-							<div className="text-destructive text-sm font-bold">HQ ADMIN</div>
+						<div className="rounded-lg bg-primary/10 p-2">
+							<div className="text-primary text-sm font-bold">WEZ STAFF</div>
 						</div>
 					</div>
-					<CardTitle className="text-2xl font-bold text-center">Wez HQ Console</CardTitle>
-					<CardDescription className="text-center">Authorized HQ staff only</CardDescription>
+					<CardTitle className="text-2xl font-bold text-center">Staff sign-in</CardTitle>
+					<CardDescription className="text-center">Station agents, supervisors, and HQ staff</CardDescription>
 				</CardHeader>
 				<form onSubmit={handleSubmit}>
 					<CardContent className="space-y-4">
@@ -82,8 +82,8 @@ const AdminLoginForm = React.memo(
 						</div>
 					</CardContent>
 					<CardFooter>
-						<Button type="submit" className="w-full" variant="destructive" disabled={loading}>
-							{loading ? "Authenticating..." : "Sign in to HQ"}
+						<Button type="submit" className="w-full" disabled={loading}>
+							{loading ? "Authenticating..." : "Sign in"}
 						</Button>
 					</CardFooter>
 				</form>

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { WezLogo } from "#components/branding/WezLogo";
 import { LanguageSwitcher } from "#shared/components/LanguageSwitcher";
@@ -7,11 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/")({
-	component: RootIndex,
-});
-
-function RootIndex() {
+const RootIndex = React.memo(() => {
 	const { t } = useTranslation();
 	const { data: session, isPending } = authClient.useSession();
 
@@ -23,7 +20,7 @@ function RootIndex() {
 		);
 	}
 
-	if (session) return <Navigate to="/dashboard" />;
+	if (session) return <Navigate to="/app/dashboard" />;
 
 	return (
 		<div className="min-h-screen flex flex-col">
@@ -45,61 +42,48 @@ function RootIndex() {
 			</header>
 
 			<main className="flex-1">
-				<section className="max-w-4xl mx-auto px-6 py-20 text-center">
+				<section className="max-w-4xl mx-auto px-6 py-16 text-center">
 					<h1 className="text-4xl md:text-5xl font-bold tracking-tight">
 						{t("landing.heroTitle")}
 					</h1>
 					<p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
 						{t("landing.heroBody")}
 					</p>
+					<div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+						<Link to="/signup">
+							<Button size="lg">{t("landing.employerCta")}</Button>
+						</Link>
+						<Link to="/staff-login">
+							<Button size="lg" variant="outline">
+								{t("landing.staffCta")}
+							</Button>
+						</Link>
+					</div>
 				</section>
 
-				<section className="max-w-4xl mx-auto px-6 pb-20">
-					<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground text-center mb-6">
-						{t("landing.chooseRole")}
-					</h2>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<Link to="/login-phone" className="block group">
-							<Card className="h-full transition-all group-hover:border-primary group-hover:shadow-md">
-								<CardHeader>
-									<CardTitle>{t("landing.workerTitle")}</CardTitle>
-									<CardDescription>{t("landing.workerBody")}</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<Button variant="outline" className="w-full">
-										{t("landing.workerCta")}
-									</Button>
-								</CardContent>
-							</Card>
-						</Link>
-
-						<Link to="/signup-employer" className="block group">
-							<Card className="h-full transition-all group-hover:border-primary group-hover:shadow-md">
-								<CardHeader>
-									<CardTitle>{t("landing.employerTitle")}</CardTitle>
-									<CardDescription>{t("landing.employerBody")}</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<Button variant="outline" className="w-full">
-										{t("landing.employerCta")}
-									</Button>
-								</CardContent>
-							</Card>
-						</Link>
-
-						<Link to="/login" className="block group">
-							<Card className="h-full transition-all group-hover:border-primary group-hover:shadow-md">
-								<CardHeader>
-									<CardTitle>{t("landing.staffTitle")}</CardTitle>
-									<CardDescription>{t("landing.staffBody")}</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<Button variant="outline" className="w-full">
-										{t("landing.staffCta")}
-									</Button>
-								</CardContent>
-							</Card>
-						</Link>
+				<section className="max-w-5xl mx-auto px-6 pb-20">
+					<div className="grid gap-4 md:grid-cols-3">
+						<Card>
+							<CardHeader>
+								<CardTitle>{t("landing.stationLedTitle")}</CardTitle>
+								<CardDescription>{t("landing.stationLedBody")}</CardDescription>
+							</CardHeader>
+							<CardContent className="text-sm text-muted-foreground">{t("landing.stationLedDetail")}</CardContent>
+						</Card>
+						<Card>
+							<CardHeader>
+								<CardTitle>{t("landing.verifiedTitle")}</CardTitle>
+								<CardDescription>{t("landing.verifiedBody")}</CardDescription>
+							</CardHeader>
+							<CardContent className="text-sm text-muted-foreground">{t("landing.verifiedDetail")}</CardContent>
+						</Card>
+						<Card>
+							<CardHeader>
+								<CardTitle>{t("landing.auditTitle")}</CardTitle>
+								<CardDescription>{t("landing.auditBody")}</CardDescription>
+							</CardHeader>
+							<CardContent className="text-sm text-muted-foreground">{t("landing.auditDetail")}</CardContent>
+						</Card>
 					</div>
 				</section>
 			</main>
@@ -111,4 +95,9 @@ function RootIndex() {
 			</footer>
 		</div>
 	);
-}
+});
+RootIndex.displayName = "RootIndex";
+
+export const Route = createFileRoute("/")({
+	component: RootIndex,
+});

@@ -30,11 +30,15 @@ export type HireRequestStatus = "awaiting_visit" | "completed" | "cancelled" | "
 export type HireRequest = {
 	id: string;
 	employerId: string;
+	employerName?: string;
 	workerId: string;
+	workerName?: string;
 	roleId: string;
+	roleName?: string;
 	jobId: string | null;
 	proposedSalaryCents: string;
 	stationId: string;
+	stationName?: string;
 	status: HireRequestStatus;
 	channel: "online" | "in_person";
 	note: string | null;

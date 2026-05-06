@@ -15,6 +15,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { WezLogo } from "#components/branding/WezLogo";
 import { adminAuthApi, useAdminSession } from "#shared/lib/admin-auth-client";
+import { isHqAdminRole } from "#shared/lib/staff-roles";
 import {
 	Sidebar,
 	SidebarContent,
@@ -43,24 +44,15 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 ];
 
 // HQ admin sidebar — only visible to roles that manage platform-wide config.
-const HQ_ROLES = new Set([
-	"super_admin",
-	"ops_manager",
-	"compliance_officer",
-	"hr_manager",
-	"finance_manager",
-	"it_manager",
-	"training_manager",
-]);
-
 const ADMINISTRATION: ReadonlyArray<NavItem> = [
+	{ labelKey: "admin.nav.overview", to: "/staff-admin", icon: DashboardSquare01Icon },
 	{ labelKey: "admin.nav.stations", to: "/staff-admin/stations", icon: StoreLocation02Icon },
 	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon },
 	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon },
+	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 ];
 
 const ACCOUNT: ReadonlyArray<NavItem> = [
-	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 	{ labelKey: "admin.nav.sessions", to: "/staff-admin/sessions", icon: UserMultipleIcon },
 ];
 
@@ -70,7 +62,7 @@ export const AppSidebar = React.memo(
 		const { data: session } = useAdminSession();
 		const user = session?.user as { name?: string; email?: string; role?: string } | undefined;
 		const role = user?.role;
-		const showHQ = !!role && HQ_ROLES.has(role);
+		const showHQ = isHqAdminRole(role);
 		const location = useLocation();
 
 		const onSignOut = React.useCallback(async () => {
@@ -130,12 +122,14 @@ export const AppSidebar = React.memo(
 						</SidebarGroup>
 					)}
 
-					<SidebarGroup>
-						<SidebarGroupLabel>{t("admin.platformAdmin")}</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>{renderItems(ACCOUNT)}</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
+					{showHQ && (
+						<SidebarGroup>
+							<SidebarGroupLabel>{t("admin.nav.account")}</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>{renderItems(ACCOUNT)}</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					)}
 				</SidebarContent>
 
 				<SidebarFooter className="border-t">
