@@ -52,6 +52,7 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon },
 	{ labelKey: "admin.nav.hiringPolicy", to: "/staff-admin/hiring-policy", icon: NoteEditIcon },
 	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon },
+	{ labelKey: "admin.nav.auditLog", to: "/staff-admin/audit-log", icon: SecurityIcon },
 	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 ];
 
