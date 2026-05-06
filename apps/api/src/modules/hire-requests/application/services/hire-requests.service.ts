@@ -51,6 +51,12 @@ export class HireRequestsService {
 			return this.list({ ...filter, employerId: employer.id });
 		}
 
+		if (session.user.role === "worker") {
+			const worker = await this.workers.findByUserId(session.user.id);
+			if (!worker) throw new ForbiddenException({ code: "NO_WORKER_PROFILE" });
+			return this.list({ ...filter, workerId: worker.id, employerId: undefined });
+		}
+
 		return this.list(filter);
 	}
 

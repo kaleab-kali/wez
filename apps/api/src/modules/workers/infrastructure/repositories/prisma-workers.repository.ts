@@ -82,6 +82,14 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 		return row ? toWorker(row as unknown as Row) : null;
 	}
 
+	async findByUserId(userId: string) {
+		const row = await this.prisma.worker.findFirst({
+			where: { userId, deletedAt: null },
+			include: { workerRoles: true },
+		});
+		return row ? toWorker(row as unknown as Row) : null;
+	}
+
 	async findByFayda(fayda: string) {
 		const row = await this.prisma.worker.findFirst({
 			where: { fayda, deletedAt: null },
