@@ -144,13 +144,24 @@ function RegisterEmployerPage() {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="lic">{t("landing.businessLicense")}</Label>
-									<Input id="lic" value={businessLicense} onChange={(e) => setBusinessLicense(e.target.value)} required />
+									<Input
+										id="lic"
+										value={businessLicense}
+										onChange={(e) => setBusinessLicense(e.target.value)}
+										required
+									/>
 								</div>
 							</>
 						) : (
 							<div className="space-y-2">
 								<Label htmlFor="fayda">{t("workers.register.fayda")}</Label>
-								<Input id="fayda" value={fayda} onChange={(e) => setFayda(e.target.value)} placeholder="F-XXXX-XXXX-XX" required />
+								<Input
+									id="fayda"
+									value={fayda}
+									onChange={(e) => setFayda(e.target.value)}
+									placeholder="F-XXXX-XXXX-XX"
+									required
+								/>
 							</div>
 						)}
 						<Button type="submit" className="w-full" disabled={createE.isPending}>

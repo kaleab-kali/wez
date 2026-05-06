@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE = "/api/v1/workers";
 
-const get = async <T,>(url: string): Promise<T> => {
+const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -11,7 +11,7 @@ const get = async <T,>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T,>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
@@ -122,8 +122,7 @@ export const useRegisterWorker = () => {
 export const useUpdateWorker = (id: string) => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (patch: Partial<Worker>) =>
-			send<{ data: Worker }>(`${BASE}/${id}`, "PATCH", patch).then((b) => b.data),
+		mutationFn: (patch: Partial<Worker>) => send<{ data: Worker }>(`${BASE}/${id}`, "PATCH", patch).then((b) => b.data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: workerKeys.lists() });
 			qc.invalidateQueries({ queryKey: workerKeys.detail(id) });

@@ -1,17 +1,7 @@
-import {
-	Body,
-	Controller,
-	Get,
-	Param,
-	Patch,
-	Post,
-	Query,
-	Req,
-	UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
-import { requireSession } from "#shared/auth/session";
 import { CreateLookupDto, UpdateLookupDto } from "../../application/dto/lookup.dto";
 import { LookupsService } from "../../application/services/lookups.service";
 
@@ -47,14 +37,14 @@ export class LookupsAdminController {
 }
 
 @ApiTags("Lookups (read-only)")
+@AllowAnonymous()
 @Controller("lookups")
 export class LookupsPublicController {
 	constructor(private readonly service: LookupsService) {}
 
 	@Get(":kind")
-	@ApiOperation({ summary: "List active lookups for a kind (any authenticated user)" })
-	async list(@Param("kind") kind: string, @Req() req: any) {
-		await requireSession(req);
+	@ApiOperation({ summary: "List active lookups for a kind" })
+	async list(@Param("kind") kind: string) {
 		const data = await this.service.listByKind(kind, false);
 		return { data, meta: { total: data.length } };
 	}

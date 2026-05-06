@@ -6,7 +6,9 @@ import type { IJobsRepository } from "../../domain/repositories/jobs.repository"
 type Row = {
 	id: string;
 	employerId: string;
+	employer?: { name: string; type: string } | null;
 	roleId: string;
+	role?: { name: string } | null;
 	title: string;
 	description: string;
 	salaryMinCents: bigint;
@@ -21,7 +23,10 @@ type Row = {
 const toJob = (row: Row): Job => ({
 	id: row.id,
 	employerId: row.employerId,
+	employerName: row.employer?.name,
+	employerType: row.employer?.type,
 	roleId: row.roleId,
+	roleName: row.role?.name,
 	title: row.title,
 	description: row.description,
 	salaryMinCents: row.salaryMinCents,
@@ -33,12 +38,20 @@ const toJob = (row: Row): Job => ({
 	updatedAt: row.updatedAt,
 });
 
+const JOB_SUMMARY_INCLUDE = {
+	employer: { select: { name: true, type: true } },
+	role: { select: { name: true } },
+} as const;
+
 @Injectable()
 export class PrismaJobsRepository implements IJobsRepository {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async findById(id: string) {
-		const row = await this.prisma.job.findFirst({ where: { id, deletedAt: null } });
+		const row = await this.prisma.job.findFirst({
+			where: { id, deletedAt: null },
+			include: JOB_SUMMARY_INCLUDE,
+		});
 		return row ? toJob(row as unknown as Row) : null;
 	}
 
@@ -54,12 +67,17 @@ export class PrismaJobsRepository implements IJobsRepository {
 				location: data.location,
 				status: data.status,
 			},
+			include: JOB_SUMMARY_INCLUDE,
 		});
 		return toJob(row as unknown as Row);
 	}
 
 	async update(id: string, patch: JobPatch) {
-		const row = await this.prisma.job.update({ where: { id }, data: patch });
+		const row = await this.prisma.job.update({
+			where: { id },
+			data: patch,
+			include: JOB_SUMMARY_INCLUDE,
+		});
 		return toJob(row as unknown as Row);
 	}
 
@@ -82,6 +100,7 @@ export class PrismaJobsRepository implements IJobsRepository {
 		const [rows, total] = await Promise.all([
 			this.prisma.job.findMany({
 				where: where as never,
+				include: JOB_SUMMARY_INCLUDE,
 				orderBy: { postedAt: "desc" },
 				skip: (page - 1) * limit,
 				take: limit,

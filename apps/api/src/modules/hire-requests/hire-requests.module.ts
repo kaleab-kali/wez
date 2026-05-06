@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { EmployersModule } from "#modules/employers/employers.module";
+import { PlatformSettingsModule } from "#modules/platform-settings/platform-settings.module";
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersModule } from "#modules/workers/workers.module";
@@ -10,7 +11,7 @@ import { PrismaHireRequestsRepository } from "./infrastructure/repositories/pris
 import { HireRequestsController } from "./presentation/controllers/hire-requests.controller";
 
 @Module({
-	imports: [WorkersModule, EmployersModule, RoleCatalogModule, StationsModule],
+	imports: [WorkersModule, EmployersModule, RoleCatalogModule, StationsModule, PlatformSettingsModule],
 	controllers: [HireRequestsController],
 	providers: [
 		HireRequestsService,

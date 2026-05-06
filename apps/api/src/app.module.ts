@@ -14,6 +14,8 @@ import { HireRequestsModule } from "#modules/hire-requests/hire-requests.module"
 import { JobsModule } from "#modules/jobs/jobs.module";
 import { LookupsModule } from "#modules/lookups/lookups.module";
 import { NotificationModule } from "#modules/notification/notification.module";
+import { PlacementsModule } from "#modules/placements/placements.module";
+import { PlatformSettingsModule } from "#modules/platform-settings/platform-settings.module";
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersModule } from "#modules/workers/workers.module";
@@ -40,6 +42,8 @@ import { StorageModule } from "#shared/storage/storage.module";
 		AuthModule,
 		AdminModule,
 		NotificationModule,
+		PlatformSettingsModule,
+		PlacementsModule,
 		StationsModule,
 		RoleCatalogModule,
 		LookupsModule,

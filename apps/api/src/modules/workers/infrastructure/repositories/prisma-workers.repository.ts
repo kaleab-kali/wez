@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
+import { buildWorkerOrderBy, buildWorkerWhere } from "../../application/specifications/worker-filter.specification";
 import type {
 	Gender,
 	HopFlag,
@@ -10,10 +11,6 @@ import type {
 	WorkerTier,
 } from "../../domain/entities/worker.entity";
 import type { IWorkersRepository } from "../../domain/repositories/workers.repository";
-import {
-	buildWorkerOrderBy,
-	buildWorkerWhere,
-} from "../../application/specifications/worker-filter.specification";
 
 type Row = {
 	id: string;

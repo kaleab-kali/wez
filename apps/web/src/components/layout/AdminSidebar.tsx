@@ -3,6 +3,7 @@ import {
 	Coins01Icon,
 	DashboardSquare01Icon,
 	Logout01Icon,
+	NoteEditIcon,
 	SecurityIcon,
 	StoreLocation02Icon,
 	UserMultipleIcon,
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
 	{ labelKey: "admin.nav.overview", to: "/staff-admin", icon: DashboardSquare01Icon, exact: true },
 	{ labelKey: "admin.nav.stations", to: "/staff-admin/stations", icon: StoreLocation02Icon, exact: false },
 	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon, exact: false },
+	{ labelKey: "admin.nav.hiringPolicy", to: "/staff-admin/hiring-policy", icon: NoteEditIcon, exact: false },
 	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon, exact: false },
 	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon, exact: false },
 	{ labelKey: "admin.nav.sessions", to: "/staff-admin/sessions", icon: UserMultipleIcon, exact: false },
@@ -73,9 +75,7 @@ export const AdminSidebar = React.memo(
 						<SidebarGroupContent>
 							<SidebarMenu>
 								{NAV_ITEMS.map((item) => {
-									const active = item.exact
-										? location.pathname === item.to
-										: location.pathname.startsWith(item.to);
+									const active = item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to);
 									return (
 										<SidebarMenuItem key={item.to}>
 											<SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)}>

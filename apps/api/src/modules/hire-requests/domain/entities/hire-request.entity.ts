@@ -9,6 +9,10 @@ export interface HireRequest {
 	workerName?: string;
 	roleId: string;
 	roleName?: string;
+	roleCommType?: "flat" | "percent";
+	roleCommValue?: number;
+	roleSalaryMinCents?: bigint;
+	roleSalaryMaxCents?: bigint;
 	jobId: string | null;
 	proposedSalaryCents: bigint;
 	stationId: string;
@@ -25,7 +29,10 @@ export interface HireRequest {
 	updatedAt: Date;
 }
 
-export type NewHireRequest = Omit<HireRequest, "id" | "completedAt" | "cancelledAt" | "cancellationReason" | "createdAt" | "updatedAt">;
+export type NewHireRequest = Omit<
+	HireRequest,
+	"id" | "completedAt" | "cancelledAt" | "cancellationReason" | "createdAt" | "updatedAt"
+>;
 export type HireRequestPatch = Partial<{
 	status: HireRequestStatus;
 	completedAt: Date;

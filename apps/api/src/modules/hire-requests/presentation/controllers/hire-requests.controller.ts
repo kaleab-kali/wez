@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { requirePermission } from "#shared/auth/session";
+import { requirePermission, type WezRequest } from "#shared/auth/session";
 import {
 	CancelHireRequestDto,
 	CreateHireRequestDto,
@@ -16,14 +16,14 @@ export class HireRequestsController {
 
 	@Get()
 	@ApiOperation({ summary: "List hire requests" })
-	async list(@Query() filter: ListHireRequestsDto, @Req() req: any) {
-		await requirePermission(req, "hire_request:list");
-		return this.service.list(filter);
+	async list(@Query() filter: ListHireRequestsDto, @Req() req: WezRequest) {
+		const s = await requirePermission(req, "hire_request:list");
+		return this.service.listForSession(s, filter);
 	}
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get a hire request by id" })
-	async getById(@Param("id") id: string, @Req() req: any) {
+	async getById(@Param("id") id: string, @Req() req: WezRequest) {
 		await requirePermission(req, "hire_request:read");
 		return { data: await this.service.getById(id) };
 	}
@@ -31,7 +31,7 @@ export class HireRequestsController {
 	@Post()
 	@ApiOperation({ summary: "Create a hire request" })
 	@ApiBody({ type: CreateHireRequestDto })
-	async create(@Body() dto: CreateHireRequestDto, @Req() req: any) {
+	async create(@Body() dto: CreateHireRequestDto, @Req() req: WezRequest) {
 		const s = await requirePermission(req, "hire_request:create");
 		const isStaff = s.kind === "staff";
 		return { data: await this.service.create(s.user.id, dto, isStaff) };
@@ -40,8 +40,8 @@ export class HireRequestsController {
 	@Post(":id/cancel")
 	@ApiOperation({ summary: "Cancel a hire request" })
 	@ApiBody({ type: CancelHireRequestDto })
-	async cancel(@Param("id") id: string, @Body() dto: CancelHireRequestDto, @Req() req: any) {
-		await requirePermission(req, "hire_request:cancel");
-		return { data: await this.service.cancel(id, dto) };
+	async cancel(@Param("id") id: string, @Body() dto: CancelHireRequestDto, @Req() req: WezRequest) {
+		const s = await requirePermission(req, "hire_request:cancel");
+		return { data: await this.service.cancelForSession(s, id, dto) };
 	}
 }

@@ -1,12 +1,9 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import type { IRoleCatalogRepository } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
-import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.repository";
+import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import type { IStationsRepository } from "#modules/stations/domain/repositories/stations.repository";
-import {
-	type IWorkersRepository,
-	WORKERS_REPO,
-} from "../../domain/repositories/workers.repository";
+import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.repository";
+import { type IWorkersRepository, WORKERS_REPO } from "../../domain/repositories/workers.repository";
 import type { ListWorkersDto, RegisterWorkerDto, UpdateWorkerDto } from "../dto/worker.dto";
 
 @Injectable()
@@ -45,7 +42,7 @@ export class WorkersService {
 
 		for (const roleId of dto.roles) {
 			const r = await this.roles.findById(roleId);
-			if (!r || !r.active) throw new ConflictException({ code: "INVALID_ROLE", details: { roleId } });
+			if (!r?.active) throw new ConflictException({ code: "INVALID_ROLE", details: { roleId } });
 		}
 
 		return this.repo.create({
@@ -73,7 +70,7 @@ export class WorkersService {
 		if (dto.roles) {
 			for (const roleId of dto.roles) {
 				const r = await this.roles.findById(roleId);
-				if (!r || !r.active) throw new ConflictException({ code: "INVALID_ROLE", details: { roleId } });
+				if (!r?.active) throw new ConflictException({ code: "INVALID_ROLE", details: { roleId } });
 			}
 		}
 		return this.repo.update(id, {

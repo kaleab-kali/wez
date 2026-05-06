@@ -6,10 +6,7 @@ import { EmployersController } from "./presentation/controllers/employers.contro
 
 @Module({
 	controllers: [EmployersController],
-	providers: [
-		EmployersService,
-		{ provide: EMPLOYERS_REPO, useClass: PrismaEmployersRepository },
-	],
+	providers: [EmployersService, { provide: EMPLOYERS_REPO, useClass: PrismaEmployersRepository }],
 	exports: [EmployersService, { provide: EMPLOYERS_REPO, useClass: PrismaEmployersRepository }],
 })
 export class EmployersModule {}

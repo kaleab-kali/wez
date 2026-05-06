@@ -43,12 +43,8 @@ const RootIndex = React.memo(() => {
 
 			<main className="flex-1">
 				<section className="max-w-4xl mx-auto px-6 py-16 text-center">
-					<h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-						{t("landing.heroTitle")}
-					</h1>
-					<p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-						{t("landing.heroBody")}
-					</p>
+					<h1 className="text-4xl md:text-5xl font-bold tracking-tight">{t("landing.heroTitle")}</h1>
+					<p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">{t("landing.heroBody")}</p>
 					<div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
 						<Link to="/signup">
 							<Button size="lg">{t("landing.employerCta")}</Button>

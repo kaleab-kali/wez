@@ -1,5 +1,6 @@
 import {
 	Book02Icon,
+	Briefcase02Icon,
 	Coins01Icon,
 	ContactBookIcon,
 	DashboardSquare01Icon,
@@ -41,6 +42,7 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 	{ labelKey: "nav.workers", to: "/staff/workers", icon: UserMultipleIcon },
 	{ labelKey: "nav.employers", to: "/staff/employers", icon: ContactBookIcon },
 	{ labelKey: "nav.hireRequests", to: "/staff/hire-requests", icon: NoteEditIcon },
+	{ labelKey: "nav.placements", to: "/staff/placements", icon: Briefcase02Icon },
 ];
 
 // HQ admin sidebar — only visible to roles that manage platform-wide config.
@@ -48,6 +50,7 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 	{ labelKey: "admin.nav.overview", to: "/staff-admin", icon: DashboardSquare01Icon },
 	{ labelKey: "admin.nav.stations", to: "/staff-admin/stations", icon: StoreLocation02Icon },
 	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon },
+	{ labelKey: "admin.nav.hiringPolicy", to: "/staff-admin/hiring-policy", icon: NoteEditIcon },
 	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon },
 	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 ];
@@ -72,7 +75,8 @@ export const AppSidebar = React.memo(
 
 		const renderItems = (items: ReadonlyArray<NavItem>) =>
 			items.map((item) => {
-				const active = location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));
+				const active =
+					location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));
 				return (
 					<SidebarMenuItem key={item.to}>
 						<SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)}>

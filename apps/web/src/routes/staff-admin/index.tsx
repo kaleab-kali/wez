@@ -1,12 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	Book02Icon,
 	Coins01Icon,
+	NoteEditIcon,
 	SecurityIcon,
 	StoreLocation02Icon,
 	UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
@@ -68,9 +69,7 @@ function AdminDashboard() {
 			<header className="flex items-start justify-between flex-wrap gap-4">
 				<div>
 					<h1 className="text-3xl font-bold tracking-tight">{t("admin.consoleTitle")}</h1>
-					<p className="text-muted-foreground mt-1.5">
-						{t("admin.welcome", { name: user?.name ?? "" })}
-					</p>
+					<p className="text-muted-foreground mt-1.5">{t("admin.welcome", { name: user?.name ?? "" })}</p>
 				</div>
 				<Badge variant="outline" className="font-mono text-[11px] uppercase tracking-wider">
 					{role}
@@ -93,6 +92,12 @@ function AdminDashboard() {
 						icon={Coins01Icon}
 						title={t("admin.roleCatalogLink")}
 						description={t("roleCatalog.subtitle")}
+					/>
+					<TileLink
+						to="/staff-admin/hiring-policy"
+						icon={NoteEditIcon}
+						title={t("platformSettings.hiringPolicy")}
+						description={t("platformSettings.hiringPolicyBody")}
 					/>
 					<TileLink
 						to="/staff-admin/lookups"

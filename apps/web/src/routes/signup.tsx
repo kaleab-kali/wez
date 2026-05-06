@@ -134,7 +134,14 @@ function EmployerSignupPage() {
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="password">{t("auth.password")}</Label>
-							<Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
+							<Input
+								id="password"
+								type="password"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								minLength={8}
+								required
+							/>
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="area">{t("workers.register.woreda")}</Label>
@@ -161,13 +168,24 @@ function EmployerSignupPage() {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="lic">{t("landing.businessLicense")}</Label>
-									<Input id="lic" value={businessLicense} onChange={(e) => setBusinessLicense(e.target.value)} required />
+									<Input
+										id="lic"
+										value={businessLicense}
+										onChange={(e) => setBusinessLicense(e.target.value)}
+										required
+									/>
 								</div>
 							</>
 						) : (
 							<div className="space-y-2">
 								<Label htmlFor="fayda">{t("workers.register.fayda")}</Label>
-								<Input id="fayda" value={fayda} onChange={(e) => setFayda(e.target.value)} placeholder="F-XXXX-XXXX-XX" required />
+								<Input
+									id="fayda"
+									value={fayda}
+									onChange={(e) => setFayda(e.target.value)}
+									placeholder="F-XXXX-XXXX-XX"
+									required
+								/>
 							</div>
 						)}
 					</CardContent>

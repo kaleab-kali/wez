@@ -3,6 +3,25 @@ import { Request, Response } from "express";
 import { PinoLogger } from "nestjs-pino";
 import { CORRELATION_ID_HEADER } from "#shared/logger/logger.constants";
 
+const DOMAIN_ERROR_MESSAGES: Record<string, string> = {
+	ALREADY_FINALIZED: "This request has already been finalized.",
+	EMPLOYER_BANNED: "This employer account is restricted.",
+	EMPLOYER_ID_REQUIRED: "Employer is required.",
+	HIRE_REQUEST_NOT_AWAITING_VISIT: "Only awaiting hire requests can be finalized.",
+	INVALID_ROLE: "Selected role is not available.",
+	NO_EMPLOYER_PROFILE: "No employer profile is linked to this account.",
+	NO_WORKER_PROFILE: "No worker profile is linked to this account.",
+	PAYMENT_REQUIRED: "Payment must be confirmed before placement.",
+	PERCENT_OUT_OF_RANGE: "Percent commission must be between 0 and 100.",
+	PLACEMENT_ALREADY_EXISTS: "A placement already exists for this hire request.",
+	ROLE_ID_TAKEN: "This role ID is already used.",
+	SALARY_OUT_OF_ROLE_RANGE: "Salary is outside the configured role range.",
+	SALARY_RANGE_INVALID: "Salary minimum must be less than or equal to salary maximum.",
+	STATION_NOT_FOUND: "Selected station was not found.",
+	WORKER_DOES_NOT_PERFORM_ROLE: "This worker is not registered for the selected role.",
+	WORKER_NOT_AVAILABLE: "This worker is not available for new hire requests.",
+} as const;
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
 	constructor(private readonly logger: PinoLogger) {
@@ -16,12 +35,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
 		const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
+		const getResponseObject = (): Record<string, unknown> => {
+			if (!(exception instanceof HttpException)) return {};
+			const res = exception.getResponse();
+			return typeof res === "object" && res !== null ? (res as Record<string, unknown>) : {};
+		};
+
+		const responseObject = getResponseObject();
+		const domainCode = typeof responseObject.code === "string" ? responseObject.code : undefined;
+
 		const getMessage = (): string => {
+			if (domainCode) return DOMAIN_ERROR_MESSAGES[domainCode] ?? domainCode.replaceAll("_", " ").toLowerCase();
 			if (!(exception instanceof HttpException)) return "Internal server error";
 			const res = exception.getResponse();
 			if (typeof res === "string") return res;
-			const resObj = res as Record<string, unknown>;
-			const msg = resObj.message;
+			const msg = responseObject.message;
 			if (Array.isArray(msg)) return msg.join(", ");
 			if (typeof msg === "string") return msg;
 			return "Internal server error";
@@ -38,7 +66,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 		};
 		const message = sanitize(getMessage());
 
-		const code = HttpStatus[status] || "INTERNAL_ERROR";
+		const code = domainCode ?? HttpStatus[status] ?? "INTERNAL_ERROR";
 
 		const logPayload = {
 			statusCode: status,
@@ -56,8 +84,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
 		// Never leak stack traces, endpoint paths, DB schema, or internal details to clients.
 		// Full details go to server logs only (logPayload above).
+		const details = responseObject.details;
 		response.status(status).json({
-			error: { code, message },
+			error: {
+				code,
+				message,
+				...(details !== undefined ? { details } : {}),
+			},
 		});
 	}
 }

@@ -1,8 +1,5 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import {
-	type IStationsRepository,
-	STATIONS_REPO,
-} from "../../domain/repositories/stations.repository";
+import { type IStationsRepository, STATIONS_REPO } from "../../domain/repositories/stations.repository";
 import type { CreateStationDto, UpdateStationDto } from "../dto/station.dto";
 
 @Injectable()

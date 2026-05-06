@@ -9,10 +9,7 @@ import { JobsController } from "./presentation/controllers/jobs.controller";
 @Module({
 	imports: [EmployersModule, RoleCatalogModule],
 	controllers: [JobsController],
-	providers: [
-		JobsService,
-		{ provide: JOBS_REPO, useClass: PrismaJobsRepository },
-	],
+	providers: [JobsService, { provide: JOBS_REPO, useClass: PrismaJobsRepository }],
 	exports: [JobsService],
 })
 export class JobsModule {}

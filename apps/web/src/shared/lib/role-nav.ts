@@ -7,10 +7,7 @@ export type NavItem = {
 	exact?: boolean;
 };
 
-export type WezTenantRole =
-	| "worker"
-	| "employer_business"
-	| "employer_household";
+export type WezTenantRole = "worker" | "employer_business" | "employer_household";
 
 const NAV_FOR_ROLE: Record<WezTenantRole, ReadonlyArray<NavItem>> = {
 	worker: [

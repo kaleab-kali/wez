@@ -9,7 +9,7 @@ import {
 import { Reflector } from "@nestjs/core";
 import { fromNodeHeaders } from "better-auth/node";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
-import { type WezAdminRole, WEZ_ADMIN_ROLES } from "#modules/auth/permissions";
+import { WEZ_ADMIN_ROLES, type WezAdminRole } from "#modules/auth/permissions";
 import { PrismaService } from "#shared/database/prisma.service";
 
 // Staff role hierarchy. Higher index = more powerful.

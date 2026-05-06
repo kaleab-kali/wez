@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE = "/api/v1/hire-requests";
 
-const get = async <T,>(url: string): Promise<T> => {
+const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -11,7 +11,7 @@ const get = async <T,>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T,>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
@@ -35,6 +35,10 @@ export type HireRequest = {
 	workerName?: string;
 	roleId: string;
 	roleName?: string;
+	roleCommType?: "flat" | "percent";
+	roleCommValue?: number;
+	roleSalaryMinCents?: string;
+	roleSalaryMaxCents?: string;
 	jobId: string | null;
 	proposedSalaryCents: string;
 	stationId: string;

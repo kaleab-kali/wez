@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
-import { requireSession } from "#shared/auth/session";
+import { requireSession, type WezRequest } from "#shared/auth/session";
 import { CreateRoleDto, UpdateRoleDto } from "../../application/dto/role.dto";
 import { RoleCatalogService } from "../../application/services/role-catalog.service";
 
@@ -48,7 +48,7 @@ export class RoleCatalogPublicController {
 
 	@Get()
 	@ApiOperation({ summary: "List active roles (any authenticated user)" })
-	async list(@Req() req: any) {
+	async list(@Req() req: WezRequest) {
 		await requireSession(req);
 		const data = await this.service.list(false);
 		return { data, meta: { total: data.length } };

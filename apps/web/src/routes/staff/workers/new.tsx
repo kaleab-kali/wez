@@ -55,15 +55,7 @@ const initialState: FormState = {
 };
 
 const StepIdentity = React.memo(
-	({
-		state,
-		set,
-		onNext,
-	}: {
-		readonly state: FormState;
-		readonly set: SetState;
-		readonly onNext: () => void;
-	}) => {
+	({ state, set, onNext }: { readonly state: FormState; readonly set: SetState; readonly onNext: () => void }) => {
 		const { t } = useTranslation();
 		const { data: woredas } = useLookupKind("woredas");
 		return (
@@ -100,7 +92,12 @@ const StepIdentity = React.memo(
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor="dob">{t("workers.register.dob")}</Label>
-					<Input id="dob" type="date" value={state.dateOfBirth} onChange={(e) => set({ dateOfBirth: e.target.value })} />
+					<Input
+						id="dob"
+						type="date"
+						value={state.dateOfBirth}
+						onChange={(e) => set({ dateOfBirth: e.target.value })}
+					/>
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor="gender">{t("workers.register.gender")}</Label>
@@ -169,9 +166,7 @@ const StepSkills = React.memo(
 		const toggleRole = React.useCallback(
 			(roleId: string) => {
 				set({
-					roles: state.roles.includes(roleId)
-						? state.roles.filter((r) => r !== roleId)
-						: [...state.roles, roleId],
+					roles: state.roles.includes(roleId) ? state.roles.filter((r) => r !== roleId) : [...state.roles, roleId],
 				});
 			},
 			[state.roles, set],
@@ -435,9 +430,7 @@ function NewWorkerPage() {
 					&larr; {t("workers.profile.backToWorkers")}
 				</Link>
 				<h1 className="text-2xl font-bold tracking-tight mt-2">{t("workers.register.title")}</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					{t("workers.register.step", { n: step, total: 3 })}
-				</p>
+				<p className="text-sm text-muted-foreground mt-1">{t("workers.register.step", { n: step, total: 3 })}</p>
 			</div>
 			<Card>
 				<CardHeader>

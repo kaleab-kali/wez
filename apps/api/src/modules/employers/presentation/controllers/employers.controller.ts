@@ -1,12 +1,8 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { hasPermission } from "#modules/auth/permissions";
-import { requirePermission, requireSession } from "#shared/auth/session";
-import {
-	CreateEmployerDto,
-	ListEmployersDto,
-	UpdateEmployerDto,
-} from "../../application/dto/employer.dto";
+import { requirePermission, requireSession, type WezRequest } from "#shared/auth/session";
+import { CreateEmployerDto, ListEmployersDto, UpdateEmployerDto } from "../../application/dto/employer.dto";
 import { EmployersService } from "../../application/services/employers.service";
 
 @ApiTags("Employers")
@@ -17,14 +13,14 @@ export class EmployersController {
 
 	@Get()
 	@ApiOperation({ summary: "List employers (staff only)" })
-	async list(@Query() filter: ListEmployersDto, @Req() req: any) {
+	async list(@Query() filter: ListEmployersDto, @Req() req: WezRequest) {
 		await requirePermission(req, "employer:list");
 		return this.service.list(filter);
 	}
 
 	@Get("me")
 	@ApiOperation({ summary: "Get current customer's employer profile (if any)" })
-	async getMine(@Req() req: any) {
+	async getMine(@Req() req: WezRequest) {
 		const s = await requireSession(req);
 		const e = await this.service.getMine(s.user.id);
 		return { data: e };
@@ -32,7 +28,7 @@ export class EmployersController {
 
 	@Get(":id")
 	@ApiOperation({ summary: "Get an employer by id" })
-	async getById(@Param("id") id: string, @Req() req: any) {
+	async getById(@Param("id") id: string, @Req() req: WezRequest) {
 		await requirePermission(req, "employer:read");
 		return { data: await this.service.getById(id) };
 	}
@@ -40,7 +36,7 @@ export class EmployersController {
 	@Post()
 	@ApiOperation({ summary: "Create an employer (staff agent-led or customer self-signup)" })
 	@ApiBody({ type: CreateEmployerDto })
-	async create(@Body() dto: CreateEmployerDto, @Req() req: any) {
+	async create(@Body() dto: CreateEmployerDto, @Req() req: WezRequest) {
 		const s = await requireSession(req);
 		// Staff with employer:create permission OR a customer self-signing-up.
 		const isStaff = s.kind === "staff";
@@ -56,7 +52,7 @@ export class EmployersController {
 	@Patch(":id")
 	@ApiOperation({ summary: "Update an employer (staff only)" })
 	@ApiBody({ type: UpdateEmployerDto })
-	async update(@Param("id") id: string, @Body() dto: UpdateEmployerDto, @Req() req: any) {
+	async update(@Param("id") id: string, @Body() dto: UpdateEmployerDto, @Req() req: WezRequest) {
 		await requirePermission(req, "employer:update");
 		return { data: await this.service.update(id, dto) };
 	}

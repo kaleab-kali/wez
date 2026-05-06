@@ -2,8 +2,8 @@ import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession, phoneNumber } from "better-auth/plugins";
-import { sendSms } from "#shared/notifications/sms-sender";
 import { prisma } from "#shared/database/prisma-instance";
+import { sendSms } from "#shared/notifications/sms-sender";
 
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 

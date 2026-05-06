@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { type Employer, type EmployerFilter, useEmployers } from "#features/employers/api/employer.queries";
@@ -100,7 +100,9 @@ function EmployersBrowsePage() {
 							<select
 								id="type"
 								value={filter.type ?? ""}
-								onChange={(e) => setFilter({ ...filter, type: (e.target.value || undefined) as EmployerFilter["type"], page: 1 })}
+								onChange={(e) =>
+									setFilter({ ...filter, type: (e.target.value || undefined) as EmployerFilter["type"], page: 1 })
+								}
 								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 							>
 								<option value="">{t("common.any")}</option>
@@ -113,7 +115,9 @@ function EmployersBrowsePage() {
 							<select
 								id="rating"
 								value={filter.rating ?? ""}
-								onChange={(e) => setFilter({ ...filter, rating: (e.target.value || undefined) as EmployerFilter["rating"], page: 1 })}
+								onChange={(e) =>
+									setFilter({ ...filter, rating: (e.target.value || undefined) as EmployerFilter["rating"], page: 1 })
+								}
 								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 							>
 								<option value="">{t("common.any")}</option>

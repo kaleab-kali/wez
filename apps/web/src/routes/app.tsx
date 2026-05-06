@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "#shared/components/LanguageSwitcher";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const CustomerAppLayout = React.memo(() => {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { data: session, isPending } = authClient.useSession();
 
 	const onSignOut = React.useCallback(async () => {
@@ -34,7 +35,7 @@ const CustomerAppLayout = React.memo(() => {
 	return (
 		<div className="min-h-screen bg-background">
 			<header className="border-b bg-background/95">
-				<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+				<div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
 					<div className="flex items-center gap-2 text-primary">
 						<WezLogo variant="mark" className="size-8" />
 						<div className="leading-tight">
@@ -42,6 +43,20 @@ const CustomerAppLayout = React.memo(() => {
 							<div className="text-xs text-muted-foreground">{t("app.shell")}</div>
 						</div>
 					</div>
+					<nav className="flex items-center gap-1">
+						<CustomerNavLink to="/app/dashboard" active={location.pathname === "/app/dashboard"}>
+							{t("nav.dashboard")}
+						</CustomerNavLink>
+						<CustomerNavLink to="/app/workers" active={location.pathname.startsWith("/app/workers")}>
+							{t("app.workers")}
+						</CustomerNavLink>
+						<CustomerNavLink to="/app/jobs" active={location.pathname.startsWith("/app/jobs")}>
+							{t("app.jobs")}
+						</CustomerNavLink>
+						<CustomerNavLink to="/app/requests" active={location.pathname.startsWith("/app/requests")}>
+							{t("app.requests")}
+						</CustomerNavLink>
+					</nav>
 					<div className="flex items-center gap-2">
 						<LanguageSwitcher />
 						<Button variant="ghost" size="sm" onClick={onSignOut}>
@@ -57,6 +72,20 @@ const CustomerAppLayout = React.memo(() => {
 	);
 });
 CustomerAppLayout.displayName = "CustomerAppLayout";
+
+const CustomerNavLink = React.memo(
+	({ to, active, children }: { readonly to: string; readonly active: boolean; readonly children: React.ReactNode }) => (
+		<Link
+			to={to}
+			className={`rounded-md px-3 py-2 text-sm transition ${
+				active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+			}`}
+		>
+			{children}
+		</Link>
+	),
+);
+CustomerNavLink.displayName = "CustomerNavLink";
 
 export const Route = createFileRoute("/app")({
 	component: CustomerAppLayout,

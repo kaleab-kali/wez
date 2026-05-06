@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
@@ -206,11 +206,7 @@ const WorkerCard = React.memo(
 	({ w }: { readonly w: Worker }) => {
 		const { t } = useTranslation();
 		return (
-			<Link
-				to="/staff/workers/$id"
-				params={{ id: w.id }}
-				className="block group"
-			>
+			<Link to="/staff/workers/$id" params={{ id: w.id }} className="block group">
 				<Card className="h-full transition-all group-hover:border-primary/40 group-hover:shadow-sm">
 					<CardHeader className="pb-3">
 						<div className="flex items-start gap-3">
@@ -282,9 +278,7 @@ function WorkerBrowsePage() {
 			<header className="flex items-start justify-between flex-wrap gap-3">
 				<div>
 					<h1 className="text-2xl font-bold tracking-tight">{t("workers.title")}</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						{t("workers.count", { count: total })}
-					</p>
+					<p className="text-sm text-muted-foreground mt-1">{t("workers.count", { count: total })}</p>
 				</div>
 				<Link to="/staff/workers/new">
 					<Button>

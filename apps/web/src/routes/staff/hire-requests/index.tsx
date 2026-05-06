@@ -6,8 +6,12 @@ import {
 	type HireRequestFilter,
 	useHireRequests,
 } from "#features/hire-requests/api/hire-request.queries";
+import { useFinalizePlacement } from "#features/placements/api/placement.queries";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/staff/hire-requests/")({
 	component: HireRequestsPage,
@@ -20,9 +24,33 @@ const STATUS_VARIANT: Record<HireRequest["status"], "default" | "secondary" | "o
 	expired: "destructive",
 };
 
+const formatBirr = (cents: string | number) => `${(Number(cents) / 100).toLocaleString()} ETB`;
+
+const calculateCommissionCents = (request: HireRequest, salaryBirr: number) => {
+	const salaryCents = Math.round(salaryBirr * 100);
+	if (request.roleCommType === "percent" && request.roleCommValue !== undefined) {
+		return Math.round((salaryCents * request.roleCommValue) / 100);
+	}
+	if (request.roleCommType === "flat" && request.roleCommValue !== undefined) {
+		return request.roleCommValue * 100;
+	}
+	return null;
+};
+
+const commissionRule = (request: HireRequest) => {
+	if (request.roleCommType === "percent" && request.roleCommValue !== undefined) {
+		return `${request.roleCommValue}% of final salary`;
+	}
+	if (request.roleCommType === "flat" && request.roleCommValue !== undefined) {
+		return `${request.roleCommValue.toLocaleString()} ETB flat`;
+	}
+	return "Role commission rule unavailable";
+};
+
 function HireRequestsPage() {
 	const { t } = useTranslation();
 	const [filter, setFilter] = React.useState<HireRequestFilter>({ page: 1, limit: 20 });
+	const [activeFinalizeId, setActiveFinalizeId] = React.useState<string | null>(null);
 	const { data, isLoading } = useHireRequests(filter);
 
 	const requestTitle = React.useCallback((request: HireRequest) => {
@@ -116,6 +144,16 @@ function HireRequestsPage() {
 									<p>{r.cancellationReason}</p>
 								</div>
 							)}
+							{r.status === "awaiting_visit" && (
+								<div className="col-span-full border-t pt-3">
+									<FinalizePlacementForm
+										request={r}
+										open={activeFinalizeId === r.id}
+										onOpen={() => setActiveFinalizeId(r.id)}
+										onClose={() => setActiveFinalizeId(null)}
+									/>
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				))}
@@ -130,3 +168,149 @@ function HireRequestsPage() {
 		</div>
 	);
 }
+
+const FinalizePlacementForm = React.memo(
+	({
+		request,
+		open,
+		onOpen,
+		onClose,
+	}: {
+		readonly request: HireRequest;
+		readonly open: boolean;
+		readonly onOpen: () => void;
+		readonly onClose: () => void;
+	}) => {
+		const { t } = useTranslation();
+		const finalize = useFinalizePlacement(request.id);
+		const [salary, setSalary] = React.useState(Number(request.proposedSalaryCents) / 100);
+		const [paymentMethod, setPaymentMethod] = React.useState("cash");
+		const [paymentReference, setPaymentReference] = React.useState("");
+		const [startDate, setStartDate] = React.useState(() => new Date().toISOString().slice(0, 10));
+		const [paymentReceived, setPaymentReceived] = React.useState(false);
+		const [error, setError] = React.useState("");
+		const commissionCents = React.useMemo(() => calculateCommissionCents(request, salary), [request, salary]);
+		const roleRange = React.useMemo(() => {
+			if (!request.roleSalaryMinCents || !request.roleSalaryMaxCents) return "-";
+			return `${formatBirr(request.roleSalaryMinCents)} - ${formatBirr(request.roleSalaryMaxCents)}`;
+		}, [request.roleSalaryMaxCents, request.roleSalaryMinCents]);
+
+		const onSubmit = React.useCallback(
+			async (event: React.FormEvent) => {
+				event.preventDefault();
+				setError("");
+				try {
+					await finalize.mutateAsync({
+						startDate,
+						salaryCents: Math.round(salary * 100),
+						paymentMethod,
+						paymentReference,
+						paymentReceivedAt: new Date().toISOString(),
+					});
+					onClose();
+				} catch (err) {
+					setError(err instanceof Error ? err.message : t("common.error"));
+				}
+			},
+			[finalize, onClose, paymentMethod, paymentReference, salary, startDate, t],
+		);
+
+		if (!open) {
+			return (
+				<Button type="button" onClick={onOpen}>
+					{t("placements.finalize")}
+				</Button>
+			);
+		}
+
+		return (
+			<form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-4">
+				{error && (
+					<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive md:col-span-4">{error}</div>
+				)}
+				<div className="grid gap-3 rounded-md border bg-muted/40 p-3 md:col-span-4 md:grid-cols-3">
+					<div className="md:col-span-3">
+						<p className="font-medium">{t("placements.paymentGateTitle")}</p>
+						<p className="mt-1 text-sm text-muted-foreground">{t("placements.paymentGateBody")}</p>
+					</div>
+					<div className="rounded-md bg-background p-3">
+						<p className="text-xs text-muted-foreground">{t("placements.roleRange")}</p>
+						<p className="mt-1 font-mono text-sm">{roleRange}</p>
+					</div>
+					<div className="rounded-md bg-background p-3">
+						<p className="text-xs text-muted-foreground">{t("placements.commissionRule")}</p>
+						<p className="mt-1 text-sm font-medium">{commissionRule(request)}</p>
+					</div>
+					<div className="rounded-md bg-background p-3">
+						<p className="text-xs text-muted-foreground">{t("placements.amountToCollect")}</p>
+						<p className="mt-1 font-mono text-lg font-semibold">
+							{commissionCents === null ? "-" : formatBirr(commissionCents)}
+						</p>
+					</div>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor={`start-${request.id}`}>{t("placements.startDate")}</Label>
+					<Input
+						id={`start-${request.id}`}
+						type="date"
+						value={startDate}
+						onChange={(event) => setStartDate(event.target.value)}
+						required
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor={`salary-${request.id}`}>{t("placements.salary")}</Label>
+					<Input
+						id={`salary-${request.id}`}
+						type="number"
+						min={0}
+						value={salary}
+						onChange={(event) => setSalary(Number(event.target.value))}
+						required
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor={`method-${request.id}`}>{t("placements.paymentMethod")}</Label>
+					<Input
+						id={`method-${request.id}`}
+						value={paymentMethod}
+						onChange={(event) => setPaymentMethod(event.target.value)}
+						required
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor={`reference-${request.id}`}>{t("placements.paymentReference")}</Label>
+					<Input
+						id={`reference-${request.id}`}
+						value={paymentReference}
+						onChange={(event) => setPaymentReference(event.target.value)}
+						required
+					/>
+				</div>
+				<label htmlFor={`paid-${request.id}`} className="flex items-start gap-2 rounded-md border p-3 md:col-span-4">
+					<input
+						id={`paid-${request.id}`}
+						type="checkbox"
+						checked={paymentReceived}
+						onChange={(event) => setPaymentReceived(event.target.checked)}
+						className="mt-1"
+						required
+					/>
+					<span>
+						<span className="block text-sm font-medium">{t("placements.paymentReceivedConfirm")}</span>
+						<span className="block text-xs text-muted-foreground">{t("placements.paymentReceivedConfirmBody")}</span>
+					</span>
+				</label>
+				<div className="flex gap-2 md:col-span-4">
+					<Button type="button" variant="outline" onClick={onClose}>
+						{t("common.cancel")}
+					</Button>
+					<Button type="submit" disabled={finalize.isPending || !paymentReceived}>
+						{finalize.isPending ? t("common.saving") : t("placements.confirmFinalize")}
+					</Button>
+				</div>
+			</form>
+		);
+	},
+);
+FinalizePlacementForm.displayName = "FinalizePlacementForm";

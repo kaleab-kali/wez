@@ -3,7 +3,10 @@ export type JobStatus = "open" | "closed" | "filled";
 export interface Job {
 	id: string;
 	employerId: string;
+	employerName?: string;
+	employerType?: string;
 	roleId: string;
+	roleName?: string;
 	title: string;
 	description: string;
 	salaryMinCents: bigint;

@@ -1,10 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-	Briefcase02Icon,
-	Edit01Icon,
-	UserMultipleIcon,
-} from "@hugeicons/core-free-icons";
+import { Briefcase02Icon, Edit01Icon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
@@ -80,7 +76,7 @@ const DashboardPage = React.memo(() => {
 							icon={Edit01Icon}
 						/>
 						<QuickAction
-							to="/staff/dashboard"
+							to="/staff/placements"
 							title={t("dashboard.placementsTitle")}
 							description={t("dashboard.placementsDesc")}
 							icon={Briefcase02Icon}

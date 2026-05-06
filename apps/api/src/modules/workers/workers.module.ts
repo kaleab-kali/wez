@@ -9,10 +9,7 @@ import { WorkersController } from "./presentation/controllers/workers.controller
 @Module({
 	imports: [RoleCatalogModule, StationsModule],
 	controllers: [WorkersController],
-	providers: [
-		WorkersService,
-		{ provide: WORKERS_REPO, useClass: PrismaWorkersRepository },
-	],
+	providers: [WorkersService, { provide: WORKERS_REPO, useClass: PrismaWorkersRepository }],
 	exports: [WorkersService, { provide: WORKERS_REPO, useClass: PrismaWorkersRepository }],
 })
 export class WorkersModule {}

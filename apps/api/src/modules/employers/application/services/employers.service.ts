@@ -1,13 +1,14 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import {
-	EMPLOYERS_REPO,
-	type IEmployersRepository,
-} from "../../domain/repositories/employers.repository";
+import { PrismaService } from "#shared/database/prisma.service";
+import { EMPLOYERS_REPO, type IEmployersRepository } from "../../domain/repositories/employers.repository";
 import type { CreateEmployerDto, ListEmployersDto, UpdateEmployerDto } from "../dto/employer.dto";
 
 @Injectable()
 export class EmployersService {
-	constructor(@Inject(EMPLOYERS_REPO) private readonly repo: IEmployersRepository) {}
+	constructor(
+		@Inject(EMPLOYERS_REPO) private readonly repo: IEmployersRepository,
+		private readonly prisma: PrismaService,
+	) {}
 
 	async list(filter: ListEmployersDto) {
 		const { items, total } = await this.repo.listByFilter(filter);
@@ -41,7 +42,7 @@ export class EmployersService {
 		const phoneTaken = await this.repo.findByPhone(dto.phone);
 		if (phoneTaken) throw new ConflictException({ code: "PHONE_TAKEN" });
 
-		return this.repo.create({
+		const employer = await this.repo.create({
 			userId: asAgent ? null : currentUserId,
 			type: dto.type,
 			name: dto.name,
@@ -54,6 +55,15 @@ export class EmployersService {
 			fayda: dto.fayda ?? null,
 			registeredByAgentId: asAgent ? currentUserId : null,
 		});
+
+		if (!asAgent) {
+			await this.prisma.user.update({
+				where: { id: currentUserId },
+				data: { role: dto.type === "business" ? "employer_business" : "employer_household" },
+			});
+		}
+
+		return employer;
 	}
 
 	async update(id: string, dto: UpdateEmployerDto) {

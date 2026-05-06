@@ -142,9 +142,7 @@ function TwoFactorPage() {
 					&larr; Back to console
 				</Link>
 				<h1 className="text-2xl font-bold mt-2">Two-factor authentication</h1>
-				<p className="text-muted-foreground text-sm mt-1">
-					HQ accounts require 2FA per modules.md 1.1.3.
-				</p>
+				<p className="text-muted-foreground text-sm mt-1">HQ accounts require 2FA per modules.md 1.1.3.</p>
 			</div>
 			{enabled ? (
 				<Card>

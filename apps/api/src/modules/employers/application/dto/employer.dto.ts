@@ -1,16 +1,6 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import {
-	IsEmail,
-	IsEnum,
-	IsInt,
-	IsOptional,
-	IsString,
-	Length,
-	Matches,
-	Max,
-	Min,
-} from "class-validator";
+import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Length, Matches, Max, Min } from "class-validator";
 
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 const FAYDA = /^F-\d{4}-\d{4}-[A-Z]{2}$/;

@@ -6,25 +6,18 @@ import {
 	Injectable,
 	NotFoundException,
 } from "@nestjs/common";
-import { EMPLOYERS_REPO } from "#modules/employers/domain/repositories/employers.repository";
 import type { IEmployersRepository } from "#modules/employers/domain/repositories/employers.repository";
-import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
+import { EMPLOYERS_REPO } from "#modules/employers/domain/repositories/employers.repository";
+import { PlatformSettingsService } from "#modules/platform-settings/application/services/platform-settings.service";
 import type { IRoleCatalogRepository } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
-import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.repository";
+import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import type { IStationsRepository } from "#modules/stations/domain/repositories/stations.repository";
-import { WORKERS_REPO } from "#modules/workers/domain/repositories/workers.repository";
+import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.repository";
 import type { IWorkersRepository } from "#modules/workers/domain/repositories/workers.repository";
-import {
-	HIRE_REQUESTS_REPO,
-	type IHireRequestsRepository,
-} from "../../domain/repositories/hire-requests.repository";
-import type {
-	CancelHireRequestDto,
-	CreateHireRequestDto,
-	ListHireRequestsDto,
-} from "../dto/hire-request.dto";
-
-const EXPIRY_DAYS = 5;
+import { WORKERS_REPO } from "#modules/workers/domain/repositories/workers.repository";
+import type { WezSession } from "#shared/auth/session";
+import { HIRE_REQUESTS_REPO, type IHireRequestsRepository } from "../../domain/repositories/hire-requests.repository";
+import type { CancelHireRequestDto, CreateHireRequestDto, ListHireRequestsDto } from "../dto/hire-request.dto";
 
 @Injectable()
 export class HireRequestsService {
@@ -34,6 +27,7 @@ export class HireRequestsService {
 		@Inject(EMPLOYERS_REPO) private readonly employers: IEmployersRepository,
 		@Inject(ROLE_CATALOG_REPO) private readonly roles: IRoleCatalogRepository,
 		@Inject(STATIONS_REPO) private readonly stations: IStationsRepository,
+		private readonly platformSettings: PlatformSettingsService,
 	) {}
 
 	async list(filter: ListHireRequestsDto) {
@@ -44,6 +38,20 @@ export class HireRequestsService {
 			data: items,
 			meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
 		};
+	}
+
+	async listForSession(session: WezSession, filter: ListHireRequestsDto) {
+		if (session.kind === "staff") {
+			return this.list(filter);
+		}
+
+		if (session.user.role?.startsWith("employer_")) {
+			const employer = await this.employers.findByUserId(session.user.id);
+			if (!employer) throw new ForbiddenException({ code: "NO_EMPLOYER_PROFILE" });
+			return this.list({ ...filter, employerId: employer.id });
+		}
+
+		return this.list(filter);
 	}
 
 	async getById(id: string) {
@@ -73,7 +81,7 @@ export class HireRequestsService {
 		}
 
 		const role = await this.roles.findById(dto.roleId);
-		if (!role || !role.active) throw new BadRequestException({ code: "INVALID_ROLE" });
+		if (!role?.active) throw new BadRequestException({ code: "INVALID_ROLE" });
 		if (
 			BigInt(dto.proposedSalaryCents) < role.salaryMinCents ||
 			BigInt(dto.proposedSalaryCents) > role.salaryMaxCents
@@ -90,7 +98,8 @@ export class HireRequestsService {
 		const station = await this.stations.findById(dto.stationId);
 		if (!station) throw new NotFoundException({ code: "STATION_NOT_FOUND" });
 
-		const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+		const { hireRequestExpiryDays } = await this.platformSettings.getHiringPolicy();
+		const expiresAt = new Date(Date.now() + hireRequestExpiryDays * 24 * 60 * 60 * 1000);
 
 		return this.repo.create({
 			employerId,
@@ -117,6 +126,23 @@ export class HireRequestsService {
 			cancelledAt: new Date(),
 			cancellationReason: dto.reason,
 		});
+	}
+
+	async cancelForSession(session: WezSession, id: string, dto: CancelHireRequestDto) {
+		const req = await this.getById(id);
+		if (session.kind === "staff") {
+			return this.cancel(id, dto);
+		}
+
+		if (session.user.role?.startsWith("employer_")) {
+			const employer = await this.employers.findByUserId(session.user.id);
+			if (!employer || req.employerId !== employer.id) {
+				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
+			}
+			return this.cancel(id, dto);
+		}
+
+		throw new ForbiddenException({ code: "CANNOT_CANCEL_HIRE_REQUEST" });
 	}
 
 	async expireDue() {

@@ -17,7 +17,13 @@ type Row = {
 	workerId: string;
 	worker?: { fullName: string } | null;
 	roleId: string;
-	role?: { name: string } | null;
+	role?: {
+		name: string;
+		commType: string;
+		commValue: number;
+		salaryMinCents: bigint;
+		salaryMaxCents: bigint;
+	} | null;
 	jobId: string | null;
 	proposedSalaryCents: bigint;
 	stationId: string;
@@ -37,7 +43,15 @@ type Row = {
 const HIRE_REQUEST_SUMMARY_INCLUDE = {
 	employer: { select: { name: true } },
 	worker: { select: { fullName: true } },
-	role: { select: { name: true } },
+	role: {
+		select: {
+			name: true,
+			commType: true,
+			commValue: true,
+			salaryMinCents: true,
+			salaryMaxCents: true,
+		},
+	},
 	station: { select: { name: true } },
 } as const;
 
@@ -49,6 +63,10 @@ const toReq = (row: Row): HireRequest => ({
 	workerName: row.worker?.fullName,
 	roleId: row.roleId,
 	roleName: row.role?.name,
+	roleCommType: row.role?.commType as "flat" | "percent" | undefined,
+	roleCommValue: row.role?.commValue,
+	roleSalaryMinCents: row.role?.salaryMinCents,
+	roleSalaryMaxCents: row.role?.salaryMaxCents,
 	jobId: row.jobId,
 	proposedSalaryCents: row.proposedSalaryCents,
 	stationId: row.stationId,

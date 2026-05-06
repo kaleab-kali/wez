@@ -110,7 +110,9 @@ const KindPanel = React.memo(
 										<td className="font-mono text-xs">{l.sortOrder}</td>
 										<td>
 											{l.archived ? (
-												<Badge variant="secondary" className="text-[10px]">archived</Badge>
+												<Badge variant="secondary" className="text-[10px]">
+													archived
+												</Badge>
 											) : (
 												<Badge className="text-[10px]">active</Badge>
 											)}
@@ -123,9 +125,7 @@ const KindPanel = React.memo(
 							</tbody>
 						</table>
 					</div>
-					{data && data.length === 0 && (
-						<p className="text-sm text-muted-foreground py-4 text-center">No entries.</p>
-					)}
+					{data && data.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No entries.</p>}
 				</CardContent>
 			</Card>
 		);
