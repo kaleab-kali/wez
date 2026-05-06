@@ -5,6 +5,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AdminModule } from "#modules/admin/admin.module";
+import { AuditLogModule } from "#modules/audit-log/audit-log.module";
 import { AuthModule } from "#modules/auth/auth.module";
 import { WezAuthGuard } from "#modules/auth/guards/wez-auth.guard";
 import { EmployersModule } from "#modules/employers/employers.module";
@@ -19,6 +20,7 @@ import { PlatformSettingsModule } from "#modules/platform-settings/platform-sett
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersModule } from "#modules/workers/workers.module";
+import { AuditContextMiddleware } from "#shared/audit/audit-context.middleware";
 import { PrismaModule } from "#shared/database/prisma.module";
 import { EmailModule } from "#shared/email/email.module";
 import { DomainEventBusModule } from "#shared/events/domain-event.bus";
@@ -39,6 +41,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 		PrismaModule,
 		StorageModule,
 		HealthModule,
+		AuditLogModule,
 		AuthModule,
 		AdminModule,
 		NotificationModule,
@@ -61,6 +64,6 @@ import { StorageModule } from "#shared/storage/storage.module";
 })
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {
-		consumer.apply(CorrelationIdMiddleware).forRoutes("*");
+		consumer.apply(CorrelationIdMiddleware, AuditContextMiddleware).forRoutes("*");
 	}
 }

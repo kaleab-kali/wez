@@ -4,6 +4,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
 import { auth } from "#modules/auth/auth.config";
 import { hasPermission, type Permission } from "#modules/auth/permissions";
+import type { AuditRequestContext } from "#shared/audit/audit-context";
 import { prisma } from "#shared/database/prisma-instance";
 
 type AuthUser = {
@@ -26,6 +27,7 @@ export type WezSession = {
 
 export type WezRequest = {
 	headers: IncomingHttpHeaders;
+	auditContext?: AuditRequestContext;
 	wezSession?: WezSession | null;
 };
 

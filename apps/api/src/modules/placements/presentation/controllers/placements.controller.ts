@@ -27,7 +27,7 @@ export class PlacementsController {
 	) {
 		const session = await requirePermission(req, "placement:finalize");
 		return {
-			data: await this.service.finalizeFromHireRequest(hireRequestId, session.user.id, dto),
+			data: await this.service.finalizeFromHireRequest(hireRequestId, session, dto, req.auditContext),
 		};
 	}
 
@@ -35,7 +35,7 @@ export class PlacementsController {
 	@ApiOperation({ summary: "End an active placement and restore worker availability" })
 	@ApiBody({ type: EndPlacementDto })
 	async end(@Param("id") id: string, @Body() dto: EndPlacementDto, @Req() req: WezRequest) {
-		await requirePermission(req, "placement:end");
-		return { data: await this.service.end(id, dto) };
+		const session = await requirePermission(req, "placement:end");
+		return { data: await this.service.end(id, session, dto, req.auditContext) };
 	}
 }

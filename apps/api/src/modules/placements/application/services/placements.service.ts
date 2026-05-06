@@ -7,6 +7,9 @@ import {
 	Injectable,
 	NotFoundException,
 } from "@nestjs/common";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditEventsService } from "#modules/audit-log/audit-events.service";
+import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
 import { STORAGE_DRIVER, type StorageDriver } from "#shared/storage/storage.interface";
@@ -21,6 +24,7 @@ export class PlacementsService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly agreementPdf: AgreementPdfService,
+		private readonly auditEvents: AuditEventsService,
 		@Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
 	) {}
 
@@ -92,11 +96,17 @@ export class PlacementsService {
 		};
 	}
 
-	async finalizeFromHireRequest(hireRequestId: string, finalizedByAgentId: string, dto: FinalizePlacementDto) {
+	async finalizeFromHireRequest(
+		hireRequestId: string,
+		session: WezSession,
+		dto: FinalizePlacementDto,
+		auditContext: AuditRequestContext | undefined,
+	) {
 		const salaryCents = BigInt(dto.salaryCents);
 		const startDate = new Date(dto.startDate);
 		const paymentReceivedAt = new Date(dto.paymentReceivedAt);
 		const placementId = randomUUID();
+		const finalizedByAgentId = session.user.id;
 		const requestSnapshot = await this.prisma.hireRequest.findUnique({
 			where: { id: hireRequestId },
 			include: { role: true, placement: true, worker: true, employer: true, station: true },
@@ -203,6 +213,27 @@ export class PlacementsService {
 						cancellationReason: "Worker placed through another hire request",
 					},
 				});
+				await this.auditEvents.record(tx, {
+					actorId: session.user.id,
+					actorRole: session.user.role ?? session.kind,
+					action: AUDIT_ACTIONS.placementFinalized,
+					targetType: AUDIT_TARGET_TYPES.placement,
+					targetId: placement.id,
+					stationId: request.stationId,
+					context: auditContext,
+					metadata: {
+						hireRequestId: request.id,
+						workerId: request.workerId,
+						employerId: request.employerId,
+						roleId: request.roleId,
+						jobId: request.jobId,
+						salaryCents: salaryCents.toString(),
+						commissionCents: currentCommissionCents.toString(),
+						paymentMethod: dto.paymentMethod,
+						paymentReferenceLast4: this.auditEvents.paymentReferenceLast4(dto.paymentReference),
+						agreementPdfUrl: agreement.url,
+					},
+				});
 
 				return placement;
 			});
@@ -212,11 +243,20 @@ export class PlacementsService {
 		}
 	}
 
-	async end(id: string, dto: EndPlacementDto) {
+	async end(id: string, session: WezSession, dto: EndPlacementDto, auditContext: AuditRequestContext | undefined) {
 		return this.prisma.$transaction(async (tx) => {
 			const placement = await tx.placement.findUnique({
 				where: { id },
-				select: { id: true, workerId: true, status: true, startDate: true },
+				select: {
+					id: true,
+					workerId: true,
+					employerId: true,
+					roleId: true,
+					stationId: true,
+					status: true,
+					startDate: true,
+					salaryCents: true,
+				},
 			});
 			if (!placement) throw new NotFoundException({ code: "PLACEMENT_NOT_FOUND" });
 			if (placement.status !== "active") {
@@ -241,6 +281,25 @@ export class PlacementsService {
 			await tx.worker.update({
 				where: { id: placement.workerId },
 				data: { available: true },
+			});
+			await this.auditEvents.record(tx, {
+				actorId: session.user.id,
+				actorRole: session.user.role ?? session.kind,
+				action: AUDIT_ACTIONS.placementEnded,
+				targetType: AUDIT_TARGET_TYPES.placement,
+				targetId: placement.id,
+				stationId: placement.stationId,
+				context: auditContext,
+				metadata: {
+					workerId: placement.workerId,
+					employerId: placement.employerId,
+					roleId: placement.roleId,
+					salaryCents: placement.salaryCents.toString(),
+					endDate: dto.endDate,
+					endedReason: dto.endedReason,
+					ratingByEmployer: dto.ratingByEmployer,
+					ratingByWorker: dto.ratingByWorker,
+				},
 			});
 			return updated;
 		});
