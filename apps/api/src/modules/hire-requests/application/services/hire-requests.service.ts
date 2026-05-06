@@ -67,6 +67,19 @@ export class HireRequestsService {
 	}
 
 	async create(currentUserId: string, dto: CreateHireRequestDto, asAgent: boolean) {
+		return this.createWithSourceReferral(currentUserId, dto, asAgent, null);
+	}
+
+	async createFromReferral(currentUserId: string, dto: CreateHireRequestDto, sourceReferralId: string) {
+		return this.createWithSourceReferral(currentUserId, dto, false, sourceReferralId);
+	}
+
+	private async createWithSourceReferral(
+		currentUserId: string,
+		dto: CreateHireRequestDto,
+		asAgent: boolean,
+		sourceReferralId: string | null,
+	) {
 		// Resolve employerId
 		let employerId = dto.employerId;
 		if (!employerId) {
@@ -117,7 +130,7 @@ export class HireRequestsService {
 			status: "awaiting_visit",
 			channel: dto.channel,
 			note: dto.note ?? null,
-			sourceReferralId: null,
+			sourceReferralId,
 			expiresAt,
 		});
 	}

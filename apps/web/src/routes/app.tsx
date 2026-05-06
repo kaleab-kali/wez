@@ -64,6 +64,11 @@ const CustomerAppLayout = React.memo(() => {
 								{t("app.requests")}
 							</CustomerNavLink>
 						)}
+						{isEmployer && (
+							<CustomerNavLink to="/app/referrals" active={location.pathname.startsWith("/app/referrals")}>
+								{t("referrals.title")}
+							</CustomerNavLink>
+						)}
 					</nav>
 					<div className="flex items-center gap-2">
 						<LanguageSwitcher />

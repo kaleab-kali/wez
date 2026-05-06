@@ -17,6 +17,7 @@ import { LookupsModule } from "#modules/lookups/lookups.module";
 import { NotificationModule } from "#modules/notification/notification.module";
 import { PlacementsModule } from "#modules/placements/placements.module";
 import { PlatformSettingsModule } from "#modules/platform-settings/platform-settings.module";
+import { ReferralsModule } from "#modules/referrals/referrals.module";
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersModule } from "#modules/workers/workers.module";
@@ -54,6 +55,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 		EmployersModule,
 		JobsModule,
 		HireRequestsModule,
+		ReferralsModule,
 		ErrorReportingModule,
 	],
 	providers: [

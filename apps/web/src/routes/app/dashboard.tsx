@@ -74,6 +74,14 @@ const CustomerDashboard = React.memo(() => {
 					body={isEmployer ? t("hireRequests.pendingCount", { count: pendingRequests }) : t("placements.workerBody")}
 					to={isEmployer ? "/app/requests" : undefined}
 				/>
+				{isEmployer && (
+					<CustomerTile
+						icon={ContactBookIcon}
+						title={t("referrals.title")}
+						body={t("referrals.dashboardBody")}
+						to="/app/referrals"
+					/>
+				)}
 				{SECONDARY_TILES.map((tile) => (
 					<CustomerTile key={tile.titleKey} icon={tile.icon} title={t(tile.titleKey)} body={t(tile.bodyKey)} />
 				))}
@@ -150,7 +158,7 @@ const CustomerTile = React.memo(
 		readonly title: string;
 		readonly body: string;
 		readonly badge?: string;
-		readonly to?: "/app/workers" | "/app/jobs" | "/app/requests";
+		readonly to?: "/app/workers" | "/app/jobs" | "/app/requests" | "/app/referrals";
 	}) => {
 		const { t } = useTranslation();
 		return (
