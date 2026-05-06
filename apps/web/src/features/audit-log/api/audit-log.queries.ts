@@ -63,6 +63,12 @@ const qs = (filter: AuditEventFilter) => {
 	return params.toString();
 };
 
+export const auditEventsExportUrl = (filter: AuditEventFilter) => {
+	const { page: _page, limit: _limit, ...exportFilter } = filter;
+	const query = qs(exportFilter);
+	return query ? `${BASE}/export?${query}` : `${BASE}/export`;
+};
+
 export const useAuditEvents = (filter: AuditEventFilter) =>
 	useQuery({
 		queryKey: auditLogKeys.list(filter),

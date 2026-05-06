@@ -6,10 +6,27 @@ import type { AuditAction, AuditTargetType } from "./audit-actions";
 
 const PAYMENT_REFERENCE_TAIL_LENGTH = 4;
 const SYSTEM_ACTOR_ROLE = "system";
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 25;
+const EXPORT_LIMIT = 5_000;
 
 type AuditMetadataValue = string | number | boolean | null | undefined;
 type AuditMetadata = Record<string, AuditMetadataValue>;
 type AuditEventWriter = Pick<PrismaService, "auditEvent">;
+type AuditEventRow = Awaited<ReturnType<PrismaService["auditEvent"]["findMany"]>>[number];
+type PlacementSummary = {
+	workerName: string;
+	employerName: string;
+	roleName: string;
+	stationName: string;
+	status: string;
+	salaryCents: string;
+	commissionCents: string;
+	paymentMethod: string;
+	paymentReferenceLast4: string;
+	endedReason: string | null;
+};
+type EnrichedAuditEvent = AuditEventRow & { targetSummary: PlacementSummary | null };
 
 export type RecordAuditEventInput = {
 	actorId?: string | null;
@@ -46,24 +63,9 @@ export class AuditEventsService {
 	}
 
 	async list(filter: ListAuditEventsDto) {
-		const page = filter.page ?? 1;
-		const limit = filter.limit ?? 25;
-		const createdAt =
-			filter.from || filter.to
-				? {
-						gte: filter.from ? new Date(filter.from) : undefined,
-						lte: filter.to ? new Date(filter.to) : undefined,
-					}
-				: undefined;
-		const where = {
-			action: filter.action,
-			actorId: filter.actorId,
-			actorRole: filter.actorRole,
-			targetType: filter.targetType,
-			targetId: filter.targetId,
-			stationId: filter.stationId,
-			createdAt,
-		};
+		const page = filter.page ?? DEFAULT_PAGE;
+		const limit = filter.limit ?? DEFAULT_LIMIT;
+		const where = this.buildWhere(filter);
 		const [items, total] = await this.prisma.$transaction([
 			this.prisma.auditEvent.findMany({
 				where,
@@ -73,6 +75,85 @@ export class AuditEventsService {
 			}),
 			this.prisma.auditEvent.count({ where }),
 		]);
+		const data = await this.enrichEvents(items);
+
+		return {
+			data,
+			meta: { total, page, limit, totalPages: Math.ceil(total / limit) || DEFAULT_PAGE },
+		};
+	}
+
+	async exportCsv(filter: ListAuditEventsDto): Promise<string> {
+		const items = await this.prisma.auditEvent.findMany({
+			where: this.buildWhere(filter),
+			orderBy: { createdAt: "desc" },
+			take: EXPORT_LIMIT,
+		});
+		const data = await this.enrichEvents(items);
+		const rows = [
+			[
+				"created_at",
+				"action",
+				"actor_role",
+				"worker",
+				"employer",
+				"role",
+				"station",
+				"salary_birr",
+				"commission_birr",
+				"payment_method",
+				"payment_reference_last4",
+				"end_reason",
+				"target_type",
+				"target_id",
+				"event_id",
+			],
+			...data.map((event) => [
+				event.createdAt.toISOString(),
+				event.action,
+				event.actorRole,
+				event.targetSummary?.workerName ?? "",
+				event.targetSummary?.employerName ?? "",
+				event.targetSummary?.roleName ?? "",
+				event.targetSummary?.stationName ?? "",
+				this.centsToBirr(event.targetSummary?.salaryCents),
+				this.centsToBirr(event.targetSummary?.commissionCents),
+				event.targetSummary?.paymentMethod ?? "",
+				event.targetSummary?.paymentReferenceLast4 ?? "",
+				event.action === "placement.ended" ? (event.targetSummary?.endedReason ?? "") : "",
+				event.targetType ?? "",
+				event.targetId ?? "",
+				event.id,
+			]),
+		];
+
+		return rows.map((row) => row.map((cell) => this.escapeCsvCell(cell)).join(",")).join("\n");
+	}
+
+	paymentReferenceLast4(value: string): string {
+		return value.slice(-PAYMENT_REFERENCE_TAIL_LENGTH);
+	}
+
+	private buildWhere(filter: ListAuditEventsDto) {
+		const createdAt =
+			filter.from || filter.to
+				? {
+						gte: filter.from ? new Date(filter.from) : undefined,
+						lte: filter.to ? new Date(filter.to) : undefined,
+					}
+				: undefined;
+		return {
+			action: filter.action,
+			actorId: filter.actorId,
+			actorRole: filter.actorRole,
+			targetType: filter.targetType,
+			targetId: filter.targetId,
+			stationId: filter.stationId,
+			createdAt,
+		};
+	}
+
+	private async enrichEvents(items: AuditEventRow[]): Promise<EnrichedAuditEvent[]> {
 		const placementIds = items.flatMap((event) =>
 			event.targetType === "placement" && event.targetId ? [event.targetId] : [],
 		);
@@ -113,17 +194,10 @@ export class AuditEventsService {
 			]),
 		);
 
-		return {
-			data: items.map((event) => ({
-				...event,
-				targetSummary: event.targetId ? (placementSummaries.get(event.targetId) ?? null) : null,
-			})),
-			meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
-		};
-	}
-
-	paymentReferenceLast4(value: string): string {
-		return value.slice(-PAYMENT_REFERENCE_TAIL_LENGTH);
+		return items.map((event) => ({
+			...event,
+			targetSummary: event.targetId ? (placementSummaries.get(event.targetId) ?? null) : null,
+		}));
 	}
 
 	private normalizeMetadata(metadata: AuditMetadata): AuditMetadata {
@@ -133,5 +207,14 @@ export class AuditEventsService {
 				return value !== undefined;
 			}),
 		);
+	}
+
+	private centsToBirr(value: string | undefined): string {
+		if (!value) return "";
+		return (Number(value) / 100).toString();
+	}
+
+	private escapeCsvCell(value: string): string {
+		return `"${value.replaceAll('"', '""')}"`;
 	}
 }

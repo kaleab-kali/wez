@@ -422,6 +422,8 @@ export const en = {
 		title: "Audit log",
 		subtitle: "Review append-only compliance events for placement lifecycle and administrative actions.",
 		events: "Events",
+		exportCsv: "Export CSV",
+		exporting: "Exporting...",
 		filters: "Filters",
 		count: "{{count}} events",
 		empty: "No audit events match the current filters.",

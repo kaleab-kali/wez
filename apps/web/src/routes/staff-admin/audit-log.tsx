@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { type AuditEvent, type AuditEventFilter, useAuditEvents } from "#features/audit-log/api/audit-log.queries";
+import {
+	type AuditEvent,
+	type AuditEventFilter,
+	auditEventsExportUrl,
+	useAuditEvents,
+} from "#features/audit-log/api/audit-log.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +18,7 @@ const ACTOR_ROLES = ["super_admin", "ops_manager", "compliance_officer", "financ
 const TARGET_TYPES = ["placement"] as const;
 const DEFAULT_LIMIT = 25;
 const FIRST_PAGE = 1;
+const CSV_FILENAME = "wez-audit-events.csv";
 
 const compactId = (value: string | null) => (value && value !== "-" ? `${value.slice(0, 8)}...` : "-");
 const formatDateTime = (value: string) =>
@@ -252,6 +258,8 @@ AuditEventList.displayName = "AuditEventList";
 const AuditLogPage = React.memo(() => {
 	const { t } = useTranslation();
 	const [filter, setFilter] = React.useState<AuditEventFilter>({ page: FIRST_PAGE, limit: DEFAULT_LIMIT });
+	const [exportError, setExportError] = React.useState("");
+	const [isExporting, setIsExporting] = React.useState(false);
 	const { data, isLoading, error } = useAuditEvents(filter);
 
 	const onChange = React.useCallback(
@@ -267,6 +275,28 @@ const AuditLogPage = React.memo(() => {
 		() => setFilter((current) => ({ ...current, page: (current.page ?? FIRST_PAGE) + 1 })),
 		[],
 	);
+	const onExport = React.useCallback(async () => {
+		setExportError("");
+		setIsExporting(true);
+		try {
+			const res = await fetch(auditEventsExportUrl(filter), { credentials: "include" });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				throw new Error(body?.error?.message ?? `Request failed: ${res.status}`);
+			}
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = CSV_FILENAME;
+			anchor.click();
+			URL.revokeObjectURL(url);
+		} catch (err) {
+			setExportError(err instanceof Error ? err.message : t("common.error"));
+		} finally {
+			setIsExporting(false);
+		}
+	}, [filter, t]);
 	const page = data?.meta.page ?? FIRST_PAGE;
 	const totalPages = data?.meta.totalPages ?? FIRST_PAGE;
 
@@ -277,13 +307,17 @@ const AuditLogPage = React.memo(() => {
 				<p className="mt-1 text-sm text-muted-foreground">{t("audit.subtitle")}</p>
 			</div>
 			<AuditFilters filter={filter} onChange={onChange} onClear={onClear} />
+			{exportError && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{exportError}</p>}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between gap-4">
 					<div>
 						<CardTitle className="text-base">{t("audit.events")}</CardTitle>
 						<p className="text-sm text-muted-foreground">{t("audit.count", { count: data?.meta.total ?? 0 })}</p>
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center justify-end gap-2">
+						<Button type="button" variant="outline" size="sm" onClick={onExport} disabled={isExporting}>
+							{isExporting ? t("audit.exporting") : t("audit.exportCsv")}
+						</Button>
 						<Button type="button" variant="outline" size="sm" onClick={onPrev} disabled={page <= FIRST_PAGE}>
 							{t("common.back")}
 						</Button>
