@@ -4,18 +4,18 @@ import { useTranslation } from "react-i18next";
 import { useCreateJob } from "#features/jobs/api/job.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
+import { authClient } from "#shared/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/app/jobs/new")({
-	component: NewCustomerJobPage,
-});
+const EMPLOYER_ROLES = new Set(["employer_business", "employer_household"]);
 
-function NewCustomerJobPage() {
+const NewCustomerJobPage = React.memo(() => {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
+	const { data: session, isPending: sessionPending } = authClient.useSession();
 	const createJob = useCreateJob();
 	const { data: roles } = usePublicRoles();
 	const { data: woredas } = useLookupKind("woredas");
@@ -27,6 +27,8 @@ function NewCustomerJobPage() {
 	const [salaryMax, setSalaryMax] = React.useState<number | "">("");
 	const [location, setLocation] = React.useState("");
 	const [error, setError] = React.useState("");
+	const role = (session?.user as { role?: string } | undefined)?.role;
+	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 
 	const selectedRole = React.useMemo(() => roles?.find((role) => role.id === roleId), [roles, roleId]);
 	const roleSalaryMin = React.useMemo(
@@ -51,6 +53,10 @@ function NewCustomerJobPage() {
 		setSalaryMin(Number(selectedRole.salaryMinCents) / 100);
 		setSalaryMax(Number(selectedRole.salaryMaxCents) / 100);
 	}, [selectedRole]);
+
+	React.useEffect(() => {
+		if (!sessionPending && !isEmployer) navigate({ to: "/app/jobs", replace: true });
+	}, [isEmployer, navigate, sessionPending]);
 
 	const onSubmit = React.useCallback(
 		async (e: React.FormEvent) => {
@@ -192,4 +198,9 @@ function NewCustomerJobPage() {
 			</Card>
 		</div>
 	);
-}
+});
+NewCustomerJobPage.displayName = "NewCustomerJobPage";
+
+export const Route = createFileRoute("/app/jobs/new")({
+	component: NewCustomerJobPage,
+});

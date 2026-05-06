@@ -83,10 +83,11 @@ export const useEmployer = (id: string | undefined) =>
 		enabled: !!id,
 	});
 
-export const useMyEmployer = () =>
+export const useMyEmployer = (options?: { readonly enabled?: boolean }) =>
 	useQuery({
 		queryKey: employerKeys.mine(),
 		queryFn: () => get<{ data: Employer | null }>(`${BASE}/me`).then((b) => b.data),
+		enabled: options?.enabled ?? true,
 	});
 
 export const useCreateEmployer = () => {

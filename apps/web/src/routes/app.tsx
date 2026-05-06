@@ -7,11 +7,15 @@ import { WezLogo } from "@/components/branding/WezLogo";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const EMPLOYER_ROLES = new Set(["employer_business", "employer_household"]);
+
 const CustomerAppLayout = React.memo(() => {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { data: session, isPending } = authClient.useSession();
+	const role = (session?.user as { role?: string } | undefined)?.role;
+	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 
 	const onSignOut = React.useCallback(async () => {
 		await authClient.signOut();
@@ -47,15 +51,19 @@ const CustomerAppLayout = React.memo(() => {
 						<CustomerNavLink to="/app/dashboard" active={location.pathname === "/app/dashboard"}>
 							{t("nav.dashboard")}
 						</CustomerNavLink>
-						<CustomerNavLink to="/app/workers" active={location.pathname.startsWith("/app/workers")}>
-							{t("app.workers")}
-						</CustomerNavLink>
+						{isEmployer && (
+							<CustomerNavLink to="/app/workers" active={location.pathname.startsWith("/app/workers")}>
+								{t("app.workers")}
+							</CustomerNavLink>
+						)}
 						<CustomerNavLink to="/app/jobs" active={location.pathname.startsWith("/app/jobs")}>
 							{t("app.jobs")}
 						</CustomerNavLink>
-						<CustomerNavLink to="/app/requests" active={location.pathname.startsWith("/app/requests")}>
-							{t("app.requests")}
-						</CustomerNavLink>
+						{isEmployer && (
+							<CustomerNavLink to="/app/requests" active={location.pathname.startsWith("/app/requests")}>
+								{t("app.requests")}
+							</CustomerNavLink>
+						)}
 					</nav>
 					<div className="flex items-center gap-2">
 						<LanguageSwitcher />

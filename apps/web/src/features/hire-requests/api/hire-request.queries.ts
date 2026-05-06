@@ -76,13 +76,14 @@ const qs = (f: HireRequestFilter) => {
 	return p.toString();
 };
 
-export const useHireRequests = (filter: HireRequestFilter) =>
+export const useHireRequests = (filter: HireRequestFilter, options?: { readonly enabled?: boolean }) =>
 	useQuery({
 		queryKey: hireRequestKeys.list(filter),
 		queryFn: () =>
 			get<{ data: HireRequest[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
 				`${BASE}?${qs(filter)}`,
 			),
+		enabled: options?.enabled ?? true,
 	});
 
 export const useCreateHireRequest = () => {

@@ -6,17 +6,22 @@ import { useTranslation } from "react-i18next";
 import { useMyEmployer } from "#features/employers/api/employer.queries";
 import { useHireRequests } from "#features/hire-requests/api/hire-request.queries";
 import { useJobs } from "#features/jobs/api/job.queries";
+import { authClient } from "#shared/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SECONDARY_TILES = [{ icon: Book02Icon, titleKey: "app.training", bodyKey: "app.trainingBody" }] as const;
+const EMPLOYER_ROLES = new Set(["employer_business", "employer_household"]);
 
 const CustomerDashboard = React.memo(() => {
 	const { t } = useTranslation();
-	const { data: employer } = useMyEmployer();
-	const { data: jobs } = useJobs({ page: 1, limit: 5 });
-	const { data: requests } = useHireRequests({ page: 1, limit: 5 });
+	const { data: session } = authClient.useSession();
+	const role = (session?.user as { role?: string } | undefined)?.role;
+	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
+	const { data: employer } = useMyEmployer({ enabled: isEmployer });
+	const { data: jobs } = useJobs({ page: 1, limit: 5, status: isEmployer ? undefined : "open" });
+	const { data: requests } = useHireRequests({ page: 1, limit: 5 }, { enabled: isEmployer });
 
 	const pendingRequests = React.useMemo(
 		() => requests?.data.filter((request) => request.status === "awaiting_visit").length ?? 0,
@@ -33,23 +38,41 @@ const CustomerDashboard = React.memo(() => {
 					</h1>
 					<p className="max-w-2xl text-muted-foreground">{t("app.dashboardBody")}</p>
 				</div>
-				<Button asChild>
-					<Link to="/app/jobs/new">{t("jobs.postJob")}</Link>
-				</Button>
+				{isEmployer ? (
+					<Button asChild>
+						<Link to="/app/jobs/new">{t("jobs.postJob")}</Link>
+					</Button>
+				) : (
+					<Button asChild>
+						<Link to="/app/jobs">{t("jobs.browseJobs")}</Link>
+					</Button>
+				)}
 			</section>
 
 			<section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				<CustomerTile
-					icon={ContactBookIcon}
-					title={t("app.profile")}
-					body={employer ? `${employer.type} - ${employer.area}` : t("app.profileBody")}
-					badge={employer?.rating}
-				/>
-				<CustomerTile icon={UserMultipleIcon} title={t("app.workers")} body={t("app.workersBody")} to="/app/workers" />
+				{isEmployer && (
+					<CustomerTile
+						icon={ContactBookIcon}
+						title={t("app.profile")}
+						body={employer ? `${employer.type} - ${employer.area}` : t("app.profileBody")}
+						badge={employer?.rating}
+					/>
+				)}
+				{isEmployer ? (
+					<CustomerTile
+						icon={UserMultipleIcon}
+						title={t("app.workers")}
+						body={t("app.workersBody")}
+						to="/app/workers"
+					/>
+				) : (
+					<CustomerTile icon={NoteEditIcon} title={t("jobs.title")} body={t("jobs.workerCatalogBody")} to="/app/jobs" />
+				)}
 				<CustomerTile
 					icon={NoteEditIcon}
-					title={t("app.requests")}
-					body={t("hireRequests.pendingCount", { count: pendingRequests })}
+					title={isEmployer ? t("app.requests") : t("placements.title")}
+					body={isEmployer ? t("hireRequests.pendingCount", { count: pendingRequests }) : t("placements.workerBody")}
+					to={isEmployer ? "/app/requests" : undefined}
 				/>
 				{SECONDARY_TILES.map((tile) => (
 					<CustomerTile key={tile.titleKey} icon={tile.icon} title={t(tile.titleKey)} body={t(tile.bodyKey)} />
@@ -82,27 +105,31 @@ const CustomerDashboard = React.memo(() => {
 				</Card>
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle className="text-base">{t("hireRequests.title")}</CardTitle>
-						<Link to="/app/requests" className="text-sm text-primary">
-							{t("common.viewAll")}
-						</Link>
+						<CardTitle className="text-base">{isEmployer ? t("hireRequests.title") : t("placements.title")}</CardTitle>
+						{isEmployer && (
+							<Link to="/app/requests" className="text-sm text-primary">
+								{t("common.viewAll")}
+							</Link>
+						)}
 					</CardHeader>
 					<CardContent className="space-y-3">
-						{requests?.data.slice(0, 3).map((request) => (
-							<div
-								key={request.id}
-								className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
-							>
-								<div>
-									<p className="text-sm font-medium">{request.workerName ?? request.workerId.slice(0, 8)}</p>
-									<p className="text-xs text-muted-foreground">{request.roleName ?? request.roleId}</p>
+						{isEmployer &&
+							requests?.data.slice(0, 3).map((request) => (
+								<div
+									key={request.id}
+									className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
+								>
+									<div>
+										<p className="text-sm font-medium">{request.workerName ?? request.workerId.slice(0, 8)}</p>
+										<p className="text-xs text-muted-foreground">{request.roleName ?? request.roleId}</p>
+									</div>
+									<Badge variant="outline">{request.status.replace("_", " ")}</Badge>
 								</div>
-								<Badge variant="outline">{request.status.replace("_", " ")}</Badge>
-							</div>
-						))}
-						{requests && requests.data.length === 0 && (
+							))}
+						{isEmployer && requests && requests.data.length === 0 && (
 							<p className="text-sm text-muted-foreground">{t("hireRequests.empty")}</p>
 						)}
+						{!isEmployer && <p className="text-sm text-muted-foreground">{t("placements.workerBody")}</p>}
 					</CardContent>
 				</Card>
 			</section>
@@ -123,7 +150,7 @@ const CustomerTile = React.memo(
 		readonly title: string;
 		readonly body: string;
 		readonly badge?: string;
-		readonly to?: "/app/workers";
+		readonly to?: "/app/workers" | "/app/jobs" | "/app/requests";
 	}) => {
 		const { t } = useTranslation();
 		return (

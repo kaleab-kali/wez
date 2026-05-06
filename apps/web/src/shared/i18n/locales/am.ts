@@ -363,6 +363,9 @@ export const am = {
 		title: "ስራዎች",
 		create: "ስራ ይለጥፉ",
 		subtitle: "ለቀጣሪ መለያዎ የስራ ማስታወቂያዎችን ይፍጠሩ እና ያስተዳድሩ።",
+		browseJobs: "ስራዎችን ይመልከቱ",
+		workerCatalogBody: "በWez ቀጣሪዎች የተለጠፉ ክፍት ስራዎችን ይመልከቱ።",
+		searchPlaceholder: "ርዕስ ወይም መግለጫ",
 		postJob: "ስራ ይለጥፉ",
 		status: "ሁኔታ",
 		statusOpen: "ክፍት",
@@ -387,6 +390,8 @@ export const am = {
 		location: "ቦታ",
 	},
 	placements: {
+		title: "ምደባዎች",
+		workerBody: "በጣቢያ ከተጠናቀቁ በኋላ ንቁ እና የተጠናቀቁ ምደባዎችዎ እዚህ ይታያሉ።",
 		finalize: "Finalize placement",
 		confirmFinalize: "Confirm payment and finalize",
 		startDate: "Start date",

@@ -370,6 +370,9 @@ export const en = {
 	jobs: {
 		title: "Jobs",
 		subtitle: "Create and manage job posts for your employer account.",
+		browseJobs: "Browse jobs",
+		workerCatalogBody: "Browse open jobs that Wez employers have posted.",
+		searchPlaceholder: "Title or description",
 		create: "Post a job",
 		postJob: "Post job",
 		status: "Status",
@@ -397,6 +400,7 @@ export const en = {
 	},
 	placements: {
 		title: "Placements",
+		workerBody: "Your active and completed placements will appear here after station finalization.",
 		subtitle: "{{count}} finalized placement records",
 		finalize: "Finalize placement",
 		confirmFinalize: "Confirm payment and finalize",
