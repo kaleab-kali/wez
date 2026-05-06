@@ -27,12 +27,12 @@ import {
 } from "@/components/ui/sidebar";
 
 const NAV_ITEMS = [
-	{ labelKey: "admin.nav.overview", to: "/admin", icon: DashboardSquare01Icon, exact: true },
-	{ labelKey: "admin.nav.stations", to: "/admin/stations", icon: StoreLocation02Icon, exact: false },
-	{ labelKey: "admin.nav.roleCatalog", to: "/admin/role-catalog", icon: Coins01Icon, exact: false },
-	{ labelKey: "admin.nav.lookups", to: "/admin/lookups", icon: Book02Icon, exact: false },
-	{ labelKey: "admin.nav.twoFactor", to: "/admin/2fa", icon: SecurityIcon, exact: false },
-	{ labelKey: "admin.nav.sessions", to: "/admin/sessions", icon: UserMultipleIcon, exact: false },
+	{ labelKey: "admin.nav.overview", to: "/staff-admin", icon: DashboardSquare01Icon, exact: true },
+	{ labelKey: "admin.nav.stations", to: "/staff-admin/stations", icon: StoreLocation02Icon, exact: false },
+	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon, exact: false },
+	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon, exact: false },
+	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon, exact: false },
+	{ labelKey: "admin.nav.sessions", to: "/staff-admin/sessions", icon: UserMultipleIcon, exact: false },
 ] as const;
 
 export const AdminSidebar = React.memo(
@@ -44,7 +44,7 @@ export const AdminSidebar = React.memo(
 
 		const onSignOut = React.useCallback(async () => {
 			await adminAuthApi.logout();
-			window.location.href = "/admin-login";
+			window.location.href = "/staff-admin-login";
 		}, []);
 
 		return (

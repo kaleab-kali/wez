@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/admin/lookups")({
+export const Route = createFileRoute("/staff-admin/lookups")({
 	component: LookupsPage,
 });
 
@@ -141,7 +141,7 @@ function LookupsPage() {
 	return (
 		<div className="space-y-4 max-w-5xl">
 			<div>
-				<Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground transition">
+				<Link to="/staff-admin" className="text-sm text-muted-foreground hover:text-foreground transition">
 					&larr; {t("admin.consoleTitle")}
 				</Link>
 				<h1 className="text-2xl font-bold tracking-tight mt-2">Lookups</h1>

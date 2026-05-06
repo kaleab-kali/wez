@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/admin-login")({
+export const Route = createFileRoute("/staff-login")({
 	component: AdminLoginPage,
 });
 
@@ -24,7 +24,7 @@ const AdminLoginForm = React.memo(
 				setLoading(true);
 				try {
 					await adminAuthApi.login(email, password);
-					window.location.href = "/admin";
+					window.location.href = "/staff-admin";
 				} catch (err) {
 					setError(err instanceof Error ? err.message : "Invalid credentials");
 					setLoading(false);

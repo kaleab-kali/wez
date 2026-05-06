@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { adminAuth } from "../src/modules/admin/auth/admin-auth.config";
-import { auth } from "../src/modules/auth/auth.config";
 import { prisma } from "../src/shared/database/prisma-instance";
 
 const seed = async () => {
@@ -14,15 +13,15 @@ const seed = async () => {
 	}
 
 	const opsManagerEmail = "ops@wez.local";
-	const opsManagerPassword = "OpsManager#1Pass";
+	const opsManagerPassword = "OpsManagerPass#1!";
 
 	const supervisorEmail = "supervisor@wez.local";
-	const supervisorPassword = "Supervisor#1Pass";
+	const supervisorPassword = "SupervisorPass#1!";
 
 	const agentBoleEmail = "agent.bole@wez.local";
-	const agentBolePassword = "AgentBole#1Pass";
+	const agentBolePassword = "AgentBolePass#1!";
 	const agentMegenagnaEmail = "agent.megenagna@wez.local";
-	const agentMegenagnaPassword = "AgentMega#1Pass";
+	const agentMegenagnaPassword = "AgentMegaPass#1!";
 
 	console.log("Seeding Wez baseline...");
 
@@ -82,28 +81,28 @@ const seed = async () => {
 	});
 
 	console.log(`Creating supervisor: ${supervisorEmail}`);
-	const { user: supervisor } = await auth.api.signUpEmail({
+	const { user: supervisor } = await adminAuth.api.signUpEmail({
 		body: { name: "Bole Station Supervisor", email: supervisorEmail, password: supervisorPassword },
 	});
-	await prisma.user.update({
+	await prisma.adminUser.update({
 		where: { id: supervisor.id },
 		data: { role: "station_supervisor" },
 	});
 
 	console.log(`Creating agent (Bole): ${agentBoleEmail}`);
-	const { user: agentBole } = await auth.api.signUpEmail({
+	const { user: agentBole } = await adminAuth.api.signUpEmail({
 		body: { name: "Hanna B.", email: agentBoleEmail, password: agentBolePassword },
 	});
-	await prisma.user.update({
+	await prisma.adminUser.update({
 		where: { id: agentBole.id },
 		data: { role: "agent" },
 	});
 
 	console.log(`Creating agent (Megenagna): ${agentMegenagnaEmail}`);
-	const { user: agentMegenagna } = await auth.api.signUpEmail({
+	const { user: agentMegenagna } = await adminAuth.api.signUpEmail({
 		body: { name: "Dawit M.", email: agentMegenagnaEmail, password: agentMegenagnaPassword },
 	});
-	await prisma.user.update({
+	await prisma.adminUser.update({
 		where: { id: agentMegenagna.id },
 		data: { role: "agent" },
 	});
@@ -205,14 +204,15 @@ const seed = async () => {
 
 	console.log("\n=== Seed Complete ===");
 	console.log("");
-	console.log("HQ ADMIN CONSOLE — http://localhost:5180/admin-login");
-	console.log(`  super admin:  ${adminEmail} / ${adminPassword}`);
-	console.log(`  ops manager:  ${opsManagerEmail} / ${opsManagerPassword}`);
+	console.log("STAFF LOGIN (Wez employees) — http://localhost:5180/staff-login");
+	console.log(`  super_admin:        ${adminEmail} / ${adminPassword}`);
+	console.log(`  ops_manager:        ${opsManagerEmail} / ${opsManagerPassword}`);
+	console.log(`  station_supervisor: ${supervisorEmail} / ${supervisorPassword}`);
+	console.log(`  agent (Bole):       ${agentBoleEmail} / ${agentBolePassword}`);
+	console.log(`  agent (Megenagna):  ${agentMegenagnaEmail} / ${agentMegenagnaPassword}`);
 	console.log("");
-	console.log("TENANT APP — http://localhost:5180/login");
-	console.log(`  supervisor:    ${supervisorEmail} / ${supervisorPassword}`);
-	console.log(`  agent (Bole):  ${agentBoleEmail} / ${agentBolePassword}`);
-	console.log(`  agent (Megen): ${agentMegenagnaEmail} / ${agentMegenagnaPassword}`);
+	console.log("CUSTOMER APP — http://localhost:5180/login (workers via phone, employers via email)");
+	console.log("  No customers seeded — sign up or have an agent register one.");
 	console.log("");
 	console.log("====================\n");
 };

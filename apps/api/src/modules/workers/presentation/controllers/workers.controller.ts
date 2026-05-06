@@ -1,24 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { fromNodeHeaders } from "better-auth/node";
-import { auth } from "#modules/auth/auth.config";
-import { hasPermission, type Permission } from "#modules/auth/permissions";
+import { requirePermission } from "#shared/auth/session";
 import {
 	ListWorkersDto,
 	RegisterWorkerDto,
 	UpdateWorkerDto,
 } from "../../application/dto/worker.dto";
 import { WorkersService } from "../../application/services/workers.service";
-
-const requirePermission = async (req: any, permission: Permission) => {
-	const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-	if (!session?.user) throw new UnauthorizedException();
-	const role = (session.user as { role?: string }).role;
-	if (!hasPermission(role, permission)) {
-		throw new UnauthorizedException({ code: "MISSING_PERMISSION", message: permission });
-	}
-	return session;
-};
 
 @ApiTags("Workers")
 @ApiBearerAuth()
@@ -41,11 +29,11 @@ export class WorkersController {
 	}
 
 	@Post()
-	@ApiOperation({ summary: "Register a worker (agent only, in-station)" })
+	@ApiOperation({ summary: "Register a worker (agent / staff only, in-station)" })
 	@ApiBody({ type: RegisterWorkerDto })
 	async register(@Body() dto: RegisterWorkerDto, @Req() req: any) {
-		const session = await requirePermission(req, "worker:create");
-		return { data: await this.service.register(session.user.id, dto) };
+		const s = await requirePermission(req, "worker:create");
+		return { data: await this.service.register(s.user.id, dto) };
 	}
 
 	@Patch(":id")

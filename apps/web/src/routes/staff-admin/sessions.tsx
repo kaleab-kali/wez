@@ -4,7 +4,7 @@ import { adminAuthClient } from "#shared/lib/admin-auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/admin/sessions")({
+export const Route = createFileRoute("/staff-admin/sessions")({
 	component: SessionsPage,
 });
 
@@ -32,7 +32,7 @@ function SessionsPage() {
 	return (
 		<div className="max-w-2xl space-y-4">
 			<div>
-				<Link to="/admin" className="text-sm text-muted-foreground underline">
+				<Link to="/staff-admin" className="text-sm text-muted-foreground underline">
 					&larr; Back to console
 				</Link>
 				<h1 className="text-2xl font-bold mt-2">Active sessions</h1>

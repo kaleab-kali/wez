@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/_authenticated/workers/new")({
+export const Route = createFileRoute("/staff/workers/new")({
 	component: NewWorkerPage,
 });
 

@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authenticated/hire-requests/")({
+export const Route = createFileRoute("/staff/hire-requests/")({
 	component: HireRequestsPage,
 });
 

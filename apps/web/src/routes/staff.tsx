@@ -1,13 +1,13 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import React from "react";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
-import { authClient } from "#shared/lib/auth-client";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/_authenticated")({
-	component: AuthenticatedLayout,
+export const Route = createFileRoute("/staff")({
+	component: StaffLayout,
 });
 
 const LoadingScreen = React.memo(
@@ -24,17 +24,17 @@ const LoadingScreen = React.memo(
 );
 LoadingScreen.displayName = "LoadingScreen";
 
-function AuthenticatedLayout() {
+function StaffLayout() {
 	const navigate = useNavigate();
-	const { data: session, isPending } = authClient.useSession();
+	const { data: session, isPending, isError } = useAdminSession();
 
 	React.useEffect(() => {
-		if (!isPending && !session) {
-			navigate({ to: "/login" });
+		if (!isPending && (isError || !session?.user)) {
+			navigate({ to: "/staff-login" });
 		}
-	}, [isPending, session, navigate]);
+	}, [isPending, isError, session, navigate]);
 
-	if (isPending || !session) return <LoadingScreen />;
+	if (isPending || !session?.user) return <LoadingScreen />;
 
 	return (
 		<SidebarProvider>

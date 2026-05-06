@@ -14,6 +14,10 @@ datasource db {
 // after changing auth.config.ts plugins.
 // ============================================================
 
+// ============================================================
+// CUSTOMER USER (workers + employers — self-signup or agent-led)
+// ============================================================
+
 model User {
   id            String    @id
   name          String
@@ -23,7 +27,7 @@ model User {
   emailVerified Boolean   @default(false)
   image         String?
 
-  // Wez role: worker | employer_business | employer_household | agent | station_supervisor | instructor
+  // Customer role: worker | employer_business | employer_household
   role          String    @default("worker")
 
   // Account state
@@ -34,32 +38,19 @@ model User {
   lockedUntil   DateTime?
   lastLoginAt   DateTime?
   localePref    String    @default("en")
-
-  // Two-factor (HQ admin uses AdminUser; this is for tenant if enabled later)
   twoFactorEnabled Boolean @default(false)
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  sessions          Session[]
-  accounts          Account[]
-  workerProfile     Worker?         @relation("WorkerUser")
-  employerProfile   Employer?       @relation("EmployerUser")
-  agentAssignments  AgentAssignment[]
-  supervisedStations Station[]      @relation("StationSupervisor")
-  filedComplaints   Complaint[]     @relation("ComplaintFiler")
-  takenComplaints   Complaint[]     @relation("ComplaintTaker")
-  closedComplaints  Complaint[]     @relation("ComplaintCloser")
-  raisedTickets     Ticket[]        @relation("TicketRaiser")
-  assignedTickets   Ticket[]        @relation("TicketAssignee")
-  resolvedTickets   Ticket[]        @relation("TicketResolver")
-  finalizedPlacements Placement[]   @relation("PlacementFinalizer")
-  registeredWorkers Worker[]        @relation("WorkerRegisteringAgent")
-  registeredEmployers Employer[]    @relation("EmployerRegisteringAgent")
-  notifications     Notification[]
+  sessions                Session[]
+  accounts                Account[]
+  workerProfile           Worker?       @relation("WorkerUser")
+  employerProfile         Employer?     @relation("EmployerUser")
+  filedComplaints         Complaint[]   @relation("ComplaintFiler")
+  notifications           Notification[]
   notificationPreferences NotificationPreference[]
-  instructorProfile Instructor?     @relation("InstructorUser")
 
   @@map("user")
 }
@@ -130,6 +121,19 @@ model AdminUser {
   sessions      AdminSession[]
   accounts      AdminAccount[]
   twoFactor     AdminTwoFactor[]
+
+  // Staff-side relations (operations + HQ work)
+  agentAssignments    AgentAssignment[]
+  supervisedStations  Station[]    @relation("StationSupervisor")
+  registeredWorkers   Worker[]     @relation("WorkerRegisteringAgent")
+  registeredEmployers Employer[]   @relation("EmployerRegisteringAgent")
+  finalizedPlacements Placement[]  @relation("PlacementFinalizer")
+  takenComplaints     Complaint[]  @relation("ComplaintTaker")
+  closedComplaints    Complaint[]  @relation("ComplaintCloser")
+  raisedTickets       Ticket[]     @relation("TicketRaiser")
+  assignedTickets     Ticket[]     @relation("TicketAssignee")
+  resolvedTickets     Ticket[]     @relation("TicketResolver")
+  instructorProfile   Instructor?  @relation("InstructorUser")
 
   @@map("admin_user")
 }
@@ -328,7 +332,7 @@ model Station {
   phone              String?
   active             Boolean   @default(true)
   supervisorUserId   String?
-  supervisor         User?     @relation("StationSupervisor", fields: [supervisorUserId], references: [id])
+  supervisor         AdminUser? @relation("StationSupervisor", fields: [supervisorUserId], references: [id])
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -344,7 +348,7 @@ model Station {
 model AgentAssignment {
   id          String    @id @default(uuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   stationId   String
   station     Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
   active      Boolean   @default(true)
@@ -383,7 +387,7 @@ model Worker {
   tin                      String?
   available                Boolean   @default(true)
   registeredByAgentId      String?
-  registeringAgent         User?     @relation("WorkerRegisteringAgent", fields: [registeredByAgentId], references: [id])
+  registeringAgent         AdminUser? @relation("WorkerRegisteringAgent", fields: [registeredByAgentId], references: [id])
   registeredAtStationId    String?
   registeringStation       Station?  @relation("WorkerRegisteringStation", fields: [registeredAtStationId], references: [id])
   ratingAverage            Decimal?  @db.Decimal(3, 2)
@@ -442,7 +446,7 @@ model Employer {
   placementsCount          Int       @default(0)
   complaintsCount          Int       @default(0)
   registeredByAgentId      String?
-  registeringAgent         User?     @relation("EmployerRegisteringAgent", fields: [registeredByAgentId], references: [id])
+  registeringAgent         AdminUser? @relation("EmployerRegisteringAgent", fields: [registeredByAgentId], references: [id])
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
   deletedAt                DateTime?
@@ -587,7 +591,7 @@ model Placement {
   stationId             String
   station               Station      @relation(fields: [stationId], references: [id])
   finalizedByAgentId    String
-  finalizedByAgent      User         @relation("PlacementFinalizer", fields: [finalizedByAgentId], references: [id])
+  finalizedByAgent      AdminUser    @relation("PlacementFinalizer", fields: [finalizedByAgentId], references: [id])
   startDate             DateTime     @db.Date
   endDate               DateTime?    @db.Date
   salaryCents           BigInt
@@ -635,7 +639,7 @@ model Complaint {
   stationId         String?
   station           Station?  @relation(fields: [stationId], references: [id])
   takenByAgentId    String?
-  takenByAgent      User?     @relation("ComplaintTaker", fields: [takenByAgentId], references: [id])
+  takenByAgent      AdminUser? @relation("ComplaintTaker", fields: [takenByAgentId], references: [id])
   type              String
   // low | medium | high
   severity          String
@@ -648,7 +652,7 @@ model Complaint {
   externalCaseId    String?
   closedAt          DateTime?
   closedById        String?
-  closedBy          User?     @relation("ComplaintCloser", fields: [closedById], references: [id])
+  closedBy          AdminUser? @relation("ComplaintCloser", fields: [closedById], references: [id])
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -662,7 +666,7 @@ model Complaint {
 model Ticket {
   id              String    @id @default(uuid())
   raisedById      String
-  raisedBy        User      @relation("TicketRaiser", fields: [raisedById], references: [id])
+  raisedBy        AdminUser @relation("TicketRaiser", fields: [raisedById], references: [id])
   // system_issue | policy_question | compliance_concern | finance_issue | training_request | hr_issue | other
   category        String
   title           String
@@ -672,11 +676,11 @@ model Ticket {
   // open | in_progress | resolved | closed | escalated_higher
   status          String    @default("open")
   assignedToId    String?
-  assignedTo      User?     @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  assignedTo      AdminUser? @relation("TicketAssignee", fields: [assignedToId], references: [id])
   resolution      String?
   resolvedAt      DateTime?
   resolvedById    String?
-  resolvedBy      User?     @relation("TicketResolver", fields: [resolvedById], references: [id])
+  resolvedBy      AdminUser? @relation("TicketResolver", fields: [resolvedById], references: [id])
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -715,7 +719,7 @@ model Course {
 model Instructor {
   id          String    @id @default(uuid())
   userId      String?   @unique
-  user        User?     @relation("InstructorUser", fields: [userId], references: [id])
+  user        AdminUser? @relation("InstructorUser", fields: [userId], references: [id])
   name        String
   expertise   String
   bio         String?

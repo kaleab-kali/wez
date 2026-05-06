@@ -3,22 +3,23 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateEmployer } from "#features/employers/api/employer.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
+import { authClient } from "#shared/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/_authenticated/employers/new")({
-	component: RegisterEmployerPage,
+export const Route = createFileRoute("/signup")({
+	component: EmployerSignupPage,
 });
 
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 const FAYDA = /^F-\d{4}-\d{4}-[A-Z]{2}$/;
 
-function RegisterEmployerPage() {
+function EmployerSignupPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const createE = useCreateEmployer();
+	const createEmployer = useCreateEmployer();
 	const { data: woredas } = useLookupKind("woredas");
 
 	const [type, setType] = React.useState<"business" | "household">("business");
@@ -26,11 +27,13 @@ function RegisterEmployerPage() {
 	const [contactName, setContactName] = React.useState("");
 	const [phone, setPhone] = React.useState("+2519");
 	const [email, setEmail] = React.useState("");
+	const [password, setPassword] = React.useState("");
 	const [area, setArea] = React.useState("");
 	const [tin, setTin] = React.useState("");
 	const [businessLicense, setBusinessLicense] = React.useState("");
 	const [fayda, setFayda] = React.useState("");
 	const [error, setError] = React.useState("");
+	const [busy, setBusy] = React.useState(false);
 
 	const onSubmit = React.useCallback(
 		async (e: React.FormEvent) => {
@@ -44,41 +47,49 @@ function RegisterEmployerPage() {
 				setError(t("workers.register.invalidFayda"));
 				return;
 			}
+			setBusy(true);
 			try {
-				const created = await createE.mutateAsync({
+				// 1. Create Better Auth user
+				const signUp = await authClient.signUp.email({
+					email,
+					password,
+					name: contactName || name,
+				});
+				if (signUp.error) throw new Error(signUp.error.message ?? "Sign-up failed");
+
+				// 2. Set role on user (server-side TODO: derive from signup flow; for now relies on default)
+				// 3. Create employer profile linked to user
+				await createEmployer.mutateAsync({
 					type,
 					name,
 					contactName: contactName || undefined,
 					phone,
-					email: email || undefined,
+					email,
 					area,
 					tin: type === "business" ? tin : undefined,
 					businessLicense: type === "business" ? businessLicense : undefined,
 					fayda: type === "household" ? fayda : undefined,
 				});
-				navigate({ to: "/employers/$id", params: { id: created.id } });
+
+				navigate({ to: "/dashboard" });
 			} catch (err) {
 				setError(err instanceof Error ? err.message : t("common.error"));
+			} finally {
+				setBusy(false);
 			}
 		},
-		[type, name, contactName, phone, email, area, tin, businessLicense, fayda, createE, navigate, t],
+		[type, name, contactName, phone, email, password, area, tin, businessLicense, fayda, createEmployer, navigate, t],
 	);
 
 	return (
-		<div className="max-w-2xl space-y-4">
-			<div>
-				<Link to="/employers" className="text-sm text-muted-foreground hover:text-foreground">
-					&larr; {t("employers.title")}
-				</Link>
-				<h1 className="text-2xl font-bold tracking-tight mt-2">{t("employers.register")}</h1>
-			</div>
-			<Card>
+		<div className="flex min-h-screen items-center justify-center p-4">
+			<Card className="w-full max-w-md">
 				<CardHeader>
 					<CardTitle>{t("landing.employerSignupTitle")}</CardTitle>
 					<CardDescription>{t("landing.employerSignupDesc")}</CardDescription>
 				</CardHeader>
-				<CardContent>
-					<form onSubmit={onSubmit} className="space-y-3">
+				<form onSubmit={onSubmit}>
+					<CardContent className="space-y-3">
 						{error && <div className="rounded bg-destructive/10 p-2 text-sm text-destructive">{error}</div>}
 						<div className="space-y-2">
 							<Label>{t("landing.employerType")}</Label>
@@ -86,28 +97,30 @@ function RegisterEmployerPage() {
 								<button
 									type="button"
 									onClick={() => setType("business")}
-									className={`px-3 py-2 rounded-md border text-sm ${type === "business" ? "bg-primary text-primary-foreground border-primary" : ""}`}
+									className={`px-3 py-2 rounded-md border text-sm ${
+										type === "business" ? "bg-primary text-primary-foreground border-primary" : ""
+									}`}
 								>
 									{t("landing.business")}
 								</button>
 								<button
 									type="button"
 									onClick={() => setType("household")}
-									className={`px-3 py-2 rounded-md border text-sm ${type === "household" ? "bg-primary text-primary-foreground border-primary" : ""}`}
+									className={`px-3 py-2 rounded-md border text-sm ${
+										type === "household" ? "bg-primary text-primary-foreground border-primary" : ""
+									}`}
 								>
 									{t("landing.household")}
 								</button>
 							</div>
 						</div>
-						<div className="grid grid-cols-2 gap-3">
-							<div className="space-y-2">
-								<Label htmlFor="name">{t("landing.businessOrName")}</Label>
-								<Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="contactName">{t("landing.contactName")}</Label>
-								<Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} />
-							</div>
+						<div className="space-y-2">
+							<Label htmlFor="name">{t("landing.businessOrName")}</Label>
+							<Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="contactName">{t("landing.contactName")}</Label>
+							<Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} />
 						</div>
 						<div className="grid grid-cols-2 gap-3">
 							<div className="space-y-2">
@@ -116,8 +129,12 @@ function RegisterEmployerPage() {
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="email">{t("auth.email")}</Label>
-								<Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+								<Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
 							</div>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="password">{t("auth.password")}</Label>
+							<Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="area">{t("workers.register.woreda")}</Label>
@@ -153,11 +170,16 @@ function RegisterEmployerPage() {
 								<Input id="fayda" value={fayda} onChange={(e) => setFayda(e.target.value)} placeholder="F-XXXX-XXXX-XX" required />
 							</div>
 						)}
-						<Button type="submit" className="w-full" disabled={createE.isPending}>
-							{createE.isPending ? t("common.saving") : t("common.create")}
+					</CardContent>
+					<CardFooter className="flex flex-col gap-3">
+						<Button type="submit" className="w-full" disabled={busy}>
+							{busy ? t("common.saving") : t("landing.createAccount")}
 						</Button>
-					</form>
-				</CardContent>
+						<Link to="/" className="text-sm text-muted-foreground">
+							&larr; {t("common.back")}
+						</Link>
+					</CardFooter>
+				</form>
 			</Card>
 		</div>
 	);

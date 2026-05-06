@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/_authenticated/employers/$id")({
+export const Route = createFileRoute("/staff/employers/$id")({
 	component: EmployerDetailPage,
 });
 

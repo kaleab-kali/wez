@@ -11,7 +11,7 @@ import { authClient } from "#shared/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute("/staff/dashboard")({
 	component: DashboardPage,
 });
 

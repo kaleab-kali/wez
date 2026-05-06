@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/admin/2fa")({
+export const Route = createFileRoute("/staff-admin/2fa")({
 	component: TwoFactorPage,
 });
 
@@ -138,7 +138,7 @@ function TwoFactorPage() {
 	return (
 		<div className="max-w-xl space-y-4">
 			<div>
-				<Link to="/admin" className="text-sm text-muted-foreground underline">
+				<Link to="/staff-admin" className="text-sm text-muted-foreground underline">
 					&larr; Back to console
 				</Link>
 				<h1 className="text-2xl font-bold mt-2">Two-factor authentication</h1>

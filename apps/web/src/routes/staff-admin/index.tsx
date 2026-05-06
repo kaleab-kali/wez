@@ -13,7 +13,7 @@ import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/admin/")({
+export const Route = createFileRoute("/staff-admin/")({
 	component: AdminDashboard,
 });
 
@@ -83,25 +83,25 @@ function AdminDashboard() {
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 					<TileLink
-						to="/admin/stations"
+						to="/staff-admin/stations"
 						icon={StoreLocation02Icon}
 						title={t("admin.stationsAndAgents")}
 						description={t("admin.nav.stations")}
 					/>
 					<TileLink
-						to="/admin/role-catalog"
+						to="/staff-admin/role-catalog"
 						icon={Coins01Icon}
 						title={t("admin.roleCatalogLink")}
 						description={t("roleCatalog.subtitle")}
 					/>
 					<TileLink
-						to="/admin/lookups"
+						to="/staff-admin/lookups"
 						icon={Book02Icon}
 						title={t("admin.nav.lookups")}
 						description="Languages, woredas, religions"
 					/>
 					<TileLink
-						to="/admin/2fa"
+						to="/staff-admin/2fa"
 						icon={SecurityIcon}
 						title={t("admin.twoFactor")}
 						description={twoFactorEnabled ? t("admin.manage") : t("admin.enable2fa")}
@@ -112,7 +112,7 @@ function AdminDashboard() {
 						}
 					/>
 					<TileLink
-						to="/admin/sessions"
+						to="/staff-admin/sessions"
 						icon={UserMultipleIcon}
 						title={t("admin.sessions")}
 						description={t("admin.viewSessions")}
