@@ -10,13 +10,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useAdminDashboardMetrics } from "#features/admin-dashboard/api/admin-dashboard.queries";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-export const Route = createFileRoute("/staff-admin/")({
-	component: AdminDashboard,
-});
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const TileLink = React.memo(
 	({
@@ -57,9 +55,63 @@ const TileLink = React.memo(
 );
 TileLink.displayName = "TileLink";
 
-function AdminDashboard() {
+const centsToBirr = (value: string) => {
+	const cents = Number(value);
+	if (!Number.isFinite(cents)) return "0 ETB";
+	return `${Math.round(cents / 100).toLocaleString()} ETB`;
+};
+
+const formatCount = (value: number) => value.toLocaleString();
+
+const MetricCard = React.memo(
+	({
+		label,
+		value,
+		description,
+		tone = "default",
+	}: {
+		readonly label: string;
+		readonly value: string;
+		readonly description: string;
+		readonly tone?: "default" | "attention" | "success";
+	}) => (
+		<Card className={tone === "attention" ? "border-amber-300 bg-amber-50/50" : undefined}>
+			<CardHeader className="space-y-1 pb-2">
+				<CardDescription>{label}</CardDescription>
+				<CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<p className="text-xs text-muted-foreground">{description}</p>
+			</CardContent>
+		</Card>
+	),
+);
+MetricCard.displayName = "MetricCard";
+
+const DashboardSkeleton = React.memo(
+	() => (
+		<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+			{Array.from({ length: 8 }, (_, index) => (
+				<Card key={index}>
+					<CardHeader className="space-y-2">
+						<Skeleton className="h-4 w-28" />
+						<Skeleton className="h-8 w-36" />
+					</CardHeader>
+					<CardContent>
+						<Skeleton className="h-3 w-full" />
+					</CardContent>
+				</Card>
+			))}
+		</div>
+	),
+	() => true,
+);
+DashboardSkeleton.displayName = "DashboardSkeleton";
+
+const AdminDashboard = React.memo(() => {
 	const { t } = useTranslation();
 	const { data: session } = useAdminSession();
+	const { data: metrics, isPending: metricsPending, isError: metricsError } = useAdminDashboardMetrics();
 	const user = session?.user as { name?: string; role?: string; twoFactorEnabled?: boolean } | undefined;
 	const role = user?.role ?? "support";
 	const twoFactorEnabled = user?.twoFactorEnabled ?? false;
@@ -75,6 +127,73 @@ function AdminDashboard() {
 					{role}
 				</Badge>
 			</header>
+
+			<section className="space-y-3">
+				<div className="flex items-center justify-between gap-3">
+					<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+						{t("admin.dashboardMetrics")}
+					</h2>
+					{metricsError && (
+						<Badge variant="destructive" className="text-[11px]">
+							{t("admin.metricsUnavailable")}
+						</Badge>
+					)}
+				</div>
+				{metricsPending && <DashboardSkeleton />}
+				{metrics && (
+					<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+						<MetricCard
+							label={t("admin.metrics.lifetimeCommission")}
+							value={centsToBirr(metrics.money.lifetimeCommissionCents)}
+							description={t("admin.metrics.lifetimeCommissionDesc")}
+						/>
+						<MetricCard
+							label={t("admin.metrics.activeWages")}
+							value={centsToBirr(metrics.money.activeWagesCents)}
+							description={t("admin.metrics.activeWagesDesc", {
+								count: formatCount(metrics.counts.activePlacements),
+							})}
+						/>
+						<MetricCard
+							label={t("admin.metrics.totalPlacements")}
+							value={formatCount(metrics.counts.totalPlacements)}
+							description={t("admin.metrics.totalPlacementsDesc")}
+						/>
+						<MetricCard
+							label={t("admin.metrics.workers")}
+							value={formatCount(metrics.counts.workers)}
+							description={t("admin.metrics.workersDesc", {
+								count: formatCount(metrics.counts.availableWorkers),
+							})}
+						/>
+						<MetricCard
+							label={t("admin.metrics.employers")}
+							value={formatCount(metrics.counts.employers)}
+							description={t("admin.metrics.employersDesc")}
+						/>
+						<MetricCard
+							label={t("admin.metrics.openComplaints")}
+							value={formatCount(metrics.counts.openComplaints)}
+							description={t("admin.metrics.openComplaintsDesc")}
+							tone={metrics.counts.openComplaints > 0 ? "attention" : "success"}
+						/>
+						<MetricCard
+							label={t("admin.metrics.flaggedWorkers")}
+							value={formatCount(metrics.counts.flaggedWorkers)}
+							description={t("admin.metrics.flaggedWorkersDesc")}
+							tone={metrics.counts.flaggedWorkers > 0 ? "attention" : "success"}
+						/>
+						<MetricCard
+							label={t("admin.metrics.stations")}
+							value={formatCount(metrics.counts.stations)}
+							description={t("admin.metrics.stationsDesc", {
+								count: formatCount(metrics.counts.activeStations),
+								tickets: formatCount(metrics.counts.openTickets),
+							})}
+						/>
+					</div>
+				)}
+			</section>
 
 			<section className="space-y-3">
 				<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -126,4 +245,9 @@ function AdminDashboard() {
 			</section>
 		</div>
 	);
-}
+});
+AdminDashboard.displayName = "AdminDashboard";
+
+export const Route = createFileRoute("/staff-admin/")({
+	component: AdminDashboard,
+});
