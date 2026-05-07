@@ -119,7 +119,7 @@ export class ReferralsService {
 
 	async defer(session: WezSession, id: string, dto: DeferReferralDto) {
 		const referral = await this.getPendingOwnedReferral(session, id);
-		return this.repo.update(referral.id, { expiresAt: new Date(Date.now() + dto.days * DAY_MS) });
+		return this.repo.update(referral.id, { expiresAt: new Date(referral.expiresAt.getTime() + dto.days * DAY_MS) });
 	}
 
 	async expireDue() {
