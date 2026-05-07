@@ -14,12 +14,18 @@ import type { IRoleCatalogRepository } from "#modules/role-catalog/domain/reposi
 import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
+import { PrismaService } from "#shared/database/prisma.service";
 import type { Job, JobPatch } from "../../domain/entities/job.entity";
 import { IJobsRepository, JOBS_REPO } from "../../domain/repositories/jobs.repository";
 import type { CreateJobDto, ListJobsDto, UpdateJobDto } from "../dto/job.dto";
 
 const DEFAULT_JOB_PAGE = 1;
 const DEFAULT_JOB_LIMIT = 20;
+const STALE_JOB_DAYS = 90;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const SYSTEM_ACTOR_ROLE = "system";
+
+type JobLifecycleWriter = Pick<PrismaService, "auditEvent" | "job">;
 
 @Injectable()
 export class JobsService {
@@ -28,6 +34,7 @@ export class JobsService {
 		@Inject(EMPLOYERS_REPO) private readonly employers: IEmployersRepository,
 		@Inject(ROLE_CATALOG_REPO) private readonly roles: IRoleCatalogRepository,
 		private readonly auditEvents: AuditEventsService,
+		private readonly prisma: PrismaService,
 	) {}
 
 	async list(filter: ListJobsDto) {
@@ -224,6 +231,104 @@ export class JobsService {
 		return this.close(id, session, auditContext);
 	}
 
+	async fillFromPlacement(
+		writer: JobLifecycleWriter,
+		jobId: string,
+		session: WezSession,
+		auditContext: AuditRequestContext | undefined,
+	) {
+		const job = await writer.job.findFirst({
+			where: { id: jobId, deletedAt: null },
+			select: {
+				id: true,
+				employerId: true,
+				roleId: true,
+				title: true,
+				salaryMinCents: true,
+				salaryMaxCents: true,
+				status: true,
+				autoCloseOnPlacement: true,
+			},
+		});
+		if (!job || job.status !== "open" || !job.autoCloseOnPlacement) return null;
+
+		const result = await writer.job.updateMany({
+			where: { id: job.id, deletedAt: null, status: "open", autoCloseOnPlacement: true },
+			data: { status: "filled" },
+		});
+		if (result.count === 0) return null;
+
+		const updated = await writer.job.findUniqueOrThrow({
+			where: { id: job.id },
+			select: {
+				id: true,
+				employerId: true,
+				roleId: true,
+				title: true,
+				salaryMinCents: true,
+				salaryMaxCents: true,
+				status: true,
+			},
+		});
+		await this.recordJobClosed(writer, {
+			actorId: session.user.id,
+			actorRole: session.user.role ?? session.kind,
+			auditContext,
+			job: updated,
+			changedFields: "status",
+		});
+		return updated;
+	}
+
+	async closeStaleOpenJobs(now = new Date()) {
+		const cutoff = new Date(now.getTime() - STALE_JOB_DAYS * DAY_IN_MS);
+		const due = await this.prisma.job.findMany({
+			where: { deletedAt: null, status: "open", postedAt: { lte: cutoff } },
+			select: {
+				id: true,
+				employerId: true,
+				roleId: true,
+				title: true,
+				salaryMinCents: true,
+				salaryMaxCents: true,
+				status: true,
+			},
+			take: 100,
+		});
+
+		for (const job of due) {
+			await this.prisma.$transaction(async (tx) => {
+				const result = await tx.job.updateMany({
+					where: { id: job.id, deletedAt: null, status: "open", postedAt: { lte: cutoff } },
+					data: { status: "closed" },
+				});
+				if (result.count === 0) return;
+
+				const updated = await tx.job.findUniqueOrThrow({
+					where: { id: job.id },
+					select: {
+						id: true,
+						employerId: true,
+						roleId: true,
+						title: true,
+						salaryMinCents: true,
+						salaryMaxCents: true,
+						status: true,
+					},
+				});
+				await this.recordJobClosed(tx, {
+					actorId: null,
+					actorRole: SYSTEM_ACTOR_ROLE,
+					auditContext: undefined,
+					job: updated,
+					changedFields: "status,stale_90_days",
+				});
+			});
+		}
+
+		return { closed: due.length };
+	}
+
 	private async recordJobUpdated(
 		session: WezSession,
 		auditContext: AuditRequestContext | undefined,
@@ -252,6 +357,45 @@ export class JobsService {
 				afterSalaryMaxCents: after.salaryMaxCents.toString(),
 				beforeStatus: before.status,
 				afterStatus: after.status,
+			},
+		});
+	}
+
+	private async recordJobClosed(
+		writer: JobLifecycleWriter,
+		input: {
+			actorId: string | null;
+			actorRole: string;
+			auditContext: AuditRequestContext | undefined;
+			job: {
+				id: string;
+				employerId: string;
+				roleId: string;
+				title: string;
+				salaryMinCents: bigint;
+				salaryMaxCents: bigint;
+				status: string;
+			};
+			changedFields: string;
+		},
+	) {
+		await this.auditEvents.record(writer, {
+			actorId: input.actorId,
+			actorRole: input.actorRole,
+			action: AUDIT_ACTIONS.jobClosed,
+			targetType: AUDIT_TARGET_TYPES.job,
+			targetId: input.job.id,
+			context: input.auditContext,
+			metadata: {
+				changedFields: input.changedFields,
+				employerId: input.job.employerId,
+				roleId: input.job.roleId,
+				title: input.job.title,
+				afterTitle: input.job.title,
+				afterSalaryMinCents: input.job.salaryMinCents.toString(),
+				afterSalaryMaxCents: input.job.salaryMaxCents.toString(),
+				status: input.job.status,
+				afterStatus: input.job.status,
 			},
 		});
 	}

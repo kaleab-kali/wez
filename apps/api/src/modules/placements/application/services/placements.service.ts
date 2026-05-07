@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
 import { AuditEventsService } from "#modules/audit-log/audit-events.service";
+import { JobsService } from "#modules/jobs/application/services/jobs.service";
 import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
@@ -25,6 +26,7 @@ export class PlacementsService {
 		private readonly prisma: PrismaService,
 		private readonly agreementPdf: AgreementPdfService,
 		private readonly auditEvents: AuditEventsService,
+		private readonly jobs: JobsService,
 		@Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
 	) {}
 
@@ -199,7 +201,7 @@ export class PlacementsService {
 					data: { placementsCount: { increment: 1 } },
 				});
 				if (request.jobId) {
-					await tx.job.update({ where: { id: request.jobId }, data: { status: "filled" } });
+					await this.jobs.fillFromPlacement(tx, request.jobId, session, auditContext);
 				}
 				await tx.hireRequest.updateMany({
 					where: {
