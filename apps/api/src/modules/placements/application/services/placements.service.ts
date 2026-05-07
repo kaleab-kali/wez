@@ -14,6 +14,7 @@ import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
 import { STORAGE_DRIVER, type StorageDriver } from "#shared/storage/storage.interface";
+import { PlacementsRepository } from "../../infrastructure/repositories/placements.repository";
 import type {
 	EndPlacementDto,
 	FinalizeFreshPlacementDto,
@@ -36,6 +37,7 @@ export class PlacementsService {
 		private readonly auditEvents: AuditEventsService,
 		private readonly jobs: JobsService,
 		private readonly placementNotifications: PlacementNotificationsService,
+		private readonly placements: PlacementsRepository,
 		@Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
 	) {}
 
@@ -45,57 +47,18 @@ export class PlacementsService {
 		}
 
 		if (session.user.role === "worker") {
-			const worker = await this.prisma.worker.findUnique({
-				where: { userId: session.user.id },
-				select: { id: true },
-			});
-			if (!worker) throw new ForbiddenException({ code: "NO_WORKER_PROFILE" });
-			return this.list({ ...filter, workerId: worker.id, employerId: undefined });
+			const workerId = await this.placements.findWorkerIdByUserId(session.user.id);
+			if (!workerId) throw new ForbiddenException({ code: "NO_WORKER_PROFILE" });
+			return this.list({ ...filter, workerId, employerId: undefined });
 		}
 
-		const employer = await this.prisma.employer.findUnique({
-			where: { userId: session.user.id },
-			select: { id: true },
-		});
-		if (!employer) throw new ForbiddenException({ code: "NO_EMPLOYER_PROFILE" });
-		return this.list({ ...filter, employerId: employer.id, workerId: undefined });
+		const employerId = await this.placements.findEmployerIdByUserId(session.user.id);
+		if (!employerId) throw new ForbiddenException({ code: "NO_EMPLOYER_PROFILE" });
+		return this.list({ ...filter, employerId, workerId: undefined });
 	}
 
 	async list(filter: ListPlacementsDto) {
-		const page = filter.page ?? 1;
-		const limit = filter.limit ?? 20;
-		const where = {
-			status: filter.status,
-			workerId: filter.workerId,
-			employerId: filter.employerId,
-			stationId: filter.stationId,
-		};
-		const [items, total] = await this.prisma.$transaction([
-			this.prisma.placement.findMany({
-				where,
-				orderBy: { createdAt: "desc" },
-				skip: (page - 1) * limit,
-				take: limit,
-				include: {
-					worker: { select: { fullName: true, phone: true, area: true } },
-					employer: { select: { name: true, type: true, phone: true, rating: true } },
-					role: {
-						select: {
-							name: true,
-							category: true,
-							commType: true,
-							commValue: true,
-							salaryMinCents: true,
-							salaryMaxCents: true,
-						},
-					},
-					station: { select: { name: true, woreda: true } },
-					finalizedByAgent: { select: { name: true, email: true } },
-					hireRequest: { select: { job: { select: { id: true, title: true, location: true } } } },
-				},
-			}),
-			this.prisma.placement.count({ where }),
-		]);
+		const { items, total, page, limit } = await this.placements.list(filter);
 
 		return {
 			data: items.map((item) => ({
