@@ -105,21 +105,4 @@ export class PrismaReferralsRepository implements IReferralsRepository {
 		});
 		return rows.map((row) => toReferral(row as unknown as Row));
 	}
-
-	async createEmployerNotification(data: {
-		userId: string;
-		templateKey: string;
-		payload: Record<string, string>;
-		channel: "sms" | "email" | "in_app";
-	}) {
-		await this.prisma.notification.create({
-			data: {
-				userId: data.userId,
-				channel: data.channel,
-				templateKey: data.templateKey,
-				payload: data.payload,
-				status: "pending",
-			},
-		});
-	}
 }

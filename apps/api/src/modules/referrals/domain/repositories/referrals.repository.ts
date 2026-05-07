@@ -8,10 +8,4 @@ export interface IReferralsRepository {
 	update(id: string, patch: ReferralPatch): Promise<Referral>;
 	listByFilter(filter: ReferralFilter): Promise<{ items: Referral[]; total: number }>;
 	listExpiringBefore(when: Date): Promise<Referral[]>;
-	createEmployerNotification(data: {
-		userId: string;
-		templateKey: string;
-		payload: Record<string, string>;
-		channel: "sms" | "email" | "in_app";
-	}): Promise<void>;
 }

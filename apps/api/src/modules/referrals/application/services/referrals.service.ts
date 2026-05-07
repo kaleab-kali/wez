@@ -10,6 +10,7 @@ import type { IEmployersRepository } from "#modules/employers/domain/repositorie
 import { EMPLOYERS_REPO } from "#modules/employers/domain/repositories/employers.repository";
 import { HireRequestsService } from "#modules/hire-requests/application/services/hire-requests.service";
 import { JobsService } from "#modules/jobs/application/services/jobs.service";
+import { NotificationOutboxService } from "#modules/notification/application/services/notification-outbox.service";
 import type { IWorkersRepository } from "#modules/workers/domain/repositories/workers.repository";
 import { WORKERS_REPO } from "#modules/workers/domain/repositories/workers.repository";
 import type { WezSession } from "#shared/auth/session";
@@ -31,6 +32,7 @@ export class ReferralsService {
 		@Inject(EMPLOYERS_REPO) private readonly employers: IEmployersRepository,
 		private readonly jobs: JobsService,
 		private readonly hireRequests: HireRequestsService,
+		private readonly notifications: NotificationOutboxService,
 	) {}
 
 	async listForSession(session: WezSession, filter: ListReferralsDto) {
@@ -70,6 +72,13 @@ export class ReferralsService {
 
 		if (employer.userId) {
 			await this.createPendingEmployerNotifications(employer.userId, {
+				referralId: referral.id,
+				workerName: worker.fullName,
+				employerName: employer.name,
+			});
+		}
+		if (!employer.userId) {
+			await this.createPendingEmployerContactNotifications(employer.phone, employer.email, {
 				referralId: referral.id,
 				workerName: worker.fullName,
 				employerName: employer.name,
@@ -157,9 +166,28 @@ export class ReferralsService {
 	) {
 		const channels = ["in_app", "email", "sms"] as const;
 		for (const channel of channels) {
-			await this.repo.createEmployerNotification({
+			await this.notifications.enqueueCustomer({
 				userId,
 				channel,
+				templateKey: "referral.created.employer",
+				payload,
+			});
+		}
+	}
+
+	private async createPendingEmployerContactNotifications(
+		phone: string,
+		email: string | null | undefined,
+		payload: { referralId: string; workerName: string; employerName: string },
+	) {
+		await this.notifications.enqueueSms({
+			phone,
+			templateKey: "referral.created.employer",
+			payload,
+		});
+		if (email) {
+			await this.notifications.enqueueEmail({
+				email,
 				templateKey: "referral.created.employer",
 				payload,
 			});

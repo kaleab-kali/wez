@@ -134,6 +134,7 @@ model AdminUser {
   assignedTickets     Ticket[]     @relation("TicketAssignee")
   resolvedTickets     Ticket[]     @relation("TicketResolver")
   instructorProfile   Instructor?  @relation("InstructorUser")
+  notifications       Notification[] @relation("AdminUserNotifications")
 
   @@map("admin_user")
 }
@@ -787,8 +788,12 @@ model CourseEnrollment {
 
 model Notification {
   id            String    @id @default(uuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminUserId   String?
+  adminUser     AdminUser? @relation("AdminUserNotifications", fields: [adminUserId], references: [id], onDelete: Cascade)
+  recipientPhone String?
+  recipientEmail String?
   // sms | email | in_app | push
   channel       String
   templateKey   String
@@ -802,6 +807,7 @@ model Notification {
   createdAt     DateTime  @default(now())
 
   @@index([userId, readAt])
+  @@index([adminUserId, readAt])
   @@index([status, createdAt])
   @@map("notification")
 }

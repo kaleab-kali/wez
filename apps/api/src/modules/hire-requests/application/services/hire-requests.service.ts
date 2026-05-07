@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import type { IEmployersRepository } from "#modules/employers/domain/repositories/employers.repository";
 import { EMPLOYERS_REPO } from "#modules/employers/domain/repositories/employers.repository";
+import { NotificationOutboxService } from "#modules/notification/application/services/notification-outbox.service";
 import { PlatformSettingsService } from "#modules/platform-settings/application/services/platform-settings.service";
 import type { IRoleCatalogRepository } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
@@ -28,6 +29,7 @@ export class HireRequestsService {
 		@Inject(ROLE_CATALOG_REPO) private readonly roles: IRoleCatalogRepository,
 		@Inject(STATIONS_REPO) private readonly stations: IStationsRepository,
 		private readonly platformSettings: PlatformSettingsService,
+		private readonly notifications: NotificationOutboxService,
 	) {}
 
 	async list(filter: ListHireRequestsDto) {
@@ -120,7 +122,7 @@ export class HireRequestsService {
 		const { hireRequestExpiryDays } = await this.platformSettings.getHiringPolicy();
 		const expiresAt = new Date(Date.now() + hireRequestExpiryDays * 24 * 60 * 60 * 1000);
 
-		return this.repo.create({
+		const request = await this.repo.create({
 			employerId,
 			workerId: dto.workerId,
 			roleId: dto.roleId,
@@ -133,6 +135,18 @@ export class HireRequestsService {
 			sourceReferralId,
 			expiresAt,
 		});
+		await this.enqueueCreatedNotifications({
+			requestId: request.id,
+			workerUserId: worker.userId,
+			workerPhone: worker.phone,
+			workerName: worker.fullName,
+			employerName: employer.name,
+			roleName: role.name,
+			stationId: dto.stationId,
+			proposedSalaryCents: dto.proposedSalaryCents.toString(),
+			channel: dto.channel,
+		});
+		return request;
 	}
 
 	async cancel(id: string, dto: CancelHireRequestDto) {
@@ -150,7 +164,9 @@ export class HireRequestsService {
 	async cancelForSession(session: WezSession, id: string, dto: CancelHireRequestDto) {
 		const req = await this.getById(id);
 		if (session.kind === "staff") {
-			return this.cancel(id, dto);
+			const updated = await this.cancel(id, dto);
+			await this.enqueueCancelledNotifications(req, dto.reason);
+			return updated;
 		}
 
 		if (session.user.role?.startsWith("employer_")) {
@@ -158,7 +174,9 @@ export class HireRequestsService {
 			if (!employer || req.employerId !== employer.id) {
 				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
 			}
-			return this.cancel(id, dto);
+			const updated = await this.cancel(id, dto);
+			await this.enqueueCancelledNotifications(req, dto.reason);
+			return updated;
 		}
 
 		throw new ForbiddenException({ code: "CANNOT_CANCEL_HIRE_REQUEST" });
@@ -169,8 +187,114 @@ export class HireRequestsService {
 		const updated: string[] = [];
 		for (const r of due) {
 			await this.repo.update(r.id, { status: "expired" });
+			await this.enqueueExpiredNotifications(r);
 			updated.push(r.id);
 		}
 		return { expired: updated.length };
+	}
+
+	private async enqueueCreatedNotifications(input: {
+		requestId: string;
+		workerUserId: string | null | undefined;
+		workerPhone: string;
+		workerName: string;
+		employerName: string;
+		roleName: string;
+		stationId: string;
+		proposedSalaryCents: string;
+		channel: string;
+	}) {
+		const payload = {
+			hireRequestId: input.requestId,
+			workerName: input.workerName,
+			employerName: input.employerName,
+			roleName: input.roleName,
+			salaryBirr: (Number(input.proposedSalaryCents) / 100).toString(),
+		};
+		if (input.workerUserId && input.channel === "online") {
+			await this.notifications.enqueueCustomer({
+				userId: input.workerUserId,
+				channel: "sms",
+				templateKey: "hire_request.created.worker",
+				payload,
+			});
+		}
+		if (!input.workerUserId && input.channel === "online") {
+			await this.notifications.enqueueSms({
+				phone: input.workerPhone,
+				templateKey: "hire_request.created.worker",
+				payload,
+			});
+		}
+		await this.notifications.enqueueStationAgents({
+			stationId: input.stationId,
+			templateKey: "hire_request.created.station_agent",
+			payload,
+		});
+	}
+
+	private async enqueueCancelledNotifications(
+		request: { workerId: string; employerId: string; id: string },
+		reason: string,
+	) {
+		const [worker, employer] = await Promise.all([
+			this.workers.findById(request.workerId),
+			this.employers.findById(request.employerId),
+		]);
+		const payload = { hireRequestId: request.id, reason };
+		if (worker?.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: worker.userId,
+				channel: "sms",
+				templateKey: "hire_request.cancelled.worker",
+				payload,
+			});
+		}
+		if (worker && !worker.userId) {
+			await this.notifications.enqueueSms({
+				phone: worker.phone,
+				templateKey: "hire_request.cancelled.worker",
+				payload,
+			});
+		}
+		if (employer?.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: employer.userId,
+				channel: "in_app",
+				templateKey: "hire_request.cancelled.employer",
+				payload,
+			});
+		}
+	}
+
+	private async enqueueExpiredNotifications(request: { workerId: string; employerId: string; id: string }) {
+		const [worker, employer] = await Promise.all([
+			this.workers.findById(request.workerId),
+			this.employers.findById(request.employerId),
+		]);
+		const payload = { hireRequestId: request.id };
+		if (worker?.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: worker.userId,
+				channel: "sms",
+				templateKey: "hire_request.expired.worker",
+				payload,
+			});
+		}
+		if (worker && !worker.userId) {
+			await this.notifications.enqueueSms({
+				phone: worker.phone,
+				templateKey: "hire_request.expired.worker",
+				payload,
+			});
+		}
+		if (employer?.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: employer.userId,
+				channel: "sms",
+				templateKey: "hire_request.expired.employer",
+				payload,
+			});
+		}
 	}
 }
