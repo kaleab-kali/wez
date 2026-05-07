@@ -11,10 +11,7 @@ import {
 @Module({
 	imports: [AdminModule],
 	controllers: [RoleCatalogAdminController, RoleCatalogPublicController],
-	providers: [
-		RoleCatalogService,
-		{ provide: ROLE_CATALOG_REPO, useClass: PrismaRoleCatalogRepository },
-	],
+	providers: [RoleCatalogService, { provide: ROLE_CATALOG_REPO, useClass: PrismaRoleCatalogRepository }],
 	exports: [RoleCatalogService, { provide: ROLE_CATALOG_REPO, useClass: PrismaRoleCatalogRepository }],
 })
 export class RoleCatalogModule {}

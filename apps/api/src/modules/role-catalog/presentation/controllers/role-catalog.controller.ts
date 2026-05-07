@@ -1,8 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { fromNodeHeaders } from "better-auth/node";
-import { auth } from "#modules/auth/auth.config";
 import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
+import { requireSession, type WezRequest } from "#shared/auth/session";
 import { CreateRoleDto, UpdateRoleDto } from "../../application/dto/role.dto";
 import { RoleCatalogService } from "../../application/services/role-catalog.service";
 
@@ -49,9 +48,8 @@ export class RoleCatalogPublicController {
 
 	@Get()
 	@ApiOperation({ summary: "List active roles (any authenticated user)" })
-	async list(@Req() req: any) {
-		const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-		if (!session?.user) throw new UnauthorizedException();
+	async list(@Req() req: WezRequest) {
+		await requireSession(req);
 		const data = await this.service.list(false);
 		return { data, meta: { total: data.length } };
 	}

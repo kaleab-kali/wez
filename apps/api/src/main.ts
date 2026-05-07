@@ -5,12 +5,14 @@ import { RequestMethod, ValidationPipe, VERSION_NEUTRAL, VersioningType } from "
 (BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
 	return this.toString();
 };
+
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { toNodeHandler } from "better-auth/node";
 import * as compression from "compression";
 import * as cookieParser from "cookie-parser";
+import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import { Logger } from "nestjs-pino";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
@@ -44,7 +46,7 @@ const bootstrap = async () => {
 	// Mounted here so Better Auth handles its own cookie/session lifecycle.
 	// Only /api/admin-auth/* routes are handled — all other routes pass through to NestJS.
 	const adminHandler = toNodeHandler(adminAuth);
-	app.use("/api/admin-auth", (req: any, res: any, next: () => void) => {
+	app.use("/api/admin-auth", (req: Request, res: Response, next: NextFunction) => {
 		adminHandler(req, res).catch(next);
 	});
 

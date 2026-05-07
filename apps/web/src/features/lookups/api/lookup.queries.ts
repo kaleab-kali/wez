@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 const ADMIN_BASE = "/api/v1/admin/lookups";
 const PUBLIC_BASE = "/api/v1/lookups";
 
-const get = async <T,>(url: string): Promise<T> => {
+const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -12,7 +12,7 @@ const get = async <T,>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T,>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
@@ -63,13 +63,8 @@ export const useLookupKind = (kind: string) =>
 export const useCreateLookup = () => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (input: {
-			kind: string;
-			value: string;
-			labelEn: string;
-			labelAm?: string;
-			sortOrder?: number;
-		}) => send<{ data: Lookup }>(ADMIN_BASE, "POST", input).then((b) => b.data),
+		mutationFn: (input: { kind: string; value: string; labelEn: string; labelAm?: string; sortOrder?: number }) =>
+			send<{ data: Lookup }>(ADMIN_BASE, "POST", input).then((b) => b.data),
 		onSuccess: () => qc.invalidateQueries({ queryKey: lookupKeys.all }),
 	});
 };

@@ -9,11 +9,16 @@ import {
 import { Reflector } from "@nestjs/core";
 import { fromNodeHeaders } from "better-auth/node";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
-import { type WezAdminRole, WEZ_ADMIN_ROLES } from "#modules/auth/permissions";
+import { WEZ_ADMIN_ROLES, type WezAdminRole } from "#modules/auth/permissions";
 import { PrismaService } from "#shared/database/prisma.service";
 
-// HQ role hierarchy. Higher index = more powerful.
+// Staff role hierarchy. Higher index = more powerful.
 const ROLE_RANK: Record<WezAdminRole, number> = {
+	// Operations tier
+	instructor: 0,
+	agent: 1,
+	station_supervisor: 2,
+	// HQ tier
 	support: 0,
 	training_manager: 1,
 	hr_manager: 2,

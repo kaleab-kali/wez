@@ -1,5 +1,10 @@
 import { Module } from "@nestjs/common";
+import { AuditEventsService } from "./audit-events.service";
+import { AuditLogController } from "./presentation/controllers/audit-log.controller";
 
-// Phase 1A placeholder. Phase 1F builds AuditEvent persistence + @AuditLog decorator + interceptor.
-@Module({})
+@Module({
+	controllers: [AuditLogController],
+	providers: [AuditEventsService],
+	exports: [AuditEventsService],
+})
 export class AuditLogModule {}

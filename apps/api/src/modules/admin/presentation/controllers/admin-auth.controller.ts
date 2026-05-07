@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
+import type { WezRequest } from "#shared/auth/session";
 
 @ApiTags("Admin Auth")
 @AllowAnonymous()
@@ -10,7 +11,7 @@ import { adminAuth } from "#modules/admin/auth/admin-auth.config";
 export class AdminAuthController {
 	@Get("me")
 	@ApiOperation({ summary: "Get current admin session" })
-	async me(@Req() req: any) {
+	async me(@Req() req: WezRequest) {
 		const session = await adminAuth.api.getSession({
 			headers: fromNodeHeaders(req.headers),
 		});

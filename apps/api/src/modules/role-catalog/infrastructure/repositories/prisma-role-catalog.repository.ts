@@ -1,11 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
-import type {
-	CommType,
-	NewRole,
-	RoleCatalogEntry,
-	RolePatch,
-} from "../../domain/entities/role.entity";
+import type { CommType, NewRole, RoleCatalogEntry, RolePatch } from "../../domain/entities/role.entity";
 import type { IRoleCatalogRepository } from "../../domain/repositories/role-catalog.repository";
 
 const toRole = (row: {

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 const ADMIN_BASE = "/api/v1/admin/stations";
 const PUBLIC_BASE = "/api/v1/stations";
 
-const get = async <T,>(url: string): Promise<T> => {
+const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -12,7 +12,7 @@ const get = async <T,>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T,>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
@@ -49,8 +49,7 @@ export const stationKeys = {
 export const useStations = (includeInactive = false) =>
 	useQuery({
 		queryKey: stationKeys.list(includeInactive),
-		queryFn: () =>
-			get<{ data: Station[] }>(`${ADMIN_BASE}?includeInactive=${includeInactive}`).then((b) => b.data),
+		queryFn: () => get<{ data: Station[] }>(`${ADMIN_BASE}?includeInactive=${includeInactive}`).then((b) => b.data),
 	});
 
 export const usePublicStations = () =>
@@ -62,13 +61,8 @@ export const usePublicStations = () =>
 export const useCreateStation = () => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (input: {
-			name: string;
-			woreda: string;
-			address: string;
-			phone?: string;
-			supervisorUserId?: string;
-		}) => send<{ data: Station }>(ADMIN_BASE, "POST", input).then((b) => b.data),
+		mutationFn: (input: { name: string; woreda: string; address: string; phone?: string; supervisorUserId?: string }) =>
+			send<{ data: Station }>(ADMIN_BASE, "POST", input).then((b) => b.data),
 		onSuccess: () => qc.invalidateQueries({ queryKey: stationKeys.lists() }),
 	});
 };

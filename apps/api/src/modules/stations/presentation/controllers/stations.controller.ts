@@ -1,13 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { fromNodeHeaders } from "better-auth/node";
 import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
-import { auth } from "#modules/auth/auth.config";
-import {
-	AssignAgentDto,
-	CreateStationDto,
-	UpdateStationDto,
-} from "../../application/dto/station.dto";
+import { requireSession, type WezRequest } from "#shared/auth/session";
+import { AssignAgentDto, CreateStationDto, UpdateStationDto } from "../../application/dto/station.dto";
 import { StationsService } from "../../application/services/stations.service";
 
 @ApiTags("Stations")
@@ -74,9 +69,8 @@ export class StationsPublicController {
 
 	@Get()
 	@ApiOperation({ summary: "List active stations (any authenticated user)" })
-	async list(@Req() req: any) {
-		const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-		if (!session?.user) throw new UnauthorizedException();
+	async list(@Req() req: WezRequest) {
+		await requireSession(req);
 		const data = await this.service.list(false);
 		return { data, meta: { total: data.length } };
 	}

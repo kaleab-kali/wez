@@ -20,4 +20,6 @@ export interface AgentAssignment {
 }
 
 export type NewStation = Omit<Station, "id" | "createdAt" | "updatedAt">;
-export type StationPatch = Partial<Pick<Station, "name" | "woreda" | "address" | "phone" | "active" | "supervisorUserId">>;
+export type StationPatch = Partial<
+	Pick<Station, "name" | "woreda" | "address" | "phone" | "active" | "supervisorUserId">
+>;

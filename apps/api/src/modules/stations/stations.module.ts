@@ -8,10 +8,7 @@ import { StationsController, StationsPublicController } from "./presentation/con
 @Module({
 	imports: [AdminModule],
 	controllers: [StationsController, StationsPublicController],
-	providers: [
-		StationsService,
-		{ provide: STATIONS_REPO, useClass: PrismaStationsRepository },
-	],
+	providers: [StationsService, { provide: STATIONS_REPO, useClass: PrismaStationsRepository }],
 	exports: [StationsService, { provide: STATIONS_REPO, useClass: PrismaStationsRepository }],
 })
 export class StationsModule {}

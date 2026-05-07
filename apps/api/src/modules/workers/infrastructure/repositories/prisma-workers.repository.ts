@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
+import { buildWorkerOrderBy, buildWorkerWhere } from "../../application/specifications/worker-filter.specification";
 import type {
 	Gender,
 	HopFlag,
@@ -10,10 +11,6 @@ import type {
 	WorkerTier,
 } from "../../domain/entities/worker.entity";
 import type { IWorkersRepository } from "../../domain/repositories/workers.repository";
-import {
-	buildWorkerOrderBy,
-	buildWorkerWhere,
-} from "../../application/specifications/worker-filter.specification";
 
 type Row = {
 	id: string;
@@ -85,6 +82,14 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 		return row ? toWorker(row as unknown as Row) : null;
 	}
 
+	async findByUserId(userId: string) {
+		const row = await this.prisma.worker.findFirst({
+			where: { userId, deletedAt: null },
+			include: { workerRoles: true },
+		});
+		return row ? toWorker(row as unknown as Row) : null;
+	}
+
 	async findByFayda(fayda: string) {
 		const row = await this.prisma.worker.findFirst({
 			where: { fayda, deletedAt: null },
@@ -104,6 +109,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	async create(data: NewWorker) {
 		const row = await this.prisma.worker.create({
 			data: {
+				userId: data.userId,
 				fullName: data.fullName,
 				fayda: data.fayda,
 				phone: data.phone,

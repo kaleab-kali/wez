@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE = "/api/v1/workers";
 
-const get = async <T,>(url: string): Promise<T> => {
+const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -11,7 +11,7 @@ const get = async <T,>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T,>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
@@ -70,6 +70,7 @@ export const workerKeys = {
 	lists: () => [...workerKeys.all, "list"] as const,
 	list: (filter: WorkerFilter) => [...workerKeys.lists(), filter] as const,
 	detail: (id: string) => [...workerKeys.all, "detail", id] as const,
+	me: () => [...workerKeys.all, "me"] as const,
 };
 
 const toQueryString = (filter: WorkerFilter) => {
@@ -96,6 +97,12 @@ export const useWorker = (id: string | undefined) =>
 		enabled: !!id,
 	});
 
+export const useMyWorkerProfile = () =>
+	useQuery({
+		queryKey: workerKeys.me(),
+		queryFn: () => get<{ data: Worker }>(`${BASE}/me`).then((b) => b.data),
+	});
+
 export const useRegisterWorker = () => {
 	const qc = useQueryClient();
 	return useMutation({
@@ -103,6 +110,8 @@ export const useRegisterWorker = () => {
 			fullName: string;
 			fayda: string;
 			phone: string;
+			loginEmail?: string;
+			loginPassword?: string;
 			gender: "M" | "F";
 			area: string;
 			bio?: string;
@@ -122,11 +131,22 @@ export const useRegisterWorker = () => {
 export const useUpdateWorker = (id: string) => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (patch: Partial<Worker>) =>
-			send<{ data: Worker }>(`${BASE}/${id}`, "PATCH", patch).then((b) => b.data),
+		mutationFn: (patch: Partial<Worker>) => send<{ data: Worker }>(`${BASE}/${id}`, "PATCH", patch).then((b) => b.data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: workerKeys.lists() });
 			qc.invalidateQueries({ queryKey: workerKeys.detail(id) });
+		},
+	});
+};
+
+export const useUpdateMyWorkerProfile = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (patch: { bio?: string; languages?: string[] }) =>
+			send<{ data: Worker }>(`${BASE}/me`, "PATCH", patch).then((b) => b.data),
+		onSuccess: (worker) => {
+			qc.invalidateQueries({ queryKey: workerKeys.me() });
+			qc.invalidateQueries({ queryKey: workerKeys.detail(worker.id) });
 		},
 	});
 };

@@ -6,6 +6,7 @@ import {
 	IsArray,
 	IsBoolean,
 	IsDateString,
+	IsEmail,
 	IsEnum,
 	IsInt,
 	IsOptional,
@@ -35,6 +36,18 @@ export class RegisterWorkerDto {
 	@IsString()
 	@Matches(ETHIOPIAN_PHONE, { message: "Phone must look like +2519XXXXXXXX" })
 	phone!: string;
+
+	@ApiProperty({ required: false, description: "Optional worker email login address" })
+	@IsOptional()
+	@IsEmail()
+	@MaxLength(320)
+	loginEmail?: string;
+
+	@ApiProperty({ required: false, minLength: 8, maxLength: 128, description: "Optional worker email login password" })
+	@IsOptional()
+	@IsString()
+	@Length(8, 128)
+	loginPassword?: string;
 
 	@ApiProperty({ example: "2000-05-12", required: false })
 	@IsOptional()
@@ -116,6 +129,22 @@ export class UpdateWorkerDto extends PartialType(RegisterWorkerDto) {
 	@IsOptional()
 	@IsBoolean()
 	available?: boolean;
+}
+
+export class UpdateOwnWorkerProfileDto {
+	@ApiProperty({ required: false, maxLength: 500 })
+	@IsOptional()
+	@IsString()
+	@MaxLength(500)
+	bio?: string;
+
+	@ApiProperty({ example: ["am", "en"], type: [String], required: false })
+	@IsOptional()
+	@IsArray()
+	@ArrayUnique()
+	@ArrayMaxSize(10)
+	@IsString({ each: true })
+	languages?: string[];
 }
 
 export class ListWorkersDto {

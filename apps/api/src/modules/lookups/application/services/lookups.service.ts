@@ -1,8 +1,5 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import {
-	type ILookupsRepository,
-	LOOKUPS_REPO,
-} from "../../domain/repositories/lookups.repository";
+import { type ILookupsRepository, LOOKUPS_REPO } from "../../domain/repositories/lookups.repository";
 import type { CreateLookupDto, UpdateLookupDto } from "../dto/lookup.dto";
 
 @Injectable()

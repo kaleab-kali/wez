@@ -1,0 +1,17 @@
+import { Module } from "@nestjs/common";
+import { AuditLogModule } from "#modules/audit-log/audit-log.module";
+import { EmployersModule } from "#modules/employers/employers.module";
+import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
+import { JobAutoCloseService } from "./application/services/job-auto-close.service";
+import { JobsService } from "./application/services/jobs.service";
+import { JOBS_REPO } from "./domain/repositories/jobs.repository";
+import { PrismaJobsRepository } from "./infrastructure/repositories/prisma-jobs.repository";
+import { JobsController } from "./presentation/controllers/jobs.controller";
+
+@Module({
+	imports: [AuditLogModule, EmployersModule, RoleCatalogModule],
+	controllers: [JobsController],
+	providers: [JobAutoCloseService, JobsService, { provide: JOBS_REPO, useClass: PrismaJobsRepository }],
+	exports: [JobsService],
+})
+export class JobsModule {}

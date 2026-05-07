@@ -1,19 +1,7 @@
-import {
-	Body,
-	Controller,
-	Get,
-	Param,
-	Patch,
-	Post,
-	Query,
-	Req,
-	UnauthorizedException,
-	UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { fromNodeHeaders } from "better-auth/node";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
-import { auth } from "#modules/auth/auth.config";
 import { CreateLookupDto, UpdateLookupDto } from "../../application/dto/lookup.dto";
 import { LookupsService } from "../../application/services/lookups.service";
 
@@ -49,15 +37,14 @@ export class LookupsAdminController {
 }
 
 @ApiTags("Lookups (read-only)")
+@AllowAnonymous()
 @Controller("lookups")
 export class LookupsPublicController {
 	constructor(private readonly service: LookupsService) {}
 
 	@Get(":kind")
-	@ApiOperation({ summary: "List active lookups for a kind (any authenticated user)" })
-	async list(@Param("kind") kind: string, @Req() req: any) {
-		const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-		if (!session?.user) throw new UnauthorizedException();
+	@ApiOperation({ summary: "List active lookups for a kind" })
+	async list(@Param("kind") kind: string) {
 		const data = await this.service.listByKind(kind, false);
 		return { data, meta: { total: data.length } };
 	}

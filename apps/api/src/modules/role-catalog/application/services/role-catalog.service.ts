@@ -1,8 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import {
-	type IRoleCatalogRepository,
-	ROLE_CATALOG_REPO,
-} from "../../domain/repositories/role-catalog.repository";
+import { type IRoleCatalogRepository, ROLE_CATALOG_REPO } from "../../domain/repositories/role-catalog.repository";
 import type { CreateRoleDto, UpdateRoleDto } from "../dto/role.dto";
 
 @Injectable()

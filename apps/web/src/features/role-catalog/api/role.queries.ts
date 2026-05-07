@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 const ADMIN_BASE = "/api/v1/admin/role-catalog";
 const PUBLIC_BASE = "/api/v1/role-catalog";
 
-const get = async <T,>(url: string): Promise<T> => {
+const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -12,7 +12,7 @@ const get = async <T,>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T,>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
@@ -39,6 +39,16 @@ export type Role = {
 	updatedAt: string;
 };
 
+export type UpdateRoleInput = Partial<{
+	name: string;
+	category: string;
+	commType: "flat" | "percent";
+	commValue: number;
+	salaryMinCents: number;
+	salaryMaxCents: number;
+	active: boolean;
+}>;
+
 export const roleKeys = {
 	all: ["roles"] as const,
 	adminList: (includeInactive: boolean) => [...roleKeys.all, "admin", { includeInactive }] as const,
@@ -48,8 +58,7 @@ export const roleKeys = {
 export const useAdminRoles = (includeInactive = false) =>
 	useQuery({
 		queryKey: roleKeys.adminList(includeInactive),
-		queryFn: () =>
-			get<{ data: Role[] }>(`${ADMIN_BASE}?includeInactive=${includeInactive}`).then((b) => b.data),
+		queryFn: () => get<{ data: Role[] }>(`${ADMIN_BASE}?includeInactive=${includeInactive}`).then((b) => b.data),
 	});
 
 export const usePublicRoles = () =>
@@ -77,7 +86,7 @@ export const useCreateRole = () => {
 export const useUpdateRole = (id: string) => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (patch: Partial<Role>) =>
+		mutationFn: (patch: UpdateRoleInput) =>
 			send<{ data: Role }>(`${ADMIN_BASE}/${id}`, "PATCH", patch).then((b) => b.data),
 		onSuccess: () => qc.invalidateQueries({ queryKey: roleKeys.all }),
 	});
