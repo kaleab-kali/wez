@@ -10,6 +10,9 @@ const toStation = (row: {
 	address: string;
 	phone: string | null;
 	active: boolean;
+	localityId: string | null;
+	custom: boolean;
+	customReason: string | null;
 	supervisorUserId: string | null;
 	createdAt: Date;
 	updatedAt: Date;
@@ -20,6 +23,9 @@ const toStation = (row: {
 	address: row.address,
 	phone: row.phone,
 	active: row.active,
+	localityId: row.localityId,
+	custom: row.custom,
+	customReason: row.customReason,
 	supervisorUserId: row.supervisorUserId,
 	createdAt: row.createdAt,
 	updatedAt: row.updatedAt,
@@ -66,6 +72,9 @@ export class PrismaStationsRepository implements IStationsRepository {
 				address: data.address,
 				phone: data.phone,
 				active: data.active,
+				localityId: data.localityId,
+				custom: data.custom,
+				customReason: data.customReason,
 				supervisorUserId: data.supervisorUserId,
 			},
 		});

@@ -3,7 +3,7 @@ import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { fromNodeHeaders } from "better-auth/node";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
 import { auth } from "#modules/auth/auth.config";
-import { hasPermission, type Permission } from "#modules/auth/permissions";
+import { hasPermission, isStaffRole, type Permission, permissionsForRole } from "#modules/auth/permissions";
 import type { AuditRequestContext } from "#shared/audit/audit-context";
 import { prisma } from "#shared/database/prisma-instance";
 
@@ -12,6 +12,7 @@ type AuthUser = {
 	email?: string | null;
 	name?: string;
 	role?: string;
+	roles?: string[];
 };
 
 type AuthSession = {
@@ -42,13 +43,22 @@ export const getSession = async (req: WezRequest): Promise<WezSession | null> =>
 	if (staff?.user) {
 		const fresh = await prisma.adminUser.findUnique({
 			where: { id: staff.user.id },
-			select: { role: true },
+			select: {
+				role: true,
+				roleAssignments: { where: { active: true, revokedAt: null }, select: { role: true } },
+			},
 		});
+		const assignedRoles = fresh?.roleAssignments.map((assignment) => assignment.role).filter(isStaffRole) ?? [];
+		const primaryRole = fresh?.role ?? (staff.user as AuthUser).role;
+		const effectiveRoles = [primaryRole, ...assignedRoles].filter(
+			(role): role is string => typeof role === "string" && isStaffRole(role),
+		);
 		return {
 			kind: "staff",
 			user: {
 				...(staff.user as AuthUser),
-				role: fresh?.role ?? (staff.user as AuthUser).role,
+				role: primaryRole,
+				roles: Array.from(new Set(effectiveRoles)),
 			},
 			session: staff.session as AuthSession,
 		};
@@ -79,7 +89,11 @@ export const requireSession = async (req: WezRequest): Promise<WezSession> => {
 
 export const requirePermission = async (req: WezRequest, permission: Permission): Promise<WezSession> => {
 	const s = await requireSession(req);
-	if (!hasPermission(s.user.role, permission)) {
+	const userWithRoles = s.user as AuthUser & { roles?: string[] };
+	const hasRolePermission =
+		userWithRoles.roles?.some((role) => permissionsForRole(role).includes(permission)) ??
+		hasPermission(s.user.role, permission);
+	if (!hasRolePermission) {
 		throw new ForbiddenException({ code: "MISSING_PERMISSION", message: permission });
 	}
 	return s;

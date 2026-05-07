@@ -111,7 +111,7 @@ model AdminUser {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
-  // HQ role: super_admin | ops_manager | compliance_officer | hr_manager | finance_manager | it_manager | training_manager | support
+  // Primary display role. Effective permissions may include extra StaffRoleAssignment rows.
   role          String    @default("super_admin")
   active        Boolean   @default(true)
   twoFactorEnabled Boolean @default(false)
@@ -121,6 +121,8 @@ model AdminUser {
   sessions      AdminSession[]
   accounts      AdminAccount[]
   twoFactor     AdminTwoFactor[]
+  roleAssignments StaffRoleAssignment[] @relation("StaffRoleAssignmentUser")
+  assignedRoleAssignments StaffRoleAssignment[] @relation("StaffRoleAssignedBy")
 
   // Staff-side relations (operations + HQ work)
   agentAssignments    AgentAssignment[]
@@ -137,6 +139,29 @@ model AdminUser {
   notifications       Notification[] @relation("AdminUserNotifications")
 
   @@map("admin_user")
+}
+
+model StaffRoleAssignment {
+  id             String    @id @default(uuid())
+  adminUserId    String
+  adminUser      AdminUser @relation("StaffRoleAssignmentUser", fields: [adminUserId], references: [id], onDelete: Cascade)
+  role           String
+  // global | admin_area | sub_area | locality | station
+  scopeType      String    @default("global")
+  scopeId        String?
+  active         Boolean   @default(true)
+  assignedById   String?
+  assignedBy     AdminUser? @relation("StaffRoleAssignedBy", fields: [assignedById], references: [id])
+  assignedAt     DateTime  @default(now())
+  revokedAt      DateTime?
+  revokeReason   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([adminUserId, active])
+  @@index([role, active])
+  @@index([scopeType, scopeId, active])
+  @@map("staff_role_assignment")
 }
 
 model AdminTwoFactor {
@@ -301,6 +326,31 @@ model Lookup {
   @@map("lookup")
 }
 
+model Location {
+  id          String     @id @default(uuid())
+  code        String     @unique
+  // admin_area | sub_area | locality
+  kind        String
+  // city_administration | region | subcity | zone | city_administration | woreda | kebele | custom
+  type        String
+  nameEn      String
+  nameAm      String?
+  parentId    String?
+  parent      Location?  @relation("LocationParent", fields: [parentId], references: [id])
+  children    Location[] @relation("LocationParent")
+  active      Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  stations    Station[]
+
+  @@index([kind, active])
+  @@index([parentId, active])
+  @@map("location")
+}
+
 // ============================================================
 // WEZ DOMAIN — Roles & Stations
 // ============================================================
@@ -332,6 +382,10 @@ model Station {
   address            String
   phone              String?
   active             Boolean   @default(true)
+  localityId         String?
+  locality           Location? @relation(fields: [localityId], references: [id])
+  custom             Boolean   @default(false)
+  customReason       String?
   supervisorUserId   String?
   supervisor         AdminUser? @relation("StationSupervisor", fields: [supervisorUserId], references: [id])
   createdAt          DateTime  @default(now())
@@ -343,6 +397,7 @@ model Station {
   complaints         Complaint[]
   workersRegistered  Worker[]  @relation("WorkerRegisteringStation")
 
+  @@index([localityId])
   @@map("station")
 }
 

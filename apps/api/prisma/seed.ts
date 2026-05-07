@@ -44,6 +44,7 @@ const seed = async () => {
 	await prisma.role.deleteMany();
 	await prisma.agentAssignment.deleteMany();
 	await prisma.station.deleteMany();
+	await prisma.location.deleteMany();
 	await prisma.lookup.deleteMany();
 	await prisma.notification.deleteMany();
 	await prisma.notificationPreference.deleteMany();
@@ -54,6 +55,7 @@ const seed = async () => {
 	await prisma.adminSession.deleteMany();
 	await prisma.adminAccount.deleteMany();
 	await prisma.adminVerification.deleteMany();
+	await prisma.staffRoleAssignment.deleteMany();
 	await prisma.adminUser.deleteMany();
 	await prisma.session.deleteMany();
 	await prisma.account.deleteMany();
@@ -107,26 +109,117 @@ const seed = async () => {
 		data: { role: "agent" },
 	});
 
+	console.log("Seeding location hierarchy...");
+	const addisAbaba = await prisma.location.create({
+		data: {
+			code: "aa",
+			kind: "admin_area",
+			type: "city_administration",
+			nameEn: "Addis Ababa City Administration",
+			nameAm: "አዲስ አበባ ከተማ አስተዳደር",
+			sortOrder: 1,
+		},
+	});
+	const sidama = await prisma.location.create({
+		data: {
+			code: "sidama",
+			kind: "admin_area",
+			type: "region",
+			nameEn: "Sidama Region",
+			nameAm: "ሲዳማ ክልል",
+			sortOrder: 2,
+		},
+	});
+	const boleSubcity = await prisma.location.create({
+		data: {
+			code: "aa-bole",
+			kind: "sub_area",
+			type: "subcity",
+			nameEn: "Bole Subcity",
+			nameAm: "ቦሌ ክፍለ ከተማ",
+			parentId: addisAbaba.id,
+			sortOrder: 1,
+		},
+	});
+	const yekaSubcity = await prisma.location.create({
+		data: {
+			code: "aa-yeka",
+			kind: "sub_area",
+			type: "subcity",
+			nameEn: "Yeka Subcity",
+			nameAm: "የካ ክፍለ ከተማ",
+			parentId: addisAbaba.id,
+			sortOrder: 2,
+		},
+	});
+	const hawassaCity = await prisma.location.create({
+		data: {
+			code: "sidama-hawassa",
+			kind: "sub_area",
+			type: "city_administration",
+			nameEn: "Hawassa City Administration",
+			nameAm: "ሀዋሳ ከተማ አስተዳደር",
+			parentId: sidama.id,
+			sortOrder: 1,
+		},
+	});
+	const boleWoreda03 = await prisma.location.create({
+		data: {
+			code: "aa-bole-w03",
+			kind: "locality",
+			type: "woreda",
+			nameEn: "Woreda 03",
+			nameAm: "ወረዳ 03",
+			parentId: boleSubcity.id,
+			sortOrder: 3,
+		},
+	});
+	const yekaWoreda08 = await prisma.location.create({
+		data: {
+			code: "aa-yeka-w08",
+			kind: "locality",
+			type: "woreda",
+			nameEn: "Woreda 08",
+			nameAm: "ወረዳ 08",
+			parentId: yekaSubcity.id,
+			sortOrder: 8,
+		},
+	});
+	const hawassaTaborKebele01 = await prisma.location.create({
+		data: {
+			code: "sidama-hawassa-tabor-k01",
+			kind: "locality",
+			type: "kebele",
+			nameEn: "Tabor Kebele 01",
+			nameAm: "ታቦር ቀበሌ 01",
+			parentId: hawassaCity.id,
+			sortOrder: 1,
+		},
+	});
+	console.log(`  locations: ${addisAbaba.id}, ${sidama.id}, ${hawassaTaborKebele01.id}`);
+
 	console.log("Creating stations...");
 	const stationBole = await prisma.station.create({
 		data: {
-			name: "Bole Station",
-			woreda: "bole",
+			name: "Bole Woreda 03 Station",
+			woreda: "bole-woreda-03",
 			address: "Bole Subcity, Woreda 03, Addis Ababa",
 			phone: "+251115000001",
+			localityId: boleWoreda03.id,
 			supervisorUserId: supervisor.id,
 		},
 	});
 	const stationMegenagna = await prisma.station.create({
 		data: {
-			name: "Megenagna Station",
-			woreda: "megenagna",
-			address: "Megenagna, Addis Ababa",
+			name: "Yeka Woreda 08 Station",
+			woreda: "yeka-woreda-08",
+			address: "Yeka Subcity, Woreda 08, Addis Ababa",
 			phone: "+251115000002",
+			localityId: yekaWoreda08.id,
 			supervisorUserId: supervisor.id,
 		},
 	});
-	console.log(`  ${stationBole.id} (Bole), ${stationMegenagna.id} (Megenagna)`);
+	console.log(`  ${stationBole.id} (Bole Woreda 03), ${stationMegenagna.id} (Yeka Woreda 08)`);
 
 	console.log("Assigning agents...");
 	await prisma.agentAssignment.create({
@@ -134,6 +227,42 @@ const seed = async () => {
 	});
 	await prisma.agentAssignment.create({
 		data: { userId: agentMegenagna.id, stationId: stationMegenagna.id },
+	});
+
+	console.log("Assigning staff role scopes...");
+	await prisma.staffRoleAssignment.createMany({
+		data: [
+			{ adminUserId: superAdmin.id, role: "super_admin", scopeType: "global" },
+			{ adminUserId: opsManager.id, role: "ops_manager", scopeType: "global", assignedById: superAdmin.id },
+			{
+				adminUserId: supervisor.id,
+				role: "station_supervisor",
+				scopeType: "sub_area",
+				scopeId: boleSubcity.id,
+				assignedById: opsManager.id,
+			},
+			{
+				adminUserId: supervisor.id,
+				role: "station_supervisor",
+				scopeType: "sub_area",
+				scopeId: yekaSubcity.id,
+				assignedById: opsManager.id,
+			},
+			{
+				adminUserId: agentBole.id,
+				role: "agent",
+				scopeType: "station",
+				scopeId: stationBole.id,
+				assignedById: supervisor.id,
+			},
+			{
+				adminUserId: agentMegenagna.id,
+				role: "agent",
+				scopeType: "station",
+				scopeId: stationMegenagna.id,
+				assignedById: supervisor.id,
+			},
+		],
 	});
 
 	console.log("Seeding starter roles catalog...");
