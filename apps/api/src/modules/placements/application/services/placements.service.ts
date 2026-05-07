@@ -5,11 +5,13 @@ import {
 	ForbiddenException,
 	Inject,
 	Injectable,
+	Logger,
 	NotFoundException,
 } from "@nestjs/common";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
 import { AuditEventsService } from "#modules/audit-log/audit-events.service";
 import { JobsService } from "#modules/jobs/application/services/jobs.service";
+import { NotificationOutboxService } from "#modules/notification/application/services/notification-outbox.service";
 import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
@@ -22,11 +24,14 @@ const AGREEMENT_FOLDER = "agreements";
 
 @Injectable()
 export class PlacementsService {
+	private readonly logger = new Logger(PlacementsService.name);
+
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly agreementPdf: AgreementPdfService,
 		private readonly auditEvents: AuditEventsService,
 		private readonly jobs: JobsService,
+		private readonly notifications: NotificationOutboxService,
 		@Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
 	) {}
 
@@ -152,7 +157,7 @@ export class PlacementsService {
 		});
 
 		try {
-			return await this.prisma.$transaction(async (tx) => {
+			const placement = await this.prisma.$transaction(async (tx) => {
 				const request = await tx.hireRequest.findUnique({
 					where: { id: hireRequestId },
 					include: { role: true, placement: true, worker: true, employer: true },
@@ -242,6 +247,22 @@ export class PlacementsService {
 
 				return placement;
 			});
+			await this.enqueuePlacementFinalizedNotifications({
+				placementId: placement.id,
+				workerPhone: requestSnapshot.worker.phone,
+				workerName: requestSnapshot.worker.fullName,
+				employerUserId: requestSnapshot.employer.userId,
+				employerPhone: requestSnapshot.employer.phone,
+				employerEmail: requestSnapshot.employer.email,
+				employerName: requestSnapshot.employer.name,
+				roleName: requestSnapshot.role.name,
+				stationName: requestSnapshot.station.name,
+				startDate,
+				salaryCents,
+				commissionCents: placement.commissionCents,
+				agreementPdfUrl: agreement.url,
+			});
+			return placement;
 		} catch (err) {
 			await this.storage.delete(agreement.key);
 			throw err;
@@ -249,7 +270,7 @@ export class PlacementsService {
 	}
 
 	async end(id: string, session: WezSession, dto: EndPlacementDto, auditContext: AuditRequestContext | undefined) {
-		return this.prisma.$transaction(async (tx) => {
+		const updated = await this.prisma.$transaction(async (tx) => {
 			const placement = await tx.placement.findUnique({
 				where: { id },
 				select: {
@@ -261,6 +282,10 @@ export class PlacementsService {
 					status: true,
 					startDate: true,
 					salaryCents: true,
+					worker: { select: { fullName: true, phone: true } },
+					employer: { select: { name: true, phone: true, email: true, userId: true } },
+					role: { select: { name: true } },
+					station: { select: { name: true } },
 				},
 			});
 			if (!placement) throw new NotFoundException({ code: "PLACEMENT_NOT_FOUND" });
@@ -273,7 +298,7 @@ export class PlacementsService {
 				throw new BadRequestException({ code: "PLACEMENT_END_BEFORE_START" });
 			}
 
-			const updated = await tx.placement.update({
+			const ended = await tx.placement.update({
 				where: { id },
 				data: {
 					status: "ended",
@@ -281,6 +306,12 @@ export class PlacementsService {
 					endedReason: dto.endedReason,
 					ratingByEmployer: dto.ratingByEmployer,
 					ratingByWorker: dto.ratingByWorker,
+				},
+				include: {
+					worker: { select: { fullName: true, phone: true } },
+					employer: { select: { name: true, phone: true, email: true, userId: true } },
+					role: { select: { name: true } },
+					station: { select: { name: true } },
 				},
 			});
 			await tx.worker.update({
@@ -306,12 +337,146 @@ export class PlacementsService {
 					ratingByWorker: dto.ratingByWorker,
 				},
 			});
-			return updated;
+			return ended;
 		});
+		await this.enqueuePlacementEndedNotifications({
+			placementId: updated.id,
+			workerPhone: updated.worker.phone,
+			workerName: updated.worker.fullName,
+			employerUserId: updated.employer.userId,
+			employerPhone: updated.employer.phone,
+			employerEmail: updated.employer.email,
+			employerName: updated.employer.name,
+			roleName: updated.role.name,
+			stationId: updated.stationId,
+			stationName: updated.station.name,
+			endDate: dto.endDate,
+			endedReason: dto.endedReason,
+		});
+		return updated;
 	}
 
 	private calculateCommission(salaryCents: bigint, commType: string, commValue: number): bigint {
 		return commType === "percent" ? (salaryCents * BigInt(commValue)) / 100n : BigInt(commValue) * 100n;
+	}
+
+	private async enqueuePlacementFinalizedNotifications(input: {
+		placementId: string;
+		workerPhone: string;
+		workerName: string;
+		employerUserId: string | null;
+		employerPhone: string;
+		employerEmail: string | null;
+		employerName: string;
+		roleName: string;
+		stationName: string;
+		startDate: Date;
+		salaryCents: bigint;
+		commissionCents: bigint;
+		agreementPdfUrl: string;
+	}) {
+		const payload = {
+			placementId: input.placementId,
+			workerName: input.workerName,
+			employerName: input.employerName,
+			roleName: input.roleName,
+			stationName: input.stationName,
+			startDate: input.startDate.toISOString().slice(0, 10),
+			salaryBirr: (input.salaryCents / 100n).toString(),
+			commissionBirr: (input.commissionCents / 100n).toString(),
+			agreementPdfUrl: input.agreementPdfUrl,
+		};
+		try {
+			await this.notifications.enqueueSms({
+				phone: input.workerPhone,
+				templateKey: "placement.finalized.worker",
+				payload,
+			});
+			await this.enqueueEmployerNotification({
+				userId: input.employerUserId,
+				phone: input.employerPhone,
+				email: input.employerEmail,
+				templateKey: "placement.finalized.employer",
+				payload,
+			});
+		} catch (err) {
+			this.logger.error("Failed to enqueue placement finalized notifications", err);
+		}
+	}
+
+	private async enqueuePlacementEndedNotifications(input: {
+		placementId: string;
+		workerPhone: string;
+		workerName: string;
+		employerUserId: string | null;
+		employerPhone: string;
+		employerEmail: string | null;
+		employerName: string;
+		roleName: string;
+		stationId: string;
+		stationName: string;
+		endDate: string;
+		endedReason: string;
+	}) {
+		const payload = {
+			placementId: input.placementId,
+			workerName: input.workerName,
+			employerName: input.employerName,
+			roleName: input.roleName,
+			stationName: input.stationName,
+			endDate: input.endDate,
+			endedReason: input.endedReason,
+		};
+		try {
+			await this.notifications.enqueueSms({
+				phone: input.workerPhone,
+				templateKey: "placement.ended.worker",
+				payload,
+			});
+			await this.enqueueEmployerNotification({
+				userId: input.employerUserId,
+				phone: input.employerPhone,
+				email: input.employerEmail,
+				templateKey: "placement.ended.employer",
+				payload,
+			});
+			await this.notifications.enqueueStationAgents({
+				stationId: input.stationId,
+				templateKey: "placement.ended.station_agent",
+				payload,
+			});
+		} catch (err) {
+			this.logger.error("Failed to enqueue placement ended notifications", err);
+		}
+	}
+
+	private async enqueueEmployerNotification(input: {
+		userId: string | null;
+		phone: string;
+		email: string | null;
+		templateKey: string;
+		payload: Record<string, string>;
+	}) {
+		if (input.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: input.userId,
+				channel: "in_app",
+				templateKey: input.templateKey,
+				payload: input.payload,
+			});
+		}
+		await this.notifications.enqueueSms({
+			phone: input.phone,
+			templateKey: input.templateKey,
+			payload: input.payload,
+		});
+		if (input.email) {
+			await this.notifications.enqueueEmail({
+				email: input.email,
+				templateKey: input.templateKey,
+				payload: input.payload,
+			});
+		}
 	}
 
 	private assertFinalizeReady(
