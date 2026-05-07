@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
 	IsBoolean,
 	IsDateString,
@@ -8,6 +8,7 @@ import {
 	IsOptional,
 	IsString,
 	IsUUID,
+	Matches,
 	Max,
 	MaxLength,
 	Min,
@@ -15,6 +16,13 @@ import {
 
 export const PAYMENT_METHODS = ["telebirr", "cbe_birr", "bank", "cash"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+const NON_BLANK_TEXT_PATTERN = /\S/;
+const trimText = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
+const trimOptionalText = ({ value }: { value: unknown }) => {
+	if (typeof value !== "string") return value;
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : undefined;
+};
 
 export class FinalizePlacementDto {
 	@ApiProperty({ description: "Placement start date" })
@@ -32,7 +40,9 @@ export class FinalizePlacementDto {
 	paymentMethod!: PaymentMethod;
 
 	@ApiProperty()
+	@Transform(trimText)
 	@IsString()
+	@Matches(NON_BLANK_TEXT_PATTERN)
 	@MaxLength(120)
 	paymentReference!: string;
 
@@ -53,7 +63,9 @@ export class EndPlacementDto {
 	endDate!: string;
 
 	@ApiProperty({ description: "Reason captured by the station agent" })
+	@Transform(trimText)
 	@IsString()
+	@Matches(NON_BLANK_TEXT_PATTERN)
 	@MaxLength(500)
 	endedReason!: string;
 
@@ -67,6 +79,7 @@ export class EndPlacementDto {
 
 	@ApiProperty({ required: false, description: "Employer comment about the worker" })
 	@IsOptional()
+	@Transform(trimOptionalText)
 	@IsString()
 	@MaxLength(500)
 	ratingCommentByEmployer?: string;
@@ -81,6 +94,7 @@ export class EndPlacementDto {
 
 	@ApiProperty({ required: false, description: "Worker comment about the employer, private to staff" })
 	@IsOptional()
+	@Transform(trimOptionalText)
 	@IsString()
 	@MaxLength(500)
 	ratingCommentByWorker?: string;

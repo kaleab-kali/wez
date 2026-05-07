@@ -22,6 +22,8 @@ import type {
 	ListPlacementsDto,
 } from "../dto/placement.dto";
 import { AgreementPdfService } from "./agreement-pdf.service";
+import { PlacementAgreementSnapshotService } from "./placement-agreement-snapshot.service";
+import { PlacementFinalizationPolicyService } from "./placement-finalization-policy.service";
 import { PlacementNotificationsService } from "./placement-notifications.service";
 import { PlacementStationAccessService } from "./placement-station-access.service";
 
@@ -41,6 +43,8 @@ export class PlacementsService {
 		private readonly agreementPdf: AgreementPdfService,
 		private readonly auditEvents: AuditEventsService,
 		private readonly jobs: JobsService,
+		private readonly agreementSnapshot: PlacementAgreementSnapshotService,
+		private readonly finalizationPolicy: PlacementFinalizationPolicyService,
 		private readonly placementNotifications: PlacementNotificationsService,
 		private readonly stationAccess: PlacementStationAccessService,
 		private readonly placements: PlacementsRepository,
@@ -104,9 +108,9 @@ export class PlacementsService {
 		});
 		if (!requestSnapshot) throw new NotFoundException({ code: "HIRE_REQUEST_NOT_FOUND" });
 		await this.stationAccess.assertAccess(session, requestSnapshot.stationId);
-		this.assertFinalizeReady(requestSnapshot, salaryCents);
+		this.finalizationPolicy.assertHireRequestReady(requestSnapshot, salaryCents);
 
-		const commissionCents = this.calculateCommission(
+		const commissionCents = this.finalizationPolicy.calculateCommission(
 			salaryCents,
 			requestSnapshot.role.commType,
 			requestSnapshot.role.commValue,
@@ -142,11 +146,25 @@ export class PlacementsService {
 			const placement = await this.prisma.$transaction(async (tx) => {
 				const request = await tx.hireRequest.findUnique({
 					where: { id: hireRequestId },
-					include: { role: true, placement: true, worker: true, employer: true },
+					include: { role: true, placement: true, worker: true, employer: true, station: true },
 				});
 				if (!request) throw new NotFoundException({ code: "HIRE_REQUEST_NOT_FOUND" });
-				this.assertFinalizeReady(request, salaryCents);
-				const currentCommissionCents = this.calculateCommission(
+				this.finalizationPolicy.assertHireRequestReady(request, salaryCents);
+				this.agreementSnapshot.assertCurrent(
+					{
+						workerUpdatedAt: requestSnapshot.worker.updatedAt,
+						employerUpdatedAt: requestSnapshot.employer.updatedAt,
+						roleUpdatedAt: requestSnapshot.role.updatedAt,
+						stationUpdatedAt: requestSnapshot.station.updatedAt,
+					},
+					{
+						workerUpdatedAt: request.worker.updatedAt,
+						employerUpdatedAt: request.employer.updatedAt,
+						roleUpdatedAt: request.role.updatedAt,
+						stationUpdatedAt: request.station.updatedAt,
+					},
+				);
+				const currentCommissionCents = this.finalizationPolicy.calculateCommission(
 					salaryCents,
 					request.role.commType,
 					request.role.commValue,
@@ -282,9 +300,9 @@ export class PlacementsService {
 		if (!station.active) throw new ConflictException({ code: "STATION_INACTIVE" });
 		if (!workerRole) throw new BadRequestException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
 		await this.stationAccess.assertAccess(session, station.id);
-		this.assertFreshReady({ worker, employer, role }, salaryCents);
+		this.finalizationPolicy.assertFreshReady({ worker, employer, role }, salaryCents);
 
-		const commissionCents = this.calculateCommission(salaryCents, role.commType, role.commValue);
+		const commissionCents = this.finalizationPolicy.calculateCommission(salaryCents, role.commType, role.commValue);
 		const agreementBuffer = await this.agreementPdf.generate({
 			placementId,
 			workerName: worker.fullName,
@@ -325,8 +343,25 @@ export class PlacementsService {
 				if (!currentStation.active) throw new ConflictException({ code: "STATION_INACTIVE" });
 				if (!currentWorkerRole) throw new BadRequestException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
 				await this.stationAccess.assertAccess(session, currentStation.id);
-				this.assertFreshReady({ worker: currentWorker, employer: currentEmployer, role: currentRole }, salaryCents);
-				const currentCommissionCents = this.calculateCommission(
+				this.agreementSnapshot.assertCurrent(
+					{
+						workerUpdatedAt: worker.updatedAt,
+						employerUpdatedAt: employer.updatedAt,
+						roleUpdatedAt: role.updatedAt,
+						stationUpdatedAt: station.updatedAt,
+					},
+					{
+						workerUpdatedAt: currentWorker.updatedAt,
+						employerUpdatedAt: currentEmployer.updatedAt,
+						roleUpdatedAt: currentRole.updatedAt,
+						stationUpdatedAt: currentStation.updatedAt,
+					},
+				);
+				this.finalizationPolicy.assertFreshReady(
+					{ worker: currentWorker, employer: currentEmployer, role: currentRole },
+					salaryCents,
+				);
+				const currentCommissionCents = this.finalizationPolicy.calculateCommission(
 					salaryCents,
 					currentRole.commType,
 					currentRole.commValue,
@@ -507,68 +542,8 @@ export class PlacementsService {
 		return { ...updated, ratingWindowClosesAt: this.ratingWindowClosesAt(updated.endDate) };
 	}
 
-	private assertFreshReady(
-		input: {
-			worker: { available: boolean };
-			employer: { rating: string };
-			role: { salaryMinCents: bigint; salaryMaxCents: bigint };
-		},
-		salaryCents: bigint,
-	) {
-		if (!input.worker.available) {
-			throw new ConflictException({ code: "WORKER_NOT_AVAILABLE" });
-		}
-		if (input.employer.rating === "red") {
-			throw new ConflictException({ code: "EMPLOYER_BANNED" });
-		}
-		if (salaryCents < input.role.salaryMinCents || salaryCents > input.role.salaryMaxCents) {
-			throw new BadRequestException({
-				code: "SALARY_OUT_OF_ROLE_RANGE",
-				details: {
-					roleSalaryMinCents: input.role.salaryMinCents.toString(),
-					roleSalaryMaxCents: input.role.salaryMaxCents.toString(),
-				},
-			});
-		}
-	}
-
-	private calculateCommission(salaryCents: bigint, commType: string, commValue: number): bigint {
-		return commType === "percent" ? (salaryCents * BigInt(commValue)) / 100n : BigInt(commValue) * 100n;
-	}
-
 	private ratingWindowClosesAt(endDate: Date | null): string | null {
 		if (!endDate) return null;
 		return new Date(endDate.getTime() + RATING_WINDOW_DAYS * MILLISECONDS_PER_DAY).toISOString();
-	}
-
-	private assertFinalizeReady(
-		request: {
-			placement: unknown;
-			status: string;
-			worker: { available: boolean };
-			employer: { rating: string };
-			role: { salaryMinCents: bigint; salaryMaxCents: bigint };
-		},
-		salaryCents: bigint,
-	) {
-		if (request.placement) throw new ConflictException({ code: "PLACEMENT_ALREADY_EXISTS" });
-		if (request.status !== "awaiting_visit") {
-			throw new ConflictException({ code: "HIRE_REQUEST_NOT_AWAITING_VISIT" });
-		}
-		if (!request.worker.available) {
-			throw new ConflictException({ code: "WORKER_NOT_AVAILABLE" });
-		}
-		if (request.employer.rating === "red") {
-			throw new ConflictException({ code: "EMPLOYER_BANNED" });
-		}
-		if (salaryCents < request.role.salaryMinCents || salaryCents > request.role.salaryMaxCents) {
-			throw new BadRequestException({
-				code: "SALARY_OUT_OF_ROLE_RANGE",
-				details: {
-					roleSalaryMinCents: request.role.salaryMinCents.toString(),
-					roleSalaryMaxCents: request.role.salaryMaxCents.toString(),
-				},
-			});
-		}
 	}
 }
