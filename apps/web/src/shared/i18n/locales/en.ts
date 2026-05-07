@@ -350,6 +350,7 @@ export const en = {
 		expiresAt: "Expires {{when}}",
 		cancel: "Cancel",
 		cancelReason: "Cancellation reason",
+		cancelReasonRequired: "Add a cancellation reason first.",
 		submit: "Send hire request",
 		created: "Hire request created. Wez staff will coordinate the station visit.",
 		salaryRangeRequired: "Salary must be between {{min}} and {{max}} ETB for this role.",

@@ -706,8 +706,53 @@ const seed = async () => {
 		{
 			key: "hire_request.created.worker",
 			channel: "sms",
-			bodyEn: "{{employerName}} requested to hire you for {{role}} at {{salary}} ETB. Visit your station to confirm.",
+			bodyEn:
+				"{{employerName}} requested to hire you for {{roleName}} at {{salaryBirr}} ETB. Visit your station to confirm.",
 			bodyAm: "{{employerName}} ለ{{role}} ስራ በ{{salary}} ብር ሊቀጥሮት ጠይቋል። ለማረጋገጥ ጣቢያዎን ይጎብኙ።",
+		},
+		{
+			key: "hire_request.created.employer",
+			channel: "email",
+			subjectEn: "Wez hire request received",
+			subjectAm: "Wez hire request received",
+			bodyEn: "Your hire request for {{workerName}} as {{roleName}} at {{salaryBirr}} ETB was received.",
+			bodyAm: "Your hire request for {{workerName}} as {{roleName}} at {{salaryBirr}} ETB was received.",
+		},
+		{
+			key: "hire_request.created.station_agent",
+			channel: "in_app",
+			bodyEn: "{{employerName}} requested {{workerName}} for {{roleName}} at {{salaryBirr}} ETB.",
+			bodyAm: "{{employerName}} requested {{workerName}} for {{roleName}} at {{salaryBirr}} ETB.",
+		},
+		{
+			key: "hire_request.cancelled.worker",
+			channel: "sms",
+			bodyEn: "Hire request {{hireRequestId}} was cancelled. Reason: {{reason}}.",
+			bodyAm: "Hire request {{hireRequestId}} was cancelled. Reason: {{reason}}.",
+		},
+		{
+			key: "hire_request.cancelled.employer",
+			channel: "in_app",
+			bodyEn: "Hire request {{hireRequestId}} was cancelled. Reason: {{reason}}.",
+			bodyAm: "Hire request {{hireRequestId}} was cancelled. Reason: {{reason}}.",
+		},
+		{
+			key: "hire_request.expired.worker",
+			channel: "sms",
+			bodyEn: "Hire request {{hireRequestId}} expired. Contact your station for new opportunities.",
+			bodyAm: "Hire request {{hireRequestId}} expired. Contact your station for new opportunities.",
+		},
+		{
+			key: "hire_request.expired.employer",
+			channel: "sms",
+			bodyEn: "Hire request {{hireRequestId}} expired. You can create a new request from Wez.",
+			bodyAm: "Hire request {{hireRequestId}} expired. You can create a new request from Wez.",
+		},
+		{
+			key: "referral.created.employer",
+			channel: "in_app",
+			bodyEn: "Wez referred {{workerName}} for your review.",
+			bodyAm: "Wez referred {{workerName}} for your review.",
 		},
 		{
 			key: "placement.finalized.worker",

@@ -66,6 +66,7 @@ const customerPermissions: Record<WezCustomerRole, ReadonlyArray<Permission>> = 
 		"job:read",
 		"job:list",
 		"hire_request:read",
+		"hire_request:cancel",
 		"placement:read",
 		"course:read",
 		"course:list",

@@ -344,6 +344,7 @@ export const am = {
 		expiresAt: "ያበቃል {{when}}",
 		cancel: "ሰርዝ",
 		cancelReason: "የመሰረዣ ምክንያት",
+		cancelReasonRequired: "Add a cancellation reason first.",
 		submit: "የቅጥር ጥያቄ ላክ",
 		created: "Hire request created. Wez staff will coordinate the station visit.",
 		empty: "ገና የቅጥር ጥያቄዎች የሉም።",

@@ -137,9 +137,11 @@ export class HireRequestsService {
 		});
 		await this.enqueueCreatedNotifications({
 			requestId: request.id,
-			workerUserId: worker.userId,
 			workerPhone: worker.phone,
 			workerName: worker.fullName,
+			employerUserId: employer.userId,
+			employerPhone: employer.phone,
+			employerEmail: employer.email,
 			employerName: employer.name,
 			roleName: role.name,
 			stationId: dto.stationId,
@@ -165,7 +167,7 @@ export class HireRequestsService {
 		const req = await this.getById(id);
 		if (session.kind === "staff") {
 			const updated = await this.cancel(id, dto);
-			await this.enqueueCancelledNotifications(req, dto.reason);
+			await this.enqueueStaffCancelledNotifications(req, dto.reason);
 			return updated;
 		}
 
@@ -175,7 +177,17 @@ export class HireRequestsService {
 				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
 			}
 			const updated = await this.cancel(id, dto);
-			await this.enqueueCancelledNotifications(req, dto.reason);
+			await this.enqueueEmployerCancelledNotifications(req, dto.reason);
+			return updated;
+		}
+
+		if (session.user.role === "worker") {
+			const worker = await this.workers.findByUserId(session.user.id);
+			if (!worker || req.workerId !== worker.id) {
+				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
+			}
+			const updated = await this.cancel(id, dto);
+			await this.enqueueWorkerCancelledNotifications(req, dto.reason);
 			return updated;
 		}
 
@@ -195,9 +207,11 @@ export class HireRequestsService {
 
 	private async enqueueCreatedNotifications(input: {
 		requestId: string;
-		workerUserId: string | null | undefined;
 		workerPhone: string;
 		workerName: string;
+		employerUserId: string | null | undefined;
+		employerPhone: string;
+		employerEmail: string | null | undefined;
 		employerName: string;
 		roleName: string;
 		stationId: string;
@@ -211,18 +225,16 @@ export class HireRequestsService {
 			roleName: input.roleName,
 			salaryBirr: (Number(input.proposedSalaryCents) / 100).toString(),
 		};
-		if (input.workerUserId && input.channel === "online") {
-			await this.notifications.enqueueCustomer({
-				userId: input.workerUserId,
-				channel: "sms",
-				templateKey: "hire_request.created.worker",
-				payload,
-			});
-		}
-		if (!input.workerUserId && input.channel === "online") {
+		if (input.channel === "online") {
 			await this.notifications.enqueueSms({
 				phone: input.workerPhone,
 				templateKey: "hire_request.created.worker",
+				payload,
+			});
+			await this.enqueueEmployerConfirmation({
+				userId: input.employerUserId,
+				phone: input.employerPhone,
+				email: input.employerEmail,
 				payload,
 			});
 		}
@@ -233,7 +245,7 @@ export class HireRequestsService {
 		});
 	}
 
-	private async enqueueCancelledNotifications(
+	private async enqueueEmployerCancelledNotifications(
 		request: { workerId: string; employerId: string; id: string },
 		reason: string,
 	) {
@@ -241,28 +253,64 @@ export class HireRequestsService {
 			this.workers.findById(request.workerId),
 			this.employers.findById(request.employerId),
 		]);
-		const payload = { hireRequestId: request.id, reason };
-		if (worker?.userId) {
-			await this.notifications.enqueueCustomer({
-				userId: worker.userId,
-				channel: "sms",
-				templateKey: "hire_request.cancelled.worker",
-				payload,
-			});
-		}
-		if (worker && !worker.userId) {
+		const payload = { hireRequestId: request.id, reason, employerName: employer?.name ?? "" };
+		if (worker) {
 			await this.notifications.enqueueSms({
 				phone: worker.phone,
 				templateKey: "hire_request.cancelled.worker",
 				payload,
 			});
 		}
-		if (employer?.userId) {
-			await this.notifications.enqueueCustomer({
-				userId: employer.userId,
-				channel: "in_app",
+	}
+
+	private async enqueueWorkerCancelledNotifications(
+		request: { workerId: string; employerId: string; id: string },
+		reason: string,
+	) {
+		const [worker, employer] = await Promise.all([
+			this.workers.findById(request.workerId),
+			this.employers.findById(request.employerId),
+		]);
+		const payload = { hireRequestId: request.id, reason, workerName: worker?.fullName ?? "" };
+		if (employer) {
+			await this.enqueueEmployerNotification({
+				employer,
 				templateKey: "hire_request.cancelled.employer",
 				payload,
+				includeSms: true,
+				includeEmail: true,
+			});
+		}
+	}
+
+	private async enqueueStaffCancelledNotifications(
+		request: { workerId: string; employerId: string; id: string },
+		reason: string,
+	) {
+		const [worker, employer] = await Promise.all([
+			this.workers.findById(request.workerId),
+			this.employers.findById(request.employerId),
+		]);
+		const payload = {
+			hireRequestId: request.id,
+			reason,
+			workerName: worker?.fullName ?? "",
+			employerName: employer?.name ?? "",
+		};
+		if (worker) {
+			await this.notifications.enqueueSms({
+				phone: worker.phone,
+				templateKey: "hire_request.cancelled.worker",
+				payload,
+			});
+		}
+		if (employer) {
+			await this.enqueueEmployerNotification({
+				employer,
+				templateKey: "hire_request.cancelled.employer",
+				payload,
+				includeSms: true,
+				includeEmail: true,
 			});
 		}
 	}
@@ -272,28 +320,86 @@ export class HireRequestsService {
 			this.workers.findById(request.workerId),
 			this.employers.findById(request.employerId),
 		]);
-		const payload = { hireRequestId: request.id };
-		if (worker?.userId) {
-			await this.notifications.enqueueCustomer({
-				userId: worker.userId,
-				channel: "sms",
-				templateKey: "hire_request.expired.worker",
-				payload,
-			});
-		}
-		if (worker && !worker.userId) {
+		const payload = {
+			hireRequestId: request.id,
+			workerName: worker?.fullName ?? "",
+			employerName: employer?.name ?? "",
+		};
+		if (worker) {
 			await this.notifications.enqueueSms({
 				phone: worker.phone,
 				templateKey: "hire_request.expired.worker",
 				payload,
 			});
 		}
-		if (employer?.userId) {
-			await this.notifications.enqueueCustomer({
-				userId: employer.userId,
-				channel: "sms",
+		if (employer) {
+			await this.enqueueEmployerNotification({
+				employer,
 				templateKey: "hire_request.expired.employer",
 				payload,
+				includeSms: true,
+				includeEmail: false,
+			});
+		}
+	}
+
+	private async enqueueEmployerConfirmation(input: {
+		userId: string | null | undefined;
+		phone: string;
+		email: string | null | undefined;
+		payload: Record<string, string>;
+	}) {
+		if (input.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: input.userId,
+				channel: "in_app",
+				templateKey: "hire_request.created.employer",
+				payload: input.payload,
+			});
+		}
+		if (input.email) {
+			await this.notifications.enqueueEmail({
+				email: input.email,
+				templateKey: "hire_request.created.employer",
+				payload: input.payload,
+			});
+		}
+		if (!input.email) {
+			await this.notifications.enqueueSms({
+				phone: input.phone,
+				templateKey: "hire_request.created.employer",
+				payload: input.payload,
+			});
+		}
+	}
+
+	private async enqueueEmployerNotification(input: {
+		employer: { userId?: string | null; phone: string; email?: string | null };
+		templateKey: string;
+		payload: Record<string, string>;
+		includeSms: boolean;
+		includeEmail: boolean;
+	}) {
+		if (input.employer.userId) {
+			await this.notifications.enqueueCustomer({
+				userId: input.employer.userId,
+				channel: "in_app",
+				templateKey: input.templateKey,
+				payload: input.payload,
+			});
+		}
+		if (input.includeSms) {
+			await this.notifications.enqueueSms({
+				phone: input.employer.phone,
+				templateKey: input.templateKey,
+				payload: input.payload,
+			});
+		}
+		if (input.includeEmail && input.employer.email) {
+			await this.notifications.enqueueEmail({
+				email: input.employer.email,
+				templateKey: input.templateKey,
+				payload: input.payload,
 			});
 		}
 	}
