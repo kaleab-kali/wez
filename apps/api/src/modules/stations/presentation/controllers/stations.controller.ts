@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
+import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
 import { requireSession, type WezRequest } from "#shared/auth/session";
 import { AssignAgentDto, CreateStationDto, UpdateStationDto } from "../../application/dto/station.dto";
 import { StationsService } from "../../application/services/stations.service";
@@ -9,7 +9,7 @@ import { StationsService } from "../../application/services/stations.service";
 @ApiBearerAuth()
 @Controller("admin/stations")
 @UseGuards(AdminPermissionsGuard)
-@RequireAdminMin("ops_manager")
+@RequireAdminRole("super_admin", "ops_manager")
 export class StationsController {
 	constructor(private readonly service: StationsService) {}
 

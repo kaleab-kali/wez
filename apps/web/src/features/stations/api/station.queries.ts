@@ -33,6 +33,9 @@ export type Station = {
 	address: string;
 	phone: string | null;
 	active: boolean;
+	localityId: string | null;
+	custom: boolean;
+	customReason: string | null;
 	supervisorUserId: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -61,8 +64,16 @@ export const usePublicStations = () =>
 export const useCreateStation = () => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (input: { name: string; woreda: string; address: string; phone?: string; supervisorUserId?: string }) =>
-			send<{ data: Station }>(ADMIN_BASE, "POST", input).then((b) => b.data),
+		mutationFn: (input: {
+			name?: string;
+			woreda?: string;
+			address?: string;
+			phone?: string;
+			localityId?: string;
+			custom?: boolean;
+			customReason?: string;
+			supervisorUserId?: string;
+		}) => send<{ data: Station }>(ADMIN_BASE, "POST", input).then((b) => b.data),
 		onSuccess: () => qc.invalidateQueries({ queryKey: stationKeys.lists() }),
 	});
 };

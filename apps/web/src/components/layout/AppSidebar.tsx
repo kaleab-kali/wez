@@ -50,7 +50,9 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 // HQ admin sidebar — only visible to roles that manage platform-wide config.
 const ADMINISTRATION: ReadonlyArray<NavItem> = [
 	{ labelKey: "admin.nav.overview", to: "/staff-admin", icon: DashboardSquare01Icon },
+	{ labelKey: "admin.nav.staffUsers", to: "/staff-admin/staff-users", icon: ContactBookIcon },
 	{ labelKey: "admin.nav.stations", to: "/staff-admin/stations", icon: StoreLocation02Icon },
+	{ labelKey: "admin.nav.locations", to: "/staff-admin/locations", icon: StoreLocation02Icon },
 	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon },
 	{ labelKey: "admin.nav.hiringPolicy", to: "/staff-admin/hiring-policy", icon: NoteEditIcon },
 	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon },

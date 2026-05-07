@@ -1,6 +1,7 @@
 import {
 	Book02Icon,
 	Coins01Icon,
+	ContactBookIcon,
 	NoteEditIcon,
 	SecurityIcon,
 	StoreLocation02Icon,
@@ -201,10 +202,22 @@ const AdminDashboard = React.memo(() => {
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 					<TileLink
+						to="/staff-admin/staff-users"
+						icon={ContactBookIcon}
+						title={t("staffUsers.title")}
+						description={t("staffUsers.subtitle")}
+					/>
+					<TileLink
 						to="/staff-admin/stations"
 						icon={StoreLocation02Icon}
 						title={t("admin.stationsAndAgents")}
 						description={t("admin.nav.stations")}
+					/>
+					<TileLink
+						to="/staff-admin/locations"
+						icon={StoreLocation02Icon}
+						title={t("locations.title")}
+						description={t("locations.subtitle")}
 					/>
 					<TileLink
 						to="/staff-admin/role-catalog"
