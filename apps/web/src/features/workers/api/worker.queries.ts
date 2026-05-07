@@ -70,6 +70,7 @@ export const workerKeys = {
 	lists: () => [...workerKeys.all, "list"] as const,
 	list: (filter: WorkerFilter) => [...workerKeys.lists(), filter] as const,
 	detail: (id: string) => [...workerKeys.all, "detail", id] as const,
+	me: () => [...workerKeys.all, "me"] as const,
 };
 
 const toQueryString = (filter: WorkerFilter) => {
@@ -94,6 +95,12 @@ export const useWorker = (id: string | undefined) =>
 		queryKey: id ? workerKeys.detail(id) : ["workers", "detail", "none"],
 		queryFn: () => get<{ data: Worker }>(`${BASE}/${id}`).then((b) => b.data),
 		enabled: !!id,
+	});
+
+export const useMyWorkerProfile = () =>
+	useQuery({
+		queryKey: workerKeys.me(),
+		queryFn: () => get<{ data: Worker }>(`${BASE}/me`).then((b) => b.data),
 	});
 
 export const useRegisterWorker = () => {
@@ -128,6 +135,18 @@ export const useUpdateWorker = (id: string) => {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: workerKeys.lists() });
 			qc.invalidateQueries({ queryKey: workerKeys.detail(id) });
+		},
+	});
+};
+
+export const useUpdateMyWorkerProfile = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (patch: { bio?: string; languages?: string[] }) =>
+			send<{ data: Worker }>(`${BASE}/me`, "PATCH", patch).then((b) => b.data),
+		onSuccess: (worker) => {
+			qc.invalidateQueries({ queryKey: workerKeys.me() });
+			qc.invalidateQueries({ queryKey: workerKeys.detail(worker.id) });
 		},
 	});
 };

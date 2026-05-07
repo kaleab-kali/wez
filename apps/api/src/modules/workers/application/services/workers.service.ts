@@ -1,12 +1,16 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditEventsService } from "#modules/audit-log/audit-events.service";
 import { auth } from "#modules/auth/auth.config";
 import type { IRoleCatalogRepository } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import { ROLE_CATALOG_REPO } from "#modules/role-catalog/domain/repositories/role-catalog.repository";
 import type { IStationsRepository } from "#modules/stations/domain/repositories/stations.repository";
 import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.repository";
+import type { AuditRequestContext } from "#shared/audit/audit-context";
+import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
 import { type IWorkersRepository, WORKERS_REPO } from "../../domain/repositories/workers.repository";
-import type { ListWorkersDto, RegisterWorkerDto, UpdateWorkerDto } from "../dto/worker.dto";
+import type { ListWorkersDto, RegisterWorkerDto, UpdateOwnWorkerProfileDto, UpdateWorkerDto } from "../dto/worker.dto";
 
 const WORKER_ROLE = "worker";
 
@@ -17,6 +21,7 @@ export class WorkersService {
 		@Inject(ROLE_CATALOG_REPO) private readonly roles: IRoleCatalogRepository,
 		@Inject(STATIONS_REPO) private readonly stations: IStationsRepository,
 		private readonly prisma: PrismaService,
+		private readonly auditEvents: AuditEventsService,
 	) {}
 
 	async list(filter: ListWorkersDto) {
@@ -33,6 +38,12 @@ export class WorkersService {
 		const w = await this.repo.findById(id);
 		if (!w) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
 		return w;
+	}
+
+	async getOwnProfile(userId: string) {
+		const worker = await this.repo.findByUserId(userId);
+		if (!worker) throw new NotFoundException({ code: "WORKER_PROFILE_NOT_FOUND" });
+		return worker;
 	}
 
 	async register(currentAgentId: string, dto: RegisterWorkerDto) {
@@ -126,5 +137,51 @@ export class WorkersService {
 			tin: dto.tin,
 			roles: dto.roles,
 		});
+	}
+
+	async updateForSession(
+		session: WezSession,
+		id: string,
+		dto: UpdateWorkerDto,
+		auditContext: AuditRequestContext | undefined,
+	) {
+		if (session.kind === "staff") {
+			return this.update(id, dto);
+		}
+		const worker = await this.getOwnProfile(session.user.id);
+		if (worker.id !== id) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
+		return this.updateOwnProfile(session, { bio: dto.bio, languages: dto.languages }, auditContext);
+	}
+
+	async updateOwnProfile(
+		session: WezSession,
+		dto: UpdateOwnWorkerProfileDto,
+		auditContext: AuditRequestContext | undefined,
+	) {
+		const worker = await this.getOwnProfile(session.user.id);
+		const updated = await this.repo.update(worker.id, {
+			bio: dto.bio,
+			languages: dto.languages,
+		});
+		await this.auditEvents.recordEvent({
+			actorId: session.user.id,
+			actorRole: session.user.role,
+			action: AUDIT_ACTIONS.workerProfileUpdated,
+			targetType: AUDIT_TARGET_TYPES.worker,
+			targetId: worker.id,
+			stationId: worker.registeredAtStationId,
+			context: auditContext,
+			metadata: {
+				bioChanged: dto.bio !== undefined && dto.bio !== worker.bio,
+				beforeBioLength: worker.bio?.length ?? 0,
+				afterBioLength: updated.bio?.length ?? 0,
+				languagesChanged:
+					dto.languages !== undefined &&
+					dto.languages.slice().sort().join(",") !== worker.languages.slice().sort().join(","),
+				beforeLanguages: worker.languages.join(","),
+				afterLanguages: updated.languages.join(","),
+			},
+		});
+		return updated;
 	}
 }

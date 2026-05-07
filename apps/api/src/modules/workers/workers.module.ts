@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AuditLogModule } from "#modules/audit-log/audit-log.module";
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersService } from "./application/services/workers.service";
@@ -7,7 +8,7 @@ import { PrismaWorkersRepository } from "./infrastructure/repositories/prisma-wo
 import { WorkersController } from "./presentation/controllers/workers.controller";
 
 @Module({
-	imports: [RoleCatalogModule, StationsModule],
+	imports: [AuditLogModule, RoleCatalogModule, StationsModule],
 	controllers: [WorkersController],
 	providers: [WorkersService, { provide: WORKERS_REPO, useClass: PrismaWorkersRepository }],
 	exports: [WorkersService, { provide: WORKERS_REPO, useClass: PrismaWorkersRepository }],

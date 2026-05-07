@@ -63,6 +63,7 @@ export type Permission = `${Resource}:${string}`;
 const customerPermissions: Record<WezCustomerRole, ReadonlyArray<Permission>> = {
 	worker: [
 		"worker:read",
+		"worker:update",
 		"hire_request:read",
 		"hire_request:list",
 		"placement:read",

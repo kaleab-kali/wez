@@ -46,19 +46,41 @@ const RootIndex = React.memo(() => {
 					<h1 className="text-4xl md:text-5xl font-bold tracking-tight">{t("landing.heroTitle")}</h1>
 					<p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">{t("landing.heroBody")}</p>
 					<div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-						<Link to="/signup">
-							<Button size="lg">{t("landing.employerCta")}</Button>
+						<Link to="/login" search={{ as: "worker" }}>
+							<Button size="lg">{t("auth.loginAsWorker")}</Button>
 						</Link>
-						<Link to="/staff-login">
+						<Link to="/login" search={{ as: "employer" }}>
 							<Button size="lg" variant="outline">
-								{t("landing.staffCta")}
+								{t("auth.loginAsEmployer")}
 							</Button>
+						</Link>
+					</div>
+					<div className="mt-3">
+						<Link to="/signup" className="text-sm text-primary">
+							{t("landing.employerCta")}
 						</Link>
 					</div>
 				</section>
 
 				<section className="max-w-5xl mx-auto px-6 pb-20">
 					<div className="grid gap-4 md:grid-cols-3">
+						<Card>
+							<CardHeader>
+								<CardTitle>{t("landing.workerTitle")}</CardTitle>
+								<CardDescription>{t("landing.workerBody")}</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-3 text-sm text-muted-foreground">
+								<p>{t("landing.workerRegistrationBody")}</p>
+								<div className="flex flex-wrap gap-2">
+									<Link to="/login" search={{ as: "worker" }} className="text-primary">
+										{t("landing.workerCta")}
+									</Link>
+									<Link to="/login" search={{ as: "worker" }} className="text-primary">
+										{t("auth.signInEmail")}
+									</Link>
+								</div>
+							</CardContent>
+						</Card>
 						<Card>
 							<CardHeader>
 								<CardTitle>{t("landing.stationLedTitle")}</CardTitle>
@@ -72,13 +94,6 @@ const RootIndex = React.memo(() => {
 								<CardDescription>{t("landing.verifiedBody")}</CardDescription>
 							</CardHeader>
 							<CardContent className="text-sm text-muted-foreground">{t("landing.verifiedDetail")}</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle>{t("landing.auditTitle")}</CardTitle>
-								<CardDescription>{t("landing.auditBody")}</CardDescription>
-							</CardHeader>
-							<CardContent className="text-sm text-muted-foreground">{t("landing.auditDetail")}</CardContent>
 						</Card>
 					</div>
 				</section>

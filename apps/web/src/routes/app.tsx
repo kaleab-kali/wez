@@ -73,6 +73,11 @@ const CustomerAppLayout = React.memo(() => {
 								{t("app.requests")}
 							</CustomerNavLink>
 						)}
+						{isWorker && (
+							<CustomerNavLink to="/app/profile" active={location.pathname.startsWith("/app/profile")}>
+								{t("app.profile")}
+							</CustomerNavLink>
+						)}
 						{isEmployer && (
 							<CustomerNavLink to="/app/referrals" active={location.pathname.startsWith("/app/referrals")}>
 								{t("referrals.title")}

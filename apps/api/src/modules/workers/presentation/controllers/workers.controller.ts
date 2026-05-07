@@ -1,7 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
-import { ListWorkersDto, RegisterWorkerDto, UpdateWorkerDto } from "../../application/dto/worker.dto";
+import {
+	ListWorkersDto,
+	RegisterWorkerDto,
+	UpdateOwnWorkerProfileDto,
+	UpdateWorkerDto,
+} from "../../application/dto/worker.dto";
 import { WorkersService } from "../../application/services/workers.service";
 import type { Worker } from "../../domain/entities/worker.entity";
 
@@ -24,6 +29,14 @@ export class WorkersController {
 		return { ...result, data: result.data.map(toCustomerWorker) };
 	}
 
+	@Get("me")
+	@ApiOperation({ summary: "Get the current worker's own profile" })
+	async getMe(@Req() req: WezRequest) {
+		const session = await requirePermission(req, "worker:read");
+		const worker = await this.service.getOwnProfile(session.user.id);
+		return { data: toSelfWorker(worker) };
+	}
+
 	@Get(":id")
 	@ApiOperation({ summary: "Get a worker profile" })
 	async getById(@Param("id") id: string, @Req() req: WezRequest) {
@@ -40,12 +53,21 @@ export class WorkersController {
 		return { data: await this.service.register(s.user.id, dto) };
 	}
 
+	@Patch("me")
+	@ApiOperation({ summary: "Update the current worker's own editable profile fields" })
+	@ApiBody({ type: UpdateOwnWorkerProfileDto })
+	async updateMe(@Body() dto: UpdateOwnWorkerProfileDto, @Req() req: WezRequest) {
+		const session = await requirePermission(req, "worker:update");
+		return { data: toSelfWorker(await this.service.updateOwnProfile(session, dto, req.auditContext)) };
+	}
+
 	@Patch(":id")
 	@ApiOperation({ summary: "Update a worker" })
 	@ApiBody({ type: UpdateWorkerDto })
 	async update(@Param("id") id: string, @Body() dto: UpdateWorkerDto, @Req() req: WezRequest) {
-		await requirePermission(req, "worker:update");
-		return { data: await this.service.update(id, dto) };
+		const session = await requirePermission(req, "worker:update");
+		const worker = await this.service.updateForSession(session, id, dto, req.auditContext);
+		return { data: session.kind === "staff" ? worker : toSelfWorker(worker) };
 	}
 }
 
@@ -54,3 +76,5 @@ const toCustomerWorker = (worker: Worker): Worker => ({
 	fayda: "",
 	phone: "",
 });
+
+const toSelfWorker = (worker: Worker): Worker => worker;

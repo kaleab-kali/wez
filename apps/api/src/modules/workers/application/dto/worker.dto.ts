@@ -131,6 +131,22 @@ export class UpdateWorkerDto extends PartialType(RegisterWorkerDto) {
 	available?: boolean;
 }
 
+export class UpdateOwnWorkerProfileDto {
+	@ApiProperty({ required: false, maxLength: 500 })
+	@IsOptional()
+	@IsString()
+	@MaxLength(500)
+	bio?: string;
+
+	@ApiProperty({ example: ["am", "en"], type: [String], required: false })
+	@IsOptional()
+	@IsArray()
+	@ArrayUnique()
+	@ArrayMaxSize(10)
+	@IsString({ each: true })
+	languages?: string[];
+}
+
 export class ListWorkersDto {
 	@ApiProperty({ required: false })
 	@IsOptional()

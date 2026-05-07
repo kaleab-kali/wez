@@ -67,10 +67,10 @@ const CustomerDashboard = React.memo(() => {
 					/>
 				) : (
 					<CustomerTile
-						icon={NoteEditIcon}
-						title={t("hireRequests.title")}
-						body={t("hireRequests.workerBody")}
-						to="/app/requests"
+						icon={ContactBookIcon}
+						title={t("app.profile")}
+						body={t("app.workerProfileBody")}
+						to="/app/profile"
 					/>
 				)}
 				<CustomerTile
@@ -169,7 +169,7 @@ const CustomerTile = React.memo(
 		readonly title: string;
 		readonly body: string;
 		readonly badge?: string;
-		readonly to?: "/app/workers" | "/app/jobs" | "/app/requests" | "/app/referrals";
+		readonly to?: "/app/workers" | "/app/jobs" | "/app/requests" | "/app/referrals" | "/app/profile";
 	}) => {
 		const { t } = useTranslation();
 		return (
