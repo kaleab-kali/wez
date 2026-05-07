@@ -6,6 +6,7 @@ import {
 	useCancelHireRequest,
 	useHireRequests,
 } from "#features/hire-requests/api/hire-request.queries";
+import { authClient } from "#shared/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,9 @@ import { Input } from "@/components/ui/input";
 
 const CustomerRequestsPage = memo(() => {
 	const { t } = useTranslation();
+	const { data: session } = authClient.useSession();
+	const role = (session?.user as { role?: string } | undefined)?.role;
+	const isWorker = role === "worker";
 	const { data, isLoading } = useHireRequests({ page: 1, limit: 20 });
 
 	return (
@@ -20,12 +24,16 @@ const CustomerRequestsPage = memo(() => {
 			<div>
 				<h1 className="text-2xl font-semibold tracking-tight">{t("hireRequests.title")}</h1>
 				<p className="text-sm text-muted-foreground">
-					{isLoading ? t("common.loading") : t("hireRequests.count", { count: data?.meta.total ?? 0 })}
+					{isWorker
+						? t("hireRequests.workerBody")
+						: isLoading
+							? t("common.loading")
+							: t("hireRequests.count", { count: data?.meta.total ?? 0 })}
 				</p>
 			</div>
 			<div className="grid gap-3">
 				{data?.data.map((request) => (
-					<RequestCard key={request.id} request={request} />
+					<RequestCard key={request.id} request={request} isWorker={isWorker} />
 				))}
 				{data && data.data.length === 0 && (
 					<Card className="border-dashed">
@@ -40,12 +48,12 @@ const CustomerRequestsPage = memo(() => {
 });
 CustomerRequestsPage.displayName = "CustomerRequestsPage";
 
-const RequestCard = memo(({ request }: { readonly request: HireRequest }) => {
+const RequestCard = memo(({ request, isWorker }: { readonly request: HireRequest; readonly isWorker: boolean }) => {
 	const { t } = useTranslation();
 	const cancel = useCancelHireRequest(request.id);
 	const [reason, setReason] = useState("");
 	const [error, setError] = useState<string | null>(null);
-	const canCancel = request.status === "awaiting_visit";
+	const canCancel = !isWorker && request.status === "awaiting_visit";
 
 	const onReasonChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
 		setReason(event.target.value);
@@ -67,7 +75,11 @@ const RequestCard = memo(({ request }: { readonly request: HireRequest }) => {
 		<Card>
 			<CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
 				<div>
-					<CardTitle className="text-base">{request.workerName ?? request.workerId.slice(0, 8)}</CardTitle>
+					<CardTitle className="text-base">
+						{isWorker
+							? (request.employerName ?? request.employerId.slice(0, 8))
+							: (request.workerName ?? request.workerId.slice(0, 8))}
+					</CardTitle>
 					<p className="mt-1 text-sm text-muted-foreground">
 						{request.roleName ?? request.roleId} - {(Number(request.proposedSalaryCents) / 100).toLocaleString()} ETB
 					</p>

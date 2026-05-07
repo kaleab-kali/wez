@@ -109,6 +109,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	async create(data: NewWorker) {
 		const row = await this.prisma.worker.create({
 			data: {
+				userId: data.userId,
 				fullName: data.fullName,
 				fayda: data.fayda,
 				phone: data.phone,

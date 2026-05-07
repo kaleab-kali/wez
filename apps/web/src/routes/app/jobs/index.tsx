@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { type Job, type JobFilter, useCloseJob, useJobs } from "#features/jobs/api/job.queries";
@@ -29,12 +29,13 @@ const toBirrInput = (value: number | undefined) => (value === undefined ? "" : S
 
 const CustomerJobsPage = React.memo(() => {
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 	const { data: session } = authClient.useSession();
 	const role = (session?.user as { role?: string } | undefined)?.role;
 	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 	const isWorker = role === "worker";
 	const [filter, setFilter] = React.useState<JobFilter>({ page: 1, limit: JOB_PAGE_LIMIT, sort: "newest" });
-	const { data, isLoading } = useJobs(filter);
+	const { data, isLoading } = useJobs(filter, { enabled: !isWorker });
 	const { data: roles } = usePublicRoles();
 	const { data: woredas } = useLookupKind("woredas");
 	const closeJob = useCloseJob();
@@ -44,8 +45,8 @@ const CustomerJobsPage = React.memo(() => {
 	);
 
 	React.useEffect(() => {
-		if (isWorker) setFilter((current) => ({ ...current, status: "open", page: 1 }));
-	}, [isWorker]);
+		if (isWorker) navigate({ to: "/app/requests", replace: true });
+	}, [isWorker, navigate]);
 
 	const onSearchChange = React.useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) =>

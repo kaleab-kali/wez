@@ -94,13 +94,14 @@ const qs = (filter: JobFilter) => {
 	return p.toString();
 };
 
-export const useJobs = (filter: JobFilter) =>
+export const useJobs = (filter: JobFilter, options?: { readonly enabled?: boolean }) =>
 	useQuery({
 		queryKey: jobKeys.list(filter),
 		queryFn: () =>
 			get<{ data: Job[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
 				`${BASE}?${qs(filter)}`,
 			),
+		enabled: options?.enabled ?? true,
 	});
 
 export const useJob = (id: string | undefined) =>

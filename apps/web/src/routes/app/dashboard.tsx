@@ -20,8 +20,8 @@ const CustomerDashboard = React.memo(() => {
 	const role = (session?.user as { role?: string } | undefined)?.role;
 	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 	const { data: employer } = useMyEmployer({ enabled: isEmployer });
-	const { data: jobs } = useJobs({ page: 1, limit: 5, status: isEmployer ? undefined : "open" });
-	const { data: requests } = useHireRequests({ page: 1, limit: 5 }, { enabled: isEmployer });
+	const { data: jobs } = useJobs({ page: 1, limit: 5 }, { enabled: isEmployer });
+	const { data: requests } = useHireRequests({ page: 1, limit: 5 }, { enabled: !!role });
 
 	const pendingRequests = React.useMemo(
 		() => requests?.data.filter((request) => request.status === "awaiting_visit").length ?? 0,
@@ -44,7 +44,7 @@ const CustomerDashboard = React.memo(() => {
 					</Button>
 				) : (
 					<Button asChild>
-						<Link to="/app/jobs">{t("jobs.browseJobs")}</Link>
+						<Link to="/app/requests">{t("hireRequests.title")}</Link>
 					</Button>
 				)}
 			</section>
@@ -66,13 +66,22 @@ const CustomerDashboard = React.memo(() => {
 						to="/app/workers"
 					/>
 				) : (
-					<CustomerTile icon={NoteEditIcon} title={t("jobs.title")} body={t("jobs.workerCatalogBody")} to="/app/jobs" />
+					<CustomerTile
+						icon={NoteEditIcon}
+						title={t("hireRequests.title")}
+						body={t("hireRequests.workerBody")}
+						to="/app/requests"
+					/>
 				)}
 				<CustomerTile
 					icon={NoteEditIcon}
-					title={isEmployer ? t("app.requests") : t("placements.title")}
-					body={isEmployer ? t("hireRequests.pendingCount", { count: pendingRequests }) : t("placements.workerBody")}
-					to={isEmployer ? "/app/requests" : undefined}
+					title={t("app.requests")}
+					body={
+						isEmployer
+							? t("hireRequests.pendingCount", { count: pendingRequests })
+							: t("hireRequests.workerDashboardBody")
+					}
+					to="/app/requests"
 				/>
 				{isEmployer && (
 					<CustomerTile
@@ -88,56 +97,58 @@ const CustomerDashboard = React.memo(() => {
 			</section>
 
 			<section className="grid gap-4 lg:grid-cols-2">
+				{isEmployer && (
+					<Card>
+						<CardHeader className="flex flex-row items-center justify-between space-y-0">
+							<CardTitle className="text-base">{t("jobs.recent")}</CardTitle>
+							<Link to="/app/jobs" className="text-sm text-primary">
+								{t("common.viewAll")}
+							</Link>
+						</CardHeader>
+						<CardContent className="space-y-3">
+							{jobs?.data.slice(0, 3).map((job) => (
+								<div
+									key={job.id}
+									className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
+								>
+									<div>
+										<p className="text-sm font-medium">{job.title}</p>
+										<p className="text-xs text-muted-foreground">{job.roleName ?? job.roleId}</p>
+									</div>
+									<Badge variant="outline">{t(`jobs.${job.status}`)}</Badge>
+								</div>
+							))}
+							{jobs && jobs.data.length === 0 && <p className="text-sm text-muted-foreground">{t("jobs.empty")}</p>}
+						</CardContent>
+					</Card>
+				)}
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle className="text-base">{t("jobs.recent")}</CardTitle>
-						<Link to="/app/jobs" className="text-sm text-primary">
+						<CardTitle className="text-base">{t("hireRequests.title")}</CardTitle>
+						<Link to="/app/requests" className="text-sm text-primary">
 							{t("common.viewAll")}
 						</Link>
 					</CardHeader>
 					<CardContent className="space-y-3">
-						{jobs?.data.slice(0, 3).map((job) => (
+						{requests?.data.slice(0, 3).map((request) => (
 							<div
-								key={job.id}
+								key={request.id}
 								className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
 							>
 								<div>
-									<p className="text-sm font-medium">{job.title}</p>
-									<p className="text-xs text-muted-foreground">{job.roleName ?? job.roleId}</p>
+									<p className="text-sm font-medium">
+										{isEmployer
+											? (request.workerName ?? request.workerId.slice(0, 8))
+											: (request.employerName ?? request.employerId.slice(0, 8))}
+									</p>
+									<p className="text-xs text-muted-foreground">{request.roleName ?? request.roleId}</p>
 								</div>
-								<Badge variant="outline">{t(`jobs.${job.status}`)}</Badge>
+								<Badge variant="outline">{request.status.replace("_", " ")}</Badge>
 							</div>
 						))}
-						{jobs && jobs.data.length === 0 && <p className="text-sm text-muted-foreground">{t("jobs.empty")}</p>}
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0">
-						<CardTitle className="text-base">{isEmployer ? t("hireRequests.title") : t("placements.title")}</CardTitle>
-						{isEmployer && (
-							<Link to="/app/requests" className="text-sm text-primary">
-								{t("common.viewAll")}
-							</Link>
-						)}
-					</CardHeader>
-					<CardContent className="space-y-3">
-						{isEmployer &&
-							requests?.data.slice(0, 3).map((request) => (
-								<div
-									key={request.id}
-									className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
-								>
-									<div>
-										<p className="text-sm font-medium">{request.workerName ?? request.workerId.slice(0, 8)}</p>
-										<p className="text-xs text-muted-foreground">{request.roleName ?? request.roleId}</p>
-									</div>
-									<Badge variant="outline">{request.status.replace("_", " ")}</Badge>
-								</div>
-							))}
-						{isEmployer && requests && requests.data.length === 0 && (
+						{requests && requests.data.length === 0 && (
 							<p className="text-sm text-muted-foreground">{t("hireRequests.empty")}</p>
 						)}
-						{!isEmployer && <p className="text-sm text-muted-foreground">{t("placements.workerBody")}</p>}
 					</CardContent>
 				</Card>
 			</section>

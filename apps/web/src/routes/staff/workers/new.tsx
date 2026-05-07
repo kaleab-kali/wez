@@ -21,6 +21,8 @@ type FormState = {
 	fullName: string;
 	fayda: string;
 	phone: string;
+	loginEmail: string;
+	loginPassword: string;
 	dateOfBirth: string;
 	gender: "M" | "F";
 	area: string;
@@ -40,6 +42,8 @@ const initialState: FormState = {
 	fullName: "",
 	fayda: "",
 	phone: "+2519",
+	loginEmail: "",
+	loginPassword: "",
 	dateOfBirth: "",
 	gender: "F",
 	area: "",
@@ -325,6 +329,31 @@ const StepVerification = React.memo(
 					<Label htmlFor="tin">{t("workers.register.tin")}</Label>
 					<Input id="tin" value={state.tin} onChange={(e) => set({ tin: e.target.value })} />
 				</div>
+				<div className="grid gap-3 md:grid-cols-2">
+					<div className="space-y-2">
+						<Label htmlFor="loginEmail">{t("workers.register.loginEmail")}</Label>
+						<Input
+							id="loginEmail"
+							type="email"
+							value={state.loginEmail}
+							onChange={(e) => set({ loginEmail: e.target.value })}
+							placeholder={t("auth.emailPlaceholder")}
+							autoComplete="off"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="loginPassword">{t("workers.register.loginPassword")}</Label>
+						<Input
+							id="loginPassword"
+							type="password"
+							value={state.loginPassword}
+							onChange={(e) => set({ loginPassword: e.target.value })}
+							minLength={8}
+							maxLength={128}
+							autoComplete="new-password"
+						/>
+					</div>
+				</div>
 				<div className="space-y-2">
 					<Label htmlFor="station">{t("workers.register.station")}</Label>
 					<select
@@ -387,11 +416,18 @@ function NewWorkerPage() {
 
 	const onSubmit = React.useCallback(async () => {
 		setError("");
+		const hasEmailLogin = !!state.loginEmail || !!state.loginPassword;
+		if (hasEmailLogin && (!state.loginEmail || !state.loginPassword)) {
+			setError(t("workers.register.loginPairRequired"));
+			return;
+		}
 		try {
 			const created = await register.mutateAsync({
 				fullName: state.fullName,
 				fayda: state.fayda,
 				phone: state.phone,
+				loginEmail: state.loginEmail || undefined,
+				loginPassword: state.loginPassword || undefined,
 				gender: state.gender,
 				area: state.area,
 				bio: state.bio || undefined,

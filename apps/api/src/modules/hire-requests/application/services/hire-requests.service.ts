@@ -181,16 +181,6 @@ export class HireRequestsService {
 			return updated;
 		}
 
-		if (session.user.role === "worker") {
-			const worker = await this.workers.findByUserId(session.user.id);
-			if (!worker || req.workerId !== worker.id) {
-				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
-			}
-			const updated = await this.cancel(id, dto);
-			await this.enqueueWorkerCancelledNotifications(req, dto.reason);
-			return updated;
-		}
-
 		throw new ForbiddenException({ code: "CANNOT_CANCEL_HIRE_REQUEST" });
 	}
 
@@ -259,26 +249,6 @@ export class HireRequestsService {
 				phone: worker.phone,
 				templateKey: "hire_request.cancelled.worker",
 				payload,
-			});
-		}
-	}
-
-	private async enqueueWorkerCancelledNotifications(
-		request: { workerId: string; employerId: string; id: string },
-		reason: string,
-	) {
-		const [worker, employer] = await Promise.all([
-			this.workers.findById(request.workerId),
-			this.employers.findById(request.employerId),
-		]);
-		const payload = { hireRequestId: request.id, reason, workerName: worker?.fullName ?? "" };
-		if (employer) {
-			await this.enqueueEmployerNotification({
-				employer,
-				templateKey: "hire_request.cancelled.employer",
-				payload,
-				includeSms: true,
-				includeEmail: true,
 			});
 		}
 	}

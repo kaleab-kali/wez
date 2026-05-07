@@ -37,7 +37,9 @@ const LoginForm = React.memo(
 					return;
 				}
 
-				window.location.href = "/app/dashboard";
+				const session = await authClient.getSession();
+				const role = (session.data?.user as { role?: string } | undefined)?.role;
+				window.location.href = role === "worker" ? "/app/requests" : "/app/dashboard";
 				return;
 			},
 			[email, password, t],

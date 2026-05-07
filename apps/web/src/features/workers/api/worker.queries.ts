@@ -103,6 +103,8 @@ export const useRegisterWorker = () => {
 			fullName: string;
 			fayda: string;
 			phone: string;
+			loginEmail?: string;
+			loginPassword?: string;
 			gender: "M" | "F";
 			area: string;
 			bio?: string;

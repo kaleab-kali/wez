@@ -6,6 +6,7 @@ import { prisma } from "#shared/database/prisma-instance";
 import { sendSms } from "#shared/notifications/sms-sender";
 
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
+const WORKER_ROLE = "worker";
 
 export const auth = betterAuth({
 	basePath: "/api/auth",
@@ -64,10 +65,21 @@ export const auth = betterAuth({
 				where: { id: user.id },
 				select: { role: true, phoneNumber: true, localePref: true, banned: true },
 			});
+			const role = fresh?.role ?? WORKER_ROLE;
+			if (role === WORKER_ROLE && fresh?.phoneNumber) {
+				await prisma.worker.updateMany({
+					where: {
+						phone: fresh.phoneNumber,
+						userId: null,
+						deletedAt: null,
+					},
+					data: { userId: user.id },
+				});
+			}
 			return {
 				user: {
 					...user,
-					role: fresh?.role ?? "worker",
+					role,
 					phoneNumber: fresh?.phoneNumber ?? null,
 					localePref: fresh?.localePref ?? "en",
 					banned: fresh?.banned ?? false,

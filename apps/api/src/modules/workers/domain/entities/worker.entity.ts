@@ -32,6 +32,7 @@ export interface Worker {
 }
 
 export interface NewWorker {
+	userId: string | null;
 	fullName: string;
 	fayda: string;
 	phone: string;

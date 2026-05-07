@@ -16,6 +16,7 @@ const CustomerAppLayout = React.memo(() => {
 	const { data: session, isPending } = authClient.useSession();
 	const role = (session?.user as { role?: string } | undefined)?.role;
 	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
+	const isWorker = role === "worker";
 
 	const onSignOut = React.useCallback(async () => {
 		await authClient.signOut();
@@ -27,6 +28,12 @@ const CustomerAppLayout = React.memo(() => {
 			navigate({ to: "/login" });
 		}
 	}, [isPending, session, navigate]);
+
+	React.useEffect(() => {
+		if (!isPending && isWorker && location.pathname.startsWith("/app/jobs")) {
+			navigate({ to: "/app/requests", replace: true });
+		}
+	}, [isPending, isWorker, location.pathname, navigate]);
 
 	if (isPending || !session?.user) {
 		return (
@@ -56,10 +63,12 @@ const CustomerAppLayout = React.memo(() => {
 								{t("app.workers")}
 							</CustomerNavLink>
 						)}
-						<CustomerNavLink to="/app/jobs" active={location.pathname.startsWith("/app/jobs")}>
-							{t("app.jobs")}
-						</CustomerNavLink>
 						{isEmployer && (
+							<CustomerNavLink to="/app/jobs" active={location.pathname.startsWith("/app/jobs")}>
+								{t("app.jobs")}
+							</CustomerNavLink>
+						)}
+						{(isEmployer || isWorker) && (
 							<CustomerNavLink to="/app/requests" active={location.pathname.startsWith("/app/requests")}>
 								{t("app.requests")}
 							</CustomerNavLink>
