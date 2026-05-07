@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import {
@@ -43,6 +43,7 @@ export class ReferralsController {
 	}
 
 	@Post(":id/decline")
+	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "Decline a referral" })
 	@ApiBody({ type: DeclineReferralDto })
 	@ApiResponse({ status: 200, description: "Referral declined" })
@@ -52,6 +53,7 @@ export class ReferralsController {
 	}
 
 	@Post(":id/defer")
+	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "Defer a referral by extending its review window" })
 	@ApiBody({ type: DeferReferralDto })
 	@ApiResponse({ status: 200, description: "Referral deferred" })
