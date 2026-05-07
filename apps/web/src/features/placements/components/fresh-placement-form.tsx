@@ -6,8 +6,8 @@ import {
 	type PaymentMethod,
 	useFinalizeFreshPlacement,
 } from "#features/placements/api/placement.queries";
-import { useAdminRoles } from "#features/role-catalog/api/role.queries";
-import { useStations } from "#features/stations/api/station.queries";
+import { usePublicRoles } from "#features/role-catalog/api/role.queries";
+import { usePublicStations } from "#features/stations/api/station.queries";
 import { useWorkers } from "#features/workers/api/worker.queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,8 +34,8 @@ export const FreshPlacementForm = React.memo(() => {
 	const finalize = useFinalizeFreshPlacement();
 	const workers = useWorkers({ availableOnly: true, hideFlagged: true, limit: 50, page: 1 });
 	const employers = useEmployers({ limit: 50, page: 1 });
-	const roles = useAdminRoles(false);
-	const stations = useStations(false);
+	const roles = usePublicRoles();
+	const stations = usePublicStations();
 	const [open, setOpen] = React.useState(false);
 	const [workerId, setWorkerId] = React.useState("");
 	const [employerId, setEmployerId] = React.useState("");
