@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useCreateEmployer } from "#features/employers/api/employer.queries";
+import { useSignupEmployer } from "#features/employers/api/employer.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { authClient } from "#shared/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,54 @@ export const Route = createFileRoute("/signup")({
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 const FAYDA = /^F-\d{4}-\d{4}-[A-Z]{2}$/;
 
+type EmployerSignupForm = {
+	readonly type: "business" | "household";
+	readonly name: string;
+	readonly contactName: string;
+	readonly phone: string;
+	readonly email: string;
+	readonly password: string;
+	readonly area: string;
+	readonly tin: string;
+	readonly businessLicense: string;
+	readonly businessLicenseExpiresAt: string;
+	readonly businessAddress: string;
+	readonly businessCategory: string;
+	readonly fayda: string;
+	readonly secondaryContact: string;
+};
+
+const validateSignupForm = (form: EmployerSignupForm, t: (key: string) => string) => {
+	if (!ETHIOPIAN_PHONE.test(form.phone)) return t("workers.register.invalidPhone");
+	if (form.type === "household" && form.fayda && !FAYDA.test(form.fayda)) return t("workers.register.invalidFayda");
+	if (form.type === "business" && new Date(form.businessLicenseExpiresAt).getTime() <= Date.now()) {
+		return t("employers.licenseExpired");
+	}
+	return "";
+};
+
+const buildSignupPayload = (form: EmployerSignupForm) => ({
+	type: form.type,
+	name: form.name,
+	contactName: form.contactName || undefined,
+	phone: form.phone,
+	email: form.email,
+	area: form.area,
+	tin: form.type === "business" ? form.tin : undefined,
+	businessLicense: form.type === "business" ? form.businessLicense : undefined,
+	businessLicenseExpiresAt: form.type === "business" ? form.businessLicenseExpiresAt : undefined,
+	businessAddress: form.type === "business" ? form.businessAddress || undefined : undefined,
+	businessCategory: form.type === "business" ? form.businessCategory || undefined : undefined,
+	fayda: form.type === "household" ? form.fayda : undefined,
+	secondaryContact: form.type === "household" ? form.secondaryContact || undefined : undefined,
+	loginEmail: form.email,
+	loginPassword: form.password,
+});
+
 function EmployerSignupPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const createEmployer = useCreateEmployer();
+	const signupEmployer = useSignupEmployer();
 	const { data: woredas } = useLookupKind("woredas");
 
 	const [type, setType] = React.useState<"business" | "household">("business");
@@ -31,7 +75,11 @@ function EmployerSignupPage() {
 	const [area, setArea] = React.useState("");
 	const [tin, setTin] = React.useState("");
 	const [businessLicense, setBusinessLicense] = React.useState("");
+	const [businessLicenseExpiresAt, setBusinessLicenseExpiresAt] = React.useState("");
+	const [businessAddress, setBusinessAddress] = React.useState("");
+	const [businessCategory, setBusinessCategory] = React.useState("");
 	const [fayda, setFayda] = React.useState("");
+	const [secondaryContact, setSecondaryContact] = React.useState("");
 	const [error, setError] = React.useState("");
 	const [busy, setBusy] = React.useState(false);
 
@@ -39,37 +87,32 @@ function EmployerSignupPage() {
 		async (e: React.FormEvent) => {
 			e.preventDefault();
 			setError("");
-			if (!ETHIOPIAN_PHONE.test(phone)) {
-				setError(t("workers.register.invalidPhone"));
-				return;
-			}
-			if (type === "household" && fayda && !FAYDA.test(fayda)) {
-				setError(t("workers.register.invalidFayda"));
+			const form = {
+				type,
+				name,
+				contactName,
+				phone,
+				email,
+				password,
+				area,
+				tin,
+				businessLicense,
+				businessLicenseExpiresAt,
+				businessAddress,
+				businessCategory,
+				fayda,
+				secondaryContact,
+			};
+			const validationError = validateSignupForm(form, t);
+			if (validationError) {
+				setError(validationError);
 				return;
 			}
 			setBusy(true);
 			try {
-				// 1. Create Better Auth user
-				const signUp = await authClient.signUp.email({
-					email,
-					password,
-					name: contactName || name,
-				});
-				if (signUp.error) throw new Error(signUp.error.message ?? "Sign-up failed");
-
-				// 2. Set role on user (server-side TODO: derive from signup flow; for now relies on default)
-				// 3. Create employer profile linked to user
-				await createEmployer.mutateAsync({
-					type,
-					name,
-					contactName: contactName || undefined,
-					phone,
-					email,
-					area,
-					tin: type === "business" ? tin : undefined,
-					businessLicense: type === "business" ? businessLicense : undefined,
-					fayda: type === "household" ? fayda : undefined,
-				});
+				await signupEmployer.mutateAsync(buildSignupPayload(form));
+				const signIn = await authClient.signIn.email({ email, password });
+				if (signIn.error) throw new Error(signIn.error.message ?? t("common.error"));
 
 				navigate({ to: "/app/dashboard" });
 			} catch (err) {
@@ -78,7 +121,25 @@ function EmployerSignupPage() {
 				setBusy(false);
 			}
 		},
-		[type, name, contactName, phone, email, password, area, tin, businessLicense, fayda, createEmployer, navigate, t],
+		[
+			type,
+			name,
+			contactName,
+			phone,
+			email,
+			password,
+			area,
+			tin,
+			businessLicense,
+			businessLicenseExpiresAt,
+			businessAddress,
+			businessCategory,
+			fayda,
+			secondaryContact,
+			signupEmployer,
+			navigate,
+			t,
+		],
 	);
 
 	return (
@@ -175,18 +236,56 @@ function EmployerSignupPage() {
 										required
 									/>
 								</div>
+								<div className="space-y-2">
+									<Label htmlFor="licenseExpiry">{t("employers.licenseExpiry")}</Label>
+									<Input
+										id="licenseExpiry"
+										type="date"
+										value={businessLicenseExpiresAt}
+										onChange={(e) => setBusinessLicenseExpiresAt(e.target.value)}
+										required
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-3">
+									<div className="space-y-2">
+										<Label htmlFor="businessCategory">{t("employers.businessCategory")}</Label>
+										<Input
+											id="businessCategory"
+											value={businessCategory}
+											onChange={(e) => setBusinessCategory(e.target.value)}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="businessAddress">{t("employers.businessAddress")}</Label>
+										<Input
+											id="businessAddress"
+											value={businessAddress}
+											onChange={(e) => setBusinessAddress(e.target.value)}
+										/>
+									</div>
+								</div>
 							</>
 						) : (
-							<div className="space-y-2">
-								<Label htmlFor="fayda">{t("workers.register.fayda")}</Label>
-								<Input
-									id="fayda"
-									value={fayda}
-									onChange={(e) => setFayda(e.target.value)}
-									placeholder="F-XXXX-XXXX-XX"
-									required
-								/>
-							</div>
+							<>
+								<div className="space-y-2">
+									<Label htmlFor="fayda">{t("workers.register.fayda")}</Label>
+									<Input
+										id="fayda"
+										value={fayda}
+										onChange={(e) => setFayda(e.target.value)}
+										placeholder="F-XXXX-XXXX-XX"
+										required
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="secondaryContact">{t("employers.secondaryContact")}</Label>
+									<Input
+										id="secondaryContact"
+										value={secondaryContact}
+										onChange={(e) => setSecondaryContact(e.target.value)}
+									/>
+								</div>
+							</>
 						)}
 					</CardContent>
 					<CardFooter className="flex flex-col gap-3">

@@ -115,3 +115,24 @@ export const useCreateEmployer = () => {
 		onSuccess: () => qc.invalidateQueries({ queryKey: employerKeys.all }),
 	});
 };
+
+export const useSignupEmployer = () =>
+	useMutation({
+		mutationFn: (input: {
+			type: "business" | "household";
+			name: string;
+			contactName?: string;
+			phone: string;
+			email?: string;
+			area: string;
+			tin?: string;
+			businessLicense?: string;
+			businessLicenseExpiresAt?: string;
+			businessAddress?: string;
+			businessCategory?: string;
+			fayda?: string;
+			secondaryContact?: string;
+			loginEmail: string;
+			loginPassword: string;
+		}) => send<{ data: Employer }>(`${BASE}/signup`, "POST", input).then((b) => b.data),
+	});

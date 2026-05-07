@@ -81,6 +81,17 @@ export class CreateEmployerDto {
 	secondaryContact?: string;
 }
 
+export class SignupEmployerDto extends CreateEmployerDto {
+	@ApiProperty({ example: "owner@business.local", description: "Customer login email" })
+	@IsEmail()
+	loginEmail!: string;
+
+	@ApiProperty({ minLength: 8, maxLength: 128, description: "Customer login password" })
+	@IsString()
+	@Length(8, 128)
+	loginPassword!: string;
+}
+
 export class UpdateEmployerDto extends PartialType(CreateEmployerDto) {
 	@ApiProperty({ enum: ["green", "yellow", "orange", "red"], required: false })
 	@IsOptional()

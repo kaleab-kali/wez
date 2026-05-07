@@ -2,7 +2,12 @@ import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, R
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { hasPermission } from "#modules/auth/permissions";
 import { requirePermission, requireSession, type WezRequest } from "#shared/auth/session";
-import { CreateEmployerDto, ListEmployersDto, UpdateEmployerDto } from "../../application/dto/employer.dto";
+import {
+	CreateEmployerDto,
+	ListEmployersDto,
+	SignupEmployerDto,
+	UpdateEmployerDto,
+} from "../../application/dto/employer.dto";
 import { EmployersService } from "../../application/services/employers.service";
 
 @ApiTags("Employers")
@@ -31,6 +36,13 @@ export class EmployersController {
 	async getById(@Param("id") id: string, @Req() req: WezRequest) {
 		await requirePermission(req, "employer:read");
 		return { data: await this.service.getById(id) };
+	}
+
+	@Post("signup")
+	@ApiOperation({ summary: "Create customer login and employer profile" })
+	@ApiBody({ type: SignupEmployerDto })
+	async signup(@Body() dto: SignupEmployerDto) {
+		return { data: await this.service.signup(dto) };
 	}
 
 	@Post()
