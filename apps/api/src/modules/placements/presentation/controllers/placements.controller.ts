@@ -1,7 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
-import { EndPlacementDto, FinalizePlacementDto, ListPlacementsDto } from "../../application/dto/placement.dto";
+import {
+	EndPlacementDto,
+	FinalizeFreshPlacementDto,
+	FinalizePlacementDto,
+	ListPlacementsDto,
+} from "../../application/dto/placement.dto";
 import { PlacementsService } from "../../application/services/placements.service";
 
 @ApiTags("Placements")
@@ -30,6 +35,17 @@ export class PlacementsController {
 		const session = await requirePermission(req, "placement:finalize");
 		return {
 			data: await this.service.finalizeFromHireRequest(hireRequestId, session, dto, req.auditContext),
+		};
+	}
+
+	@Post("fresh/finalize")
+	@ApiOperation({ summary: "Finalize a fresh placement created at the station desk" })
+	@ApiBody({ type: FinalizeFreshPlacementDto })
+	@ApiResponse({ status: 201, description: "Fresh desk placement finalized and agreement PDF generated" })
+	async finalizeFresh(@Body() dto: FinalizeFreshPlacementDto, @Req() req: WezRequest) {
+		const session = await requirePermission(req, "placement:finalize");
+		return {
+			data: await this.service.finalizeFresh(session, dto, req.auditContext),
 		};
 	}
 

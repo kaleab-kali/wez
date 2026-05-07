@@ -1,6 +1,17 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import {
+	IsBoolean,
+	IsDateString,
+	IsEnum,
+	IsInt,
+	IsOptional,
+	IsString,
+	IsUUID,
+	Max,
+	MaxLength,
+	Min,
+} from "class-validator";
 
 export const PAYMENT_METHODS = ["telebirr", "cbe_birr", "bank", "cash"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -73,6 +84,24 @@ export class EndPlacementDto {
 	@IsString()
 	@MaxLength(500)
 	ratingCommentByWorker?: string;
+}
+
+export class FinalizeFreshPlacementDto extends FinalizePlacementDto {
+	@ApiProperty()
+	@IsUUID()
+	workerId!: string;
+
+	@ApiProperty()
+	@IsUUID()
+	employerId!: string;
+
+	@ApiProperty()
+	@IsString()
+	roleId!: string;
+
+	@ApiProperty()
+	@IsUUID()
+	stationId!: string;
 }
 
 export class ListPlacementsDto {

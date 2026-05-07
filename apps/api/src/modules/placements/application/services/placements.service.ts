@@ -14,7 +14,12 @@ import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
 import { STORAGE_DRIVER, type StorageDriver } from "#shared/storage/storage.interface";
-import type { EndPlacementDto, FinalizePlacementDto, ListPlacementsDto } from "../dto/placement.dto";
+import type {
+	EndPlacementDto,
+	FinalizeFreshPlacementDto,
+	FinalizePlacementDto,
+	ListPlacementsDto,
+} from "../dto/placement.dto";
 import { AgreementPdfService } from "./agreement-pdf.service";
 import { PlacementNotificationsService } from "./placement-notifications.service";
 
@@ -269,6 +274,168 @@ export class PlacementsService {
 		}
 	}
 
+	async finalizeFresh(
+		session: WezSession,
+		dto: FinalizeFreshPlacementDto,
+		auditContext: AuditRequestContext | undefined,
+	) {
+		const salaryCents = BigInt(dto.salaryCents);
+		const startDate = new Date(dto.startDate);
+		const paymentReceivedAt = new Date(dto.paymentReceivedAt);
+		const placementId = randomUUID();
+		const finalizedByAgentId = session.user.id;
+		if (dto.paymentMethod === "cash" && dto.cashDoubleConfirmed !== true) {
+			throw new BadRequestException({ code: "CASH_DOUBLE_CONFIRMATION_REQUIRED" });
+		}
+		const [worker, employer, role, station, finalizer, workerRole] = await Promise.all([
+			this.prisma.worker.findUnique({ where: { id: dto.workerId } }),
+			this.prisma.employer.findUnique({ where: { id: dto.employerId } }),
+			this.prisma.role.findUnique({ where: { id: dto.roleId } }),
+			this.prisma.station.findUnique({ where: { id: dto.stationId } }),
+			this.prisma.adminUser.findUnique({ where: { id: finalizedByAgentId }, select: { name: true, email: true } }),
+			this.prisma.workerRole.findUnique({
+				where: { workerId_roleId: { workerId: dto.workerId, roleId: dto.roleId } },
+			}),
+		]);
+		if (!worker) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
+		if (!employer) throw new NotFoundException({ code: "EMPLOYER_NOT_FOUND" });
+		if (!role) throw new NotFoundException({ code: "ROLE_NOT_FOUND" });
+		if (!station) throw new NotFoundException({ code: "STATION_NOT_FOUND" });
+		if (!role.active) throw new ConflictException({ code: "INVALID_ROLE" });
+		if (!station.active) throw new ConflictException({ code: "STATION_INACTIVE" });
+		if (!workerRole) throw new BadRequestException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
+		this.assertFreshReady({ worker, employer, role }, salaryCents);
+
+		const commissionCents = this.calculateCommission(salaryCents, role.commType, role.commValue);
+		const agreementBuffer = await this.agreementPdf.generate({
+			placementId,
+			workerName: worker.fullName,
+			workerPhone: worker.phone,
+			employerName: employer.name,
+			employerPhone: employer.phone,
+			roleName: role.name,
+			stationName: station.name,
+			startDate,
+			salaryCents,
+			commissionCents,
+			paymentMethod: dto.paymentMethod,
+			paymentReference: dto.paymentReference,
+			finalizedBy: finalizer?.name ?? finalizer?.email ?? finalizedByAgentId,
+		});
+		const agreement = await this.storage.save({
+			organizationId: STORAGE_ORGANIZATION_ID,
+			folder: AGREEMENT_FOLDER,
+			buffer: agreementBuffer,
+			originalName: `${placementId}-agreement.pdf`,
+			mimeType: "application/pdf",
+		});
+
+		try {
+			const placement = await this.prisma.$transaction(async (tx) => {
+				const [currentWorker, currentEmployer, currentRole, currentStation, currentWorkerRole] = await Promise.all([
+					tx.worker.findUnique({ where: { id: dto.workerId } }),
+					tx.employer.findUnique({ where: { id: dto.employerId } }),
+					tx.role.findUnique({ where: { id: dto.roleId } }),
+					tx.station.findUnique({ where: { id: dto.stationId } }),
+					tx.workerRole.findUnique({ where: { workerId_roleId: { workerId: dto.workerId, roleId: dto.roleId } } }),
+				]);
+				if (!currentWorker) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
+				if (!currentEmployer) throw new NotFoundException({ code: "EMPLOYER_NOT_FOUND" });
+				if (!currentRole) throw new NotFoundException({ code: "ROLE_NOT_FOUND" });
+				if (!currentStation) throw new NotFoundException({ code: "STATION_NOT_FOUND" });
+				if (!currentRole.active) throw new ConflictException({ code: "INVALID_ROLE" });
+				if (!currentStation.active) throw new ConflictException({ code: "STATION_INACTIVE" });
+				if (!currentWorkerRole) throw new BadRequestException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
+				this.assertFreshReady({ worker: currentWorker, employer: currentEmployer, role: currentRole }, salaryCents);
+				const currentCommissionCents = this.calculateCommission(
+					salaryCents,
+					currentRole.commType,
+					currentRole.commValue,
+				);
+				const created = await tx.placement.create({
+					data: {
+						id: placementId,
+						workerId: currentWorker.id,
+						employerId: currentEmployer.id,
+						roleId: currentRole.id,
+						stationId: currentStation.id,
+						finalizedByAgentId,
+						startDate,
+						salaryCents,
+						commissionCents: currentCommissionCents,
+						paymentMethod: dto.paymentMethod,
+						paymentReference: dto.paymentReference,
+						paymentReceivedAt,
+						agreementPdfUrl: agreement.url,
+						status: "active",
+					},
+					include: {
+						employer: { select: { name: true } },
+						worker: { select: { fullName: true } },
+						role: { select: { name: true } },
+						station: { select: { name: true } },
+					},
+				});
+				await tx.worker.update({
+					where: { id: currentWorker.id },
+					data: { available: false, placementsCount: { increment: 1 } },
+				});
+				await tx.employer.update({
+					where: { id: currentEmployer.id },
+					data: { placementsCount: { increment: 1 } },
+				});
+				await tx.hireRequest.updateMany({
+					where: { workerId: currentWorker.id, status: "awaiting_visit" },
+					data: {
+						status: "cancelled",
+						cancelledAt: new Date(),
+						cancellationReason: "Worker placed through a fresh desk placement",
+					},
+				});
+				await this.auditEvents.record(tx, {
+					actorId: session.user.id,
+					actorRole: session.user.role ?? session.kind,
+					action: AUDIT_ACTIONS.placementFinalized,
+					targetType: AUDIT_TARGET_TYPES.placement,
+					targetId: created.id,
+					stationId: currentStation.id,
+					context: auditContext,
+					metadata: {
+						source: "fresh_desk",
+						workerId: currentWorker.id,
+						employerId: currentEmployer.id,
+						roleId: currentRole.id,
+						salaryCents: salaryCents.toString(),
+						commissionCents: currentCommissionCents.toString(),
+						paymentMethod: dto.paymentMethod,
+						paymentReferenceLast4: this.auditEvents.paymentReferenceLast4(dto.paymentReference),
+						agreementPdfUrl: agreement.url,
+					},
+				});
+				return created;
+			});
+			await this.placementNotifications.enqueueFinalized({
+				placementId: placement.id,
+				workerPhone: worker.phone,
+				workerName: worker.fullName,
+				employerUserId: employer.userId,
+				employerPhone: employer.phone,
+				employerEmail: employer.email,
+				employerName: employer.name,
+				roleName: role.name,
+				stationName: station.name,
+				startDate,
+				salaryCents,
+				commissionCents: placement.commissionCents,
+				agreementPdfUrl: agreement.url,
+			});
+			return placement;
+		} catch (err) {
+			await this.storage.delete(agreement.key);
+			throw err;
+		}
+	}
+
 	async end(id: string, session: WezSession, dto: EndPlacementDto, auditContext: AuditRequestContext | undefined) {
 		const updated = await this.prisma.$transaction(async (tx) => {
 			const placement = await tx.placement.findUnique({
@@ -358,6 +525,31 @@ export class PlacementsService {
 			endedReason: dto.endedReason,
 		});
 		return { ...updated, ratingWindowClosesAt: this.ratingWindowClosesAt(updated.endDate) };
+	}
+
+	private assertFreshReady(
+		input: {
+			worker: { available: boolean };
+			employer: { rating: string };
+			role: { salaryMinCents: bigint; salaryMaxCents: bigint };
+		},
+		salaryCents: bigint,
+	) {
+		if (!input.worker.available) {
+			throw new ConflictException({ code: "WORKER_NOT_AVAILABLE" });
+		}
+		if (input.employer.rating === "red") {
+			throw new ConflictException({ code: "EMPLOYER_BANNED" });
+		}
+		if (salaryCents < input.role.salaryMinCents || salaryCents > input.role.salaryMaxCents) {
+			throw new BadRequestException({
+				code: "SALARY_OUT_OF_ROLE_RANGE",
+				details: {
+					roleSalaryMinCents: input.role.salaryMinCents.toString(),
+					roleSalaryMaxCents: input.role.salaryMaxCents.toString(),
+				},
+			});
+		}
 	}
 
 	private calculateCommission(salaryCents: bigint, commType: string, commValue: number): bigint {
