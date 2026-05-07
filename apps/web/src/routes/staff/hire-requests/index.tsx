@@ -235,6 +235,7 @@ const FinalizePlacementForm = React.memo(
 					<div className="md:col-span-3">
 						<p className="font-medium">{t("placements.paymentGateTitle")}</p>
 						<p className="mt-1 text-sm text-muted-foreground">{t("placements.paymentGateBody")}</p>
+						<p className="mt-2 text-sm font-medium text-foreground">{t("placements.printAgreementAfterFinalize")}</p>
 					</div>
 					<div className="rounded-md bg-background p-3">
 						<p className="text-xs text-muted-foreground">{t("placements.roleRange")}</p>

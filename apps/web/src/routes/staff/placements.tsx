@@ -141,10 +141,10 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 							href={placement.agreementPdfUrl}
 							target="_blank"
 							rel="noreferrer"
-							className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
+							className="inline-flex items-center gap-2 rounded-md border border-primary/30 px-3 py-2 font-medium text-primary hover:bg-primary/5"
 						>
 							<HugeiconsIcon icon={NoteEditIcon} className="size-4" />
-							{t("placements.agreement")}
+							{t("placements.printAgreement")}
 						</a>
 					) : (
 						<p>{t("placements.agreementPending")}</p>

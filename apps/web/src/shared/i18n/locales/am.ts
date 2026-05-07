@@ -489,6 +489,7 @@ export const am = {
 		finalizedBy: "Finalized by",
 		created: "Created",
 		agreement: "Agreement PDF",
+		printAgreement: "Open printable agreement",
 		agreementPending: "Agreement PDF not generated",
 		ended: "Placement ended",
 		endPlacement: "End placement",
@@ -508,6 +509,7 @@ export const am = {
 		paymentReceivedConfirm: "Payment received and verified",
 		paymentReceivedConfirmBody:
 			"This creates the placement, marks the worker currently placed, and completes the hire request.",
+		printAgreementAfterFinalize: "After finalizing, open the generated agreement PDF and print it for signatures.",
 		cashDoubleConfirm: "Cash counted and confirmed by a second staff member",
 		cashDoubleConfirmBody: "Cash placements require a second check before the placement can be finalized.",
 	},
