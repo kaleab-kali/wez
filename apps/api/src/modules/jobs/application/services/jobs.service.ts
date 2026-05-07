@@ -14,6 +14,9 @@ import type { WezSession } from "#shared/auth/session";
 import { IJobsRepository, JOBS_REPO } from "../../domain/repositories/jobs.repository";
 import type { CreateJobDto, ListJobsDto, UpdateJobDto } from "../dto/job.dto";
 
+const DEFAULT_JOB_PAGE = 1;
+const DEFAULT_JOB_LIMIT = 20;
+
 @Injectable()
 export class JobsService {
 	constructor(
@@ -24,8 +27,8 @@ export class JobsService {
 
 	async list(filter: ListJobsDto) {
 		const { items, total } = await this.repo.listByFilter(filter);
-		const page = filter.page ?? 1;
-		const limit = filter.limit ?? 20;
+		const page = filter.page ?? DEFAULT_JOB_PAGE;
+		const limit = filter.limit ?? DEFAULT_JOB_LIMIT;
 		return {
 			data: items,
 			meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
@@ -88,18 +91,12 @@ export class JobsService {
 
 		const role = await this.roles.findById(dto.roleId);
 		if (!role?.active) throw new BadRequestException({ code: "INVALID_ROLE" });
-		if (BigInt(dto.salaryMinCents) > BigInt(dto.salaryMaxCents)) {
-			throw new BadRequestException({ code: "SALARY_RANGE_INVALID" });
-		}
-		if (BigInt(dto.salaryMinCents) < role.salaryMinCents || BigInt(dto.salaryMaxCents) > role.salaryMaxCents) {
-			throw new BadRequestException({
-				code: "SALARY_OUT_OF_ROLE_RANGE",
-				details: {
-					roleSalaryMinCents: role.salaryMinCents.toString(),
-					roleSalaryMaxCents: role.salaryMaxCents.toString(),
-				},
-			});
-		}
+		this.assertSalaryRange(
+			BigInt(dto.salaryMinCents),
+			BigInt(dto.salaryMaxCents),
+			role.salaryMinCents,
+			role.salaryMaxCents,
+		);
 
 		return this.repo.create({
 			employerId,
@@ -114,7 +111,12 @@ export class JobsService {
 	}
 
 	async update(id: string, dto: UpdateJobDto) {
-		await this.getById(id);
+		const existing = await this.getById(id);
+		const role = await this.roles.findById(existing.roleId);
+		if (!role) throw new BadRequestException({ code: "INVALID_ROLE" });
+		const nextSalaryMinCents = dto.salaryMinCents !== undefined ? BigInt(dto.salaryMinCents) : existing.salaryMinCents;
+		const nextSalaryMaxCents = dto.salaryMaxCents !== undefined ? BigInt(dto.salaryMaxCents) : existing.salaryMaxCents;
+		this.assertSalaryRange(nextSalaryMinCents, nextSalaryMaxCents, role.salaryMinCents, role.salaryMaxCents);
 		// roleId not editable per modules.md 5.2.2
 		const { roleId: _ignore, ...rest } = dto;
 		return this.repo.update(id, {
@@ -158,5 +160,25 @@ export class JobsService {
 		}
 
 		return this.close(id);
+	}
+
+	private assertSalaryRange(
+		salaryMinCents: bigint,
+		salaryMaxCents: bigint,
+		roleSalaryMinCents: bigint,
+		roleSalaryMaxCents: bigint,
+	) {
+		if (salaryMinCents > salaryMaxCents) {
+			throw new BadRequestException({ code: "SALARY_RANGE_INVALID" });
+		}
+		if (salaryMinCents < roleSalaryMinCents || salaryMaxCents > roleSalaryMaxCents) {
+			throw new BadRequestException({
+				code: "SALARY_OUT_OF_ROLE_RANGE",
+				details: {
+					roleSalaryMinCents: roleSalaryMinCents.toString(),
+					roleSalaryMaxCents: roleSalaryMaxCents.toString(),
+				},
+			});
+		}
 	}
 }

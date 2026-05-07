@@ -17,8 +17,15 @@ const JOB_STATUS_VARIANT: Record<Job["status"], "default" | "secondary" | "outli
 	filled: "secondary",
 };
 const EMPLOYER_ROLES = new Set(["employer_business", "employer_household"]);
+const CENTS_PER_BIRR = 100;
+const JOB_PAGE_LIMIT = 20;
+const POSTED_WITHIN_OPTIONS = [7, 30, 90] as const;
+const EMPLOYER_TYPE_OPTIONS = ["business", "household"] as const;
+const JOB_SORT_OPTIONS = ["newest", "salary_high", "salary_low"] as const;
 
-const formatBirr = (cents: string) => `${(Number(cents) / 100).toLocaleString()} ETB`;
+const formatBirr = (cents: string) => `${(Number(cents) / CENTS_PER_BIRR).toLocaleString()} ETB`;
+const toCents = (value: string) => (value ? Number(value) * CENTS_PER_BIRR : undefined);
+const toBirrInput = (value: number | undefined) => (value === undefined ? "" : String(value / CENTS_PER_BIRR));
 
 const CustomerJobsPage = React.memo(() => {
 	const { t } = useTranslation();
@@ -26,36 +33,90 @@ const CustomerJobsPage = React.memo(() => {
 	const role = (session?.user as { role?: string } | undefined)?.role;
 	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 	const isWorker = role === "worker";
-	const [filter, setFilter] = React.useState<JobFilter>({ page: 1, limit: 20 });
+	const [filter, setFilter] = React.useState<JobFilter>({ page: 1, limit: JOB_PAGE_LIMIT, sort: "newest" });
 	const { data, isLoading } = useJobs(filter);
 	const { data: roles } = usePublicRoles();
 	const { data: woredas } = useLookupKind("woredas");
 	const closeJob = useCloseJob();
+	const roleCategories = React.useMemo(
+		() => Array.from(new Set((roles ?? []).map((role) => role.category).filter(Boolean))).sort(),
+		[roles],
+	);
 
 	React.useEffect(() => {
 		if (isWorker) setFilter((current) => ({ ...current, status: "open", page: 1 }));
 	}, [isWorker]);
 
 	const onSearchChange = React.useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => setFilter({ ...filter, q: e.target.value || undefined, page: 1 }),
-		[filter],
+		(e: React.ChangeEvent<HTMLInputElement>) =>
+			setFilter((current) => ({ ...current, q: e.target.value || undefined, page: 1 })),
+		[],
 	);
 
 	const onRoleChange = React.useCallback(
-		(e: React.ChangeEvent<HTMLSelectElement>) => setFilter({ ...filter, roleId: e.target.value || undefined, page: 1 }),
-		[filter],
+		(e: React.ChangeEvent<HTMLSelectElement>) =>
+			setFilter((current) => ({ ...current, roleId: e.target.value || undefined, page: 1 })),
+		[],
+	);
+
+	const onRoleCategoryChange = React.useCallback(
+		(e: React.ChangeEvent<HTMLSelectElement>) =>
+			setFilter((current) => ({ ...current, roleCategory: e.target.value || undefined, page: 1 })),
+		[],
 	);
 
 	const onLocationChange = React.useCallback(
 		(e: React.ChangeEvent<HTMLSelectElement>) =>
-			setFilter({ ...filter, location: e.target.value || undefined, page: 1 }),
-		[filter],
+			setFilter((current) => ({ ...current, location: e.target.value || undefined, page: 1 })),
+		[],
 	);
 
 	const onStatusChange = React.useCallback(
 		(e: React.ChangeEvent<HTMLSelectElement>) =>
-			setFilter({ ...filter, status: (e.target.value || undefined) as Job["status"] | undefined, page: 1 }),
-		[filter],
+			setFilter((current) => ({
+				...current,
+				status: (e.target.value || undefined) as Job["status"] | undefined,
+				page: 1,
+			})),
+		[],
+	);
+
+	const onEmployerTypeChange = React.useCallback(
+		(e: React.ChangeEvent<HTMLSelectElement>) =>
+			setFilter((current) => ({
+				...current,
+				employerType: (e.target.value || undefined) as JobFilter["employerType"],
+				page: 1,
+			})),
+		[],
+	);
+
+	const onSalaryMinChange = React.useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) =>
+			setFilter((current) => ({ ...current, salaryMinCents: toCents(e.target.value), page: 1 })),
+		[],
+	);
+
+	const onSalaryMaxChange = React.useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) =>
+			setFilter((current) => ({ ...current, salaryMaxCents: toCents(e.target.value), page: 1 })),
+		[],
+	);
+
+	const onPostedWithinChange = React.useCallback(
+		(e: React.ChangeEvent<HTMLSelectElement>) =>
+			setFilter((current) => ({
+				...current,
+				postedWithinDays: e.target.value ? Number(e.target.value) : undefined,
+				page: 1,
+			})),
+		[],
+	);
+
+	const onSortChange = React.useCallback(
+		(e: React.ChangeEvent<HTMLSelectElement>) =>
+			setFilter((current) => ({ ...current, sort: e.target.value as JobFilter["sort"], page: 1 })),
+		[],
 	);
 
 	const onClose = React.useCallback((id: string) => closeJob.mutate(id), [closeJob]);
@@ -77,7 +138,7 @@ const CustomerJobsPage = React.memo(() => {
 			</div>
 
 			<Card>
-				<CardContent className="grid gap-3 pt-6 md:grid-cols-4">
+				<CardContent className="grid gap-3 pt-6 md:grid-cols-4 xl:grid-cols-8">
 					<div className="space-y-2">
 						<Label htmlFor="q">{t("common.search")}</Label>
 						<Input id="q" value={filter.q ?? ""} onChange={onSearchChange} placeholder={t("jobs.searchPlaceholder")} />
@@ -99,6 +160,22 @@ const CustomerJobsPage = React.memo(() => {
 						</select>
 					</div>
 					<div className="space-y-2">
+						<Label htmlFor="roleCategory">{t("jobs.roleCategory")}</Label>
+						<select
+							id="roleCategory"
+							value={filter.roleCategory ?? ""}
+							onChange={onRoleCategoryChange}
+							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						>
+							<option value="">{t("common.any")}</option>
+							{roleCategories.map((category) => (
+								<option key={category} value={category}>
+									{category}
+								</option>
+							))}
+						</select>
+					</div>
+					<div className="space-y-2">
 						<Label htmlFor="location">{t("jobs.location")}</Label>
 						<select
 							id="location"
@@ -110,6 +187,73 @@ const CustomerJobsPage = React.memo(() => {
 							{woredas?.map((woreda) => (
 								<option key={woreda.value} value={woreda.value}>
 									{woreda.labelEn}
+								</option>
+							))}
+						</select>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="employerType">{t("jobs.employerType")}</Label>
+						<select
+							id="employerType"
+							value={filter.employerType ?? ""}
+							onChange={onEmployerTypeChange}
+							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						>
+							<option value="">{t("common.any")}</option>
+							{EMPLOYER_TYPE_OPTIONS.map((type) => (
+								<option key={type} value={type}>
+									{t(`jobs.employerType${type}`)}
+								</option>
+							))}
+						</select>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="salaryMin">{t("jobs.salaryMin")}</Label>
+						<Input
+							id="salaryMin"
+							type="number"
+							min="0"
+							value={toBirrInput(filter.salaryMinCents)}
+							onChange={onSalaryMinChange}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="salaryMax">{t("jobs.salaryMax")}</Label>
+						<Input
+							id="salaryMax"
+							type="number"
+							min="0"
+							value={toBirrInput(filter.salaryMaxCents)}
+							onChange={onSalaryMaxChange}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="postedWithin">{t("jobs.postedWithin")}</Label>
+						<select
+							id="postedWithin"
+							value={filter.postedWithinDays ?? ""}
+							onChange={onPostedWithinChange}
+							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						>
+							<option value="">{t("jobs.postedAny")}</option>
+							{POSTED_WITHIN_OPTIONS.map((days) => (
+								<option key={days} value={days}>
+									{t(`jobs.posted${days}`)}
+								</option>
+							))}
+						</select>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="sort">{t("jobs.sort")}</Label>
+						<select
+							id="sort"
+							value={filter.sort ?? "newest"}
+							onChange={onSortChange}
+							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						>
+							{JOB_SORT_OPTIONS.map((sort) => (
+								<option key={sort} value={sort}>
+									{t(`jobs.sort${sort}`)}
 								</option>
 							))}
 						</select>

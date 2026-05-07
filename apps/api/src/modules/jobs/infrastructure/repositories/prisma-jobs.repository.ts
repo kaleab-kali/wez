@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
+import { buildJobOrderBy, buildJobWhere } from "../../application/specifications/job-filter.specification";
 import type { Job, JobFilter, JobPatch, JobStatus, NewJob } from "../../domain/entities/job.entity";
 import type { IJobsRepository } from "../../domain/repositories/jobs.repository";
 
@@ -8,7 +9,7 @@ type Row = {
 	employerId: string;
 	employer?: { name: string; type: string } | null;
 	roleId: string;
-	role?: { name: string } | null;
+	role?: { name: string; category: string } | null;
 	title: string;
 	description: string;
 	salaryMinCents: bigint;
@@ -27,6 +28,7 @@ const toJob = (row: Row): Job => ({
 	employerType: row.employer?.type,
 	roleId: row.roleId,
 	roleName: row.role?.name,
+	roleCategory: row.role?.category,
 	title: row.title,
 	description: row.description,
 	salaryMinCents: row.salaryMinCents,
@@ -40,8 +42,11 @@ const toJob = (row: Row): Job => ({
 
 const JOB_SUMMARY_INCLUDE = {
 	employer: { select: { name: true, type: true } },
-	role: { select: { name: true } },
+	role: { select: { name: true, category: true } },
 } as const;
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
 
 @Injectable()
 export class PrismaJobsRepository implements IJobsRepository {
@@ -82,30 +87,19 @@ export class PrismaJobsRepository implements IJobsRepository {
 	}
 
 	async listByFilter(filter: JobFilter) {
-		const where: Record<string, unknown> = { deletedAt: null };
-		if (filter.q) {
-			where.OR = [
-				{ title: { contains: filter.q, mode: "insensitive" } },
-				{ description: { contains: filter.q, mode: "insensitive" } },
-			];
-		}
-		if (filter.roleId) where.roleId = filter.roleId;
-		if (filter.location) where.location = filter.location;
-		if (filter.status) where.status = filter.status;
-		if (filter.employerId) where.employerId = filter.employerId;
-
-		const page = Math.max(1, filter.page ?? 1);
-		const limit = Math.min(Math.max(1, filter.limit ?? 20), 100);
+		const where = buildJobWhere(filter);
+		const page = Math.max(DEFAULT_PAGE, filter.page ?? DEFAULT_PAGE);
+		const limit = Math.min(Math.max(1, filter.limit ?? DEFAULT_LIMIT), MAX_LIMIT);
 
 		const [rows, total] = await Promise.all([
 			this.prisma.job.findMany({
-				where: where as never,
+				where,
 				include: JOB_SUMMARY_INCLUDE,
-				orderBy: { postedAt: "desc" },
+				orderBy: buildJobOrderBy(filter),
 				skip: (page - 1) * limit,
 				take: limit,
 			}),
-			this.prisma.job.count({ where: where as never }),
+			this.prisma.job.count({ where }),
 		]);
 
 		return { items: rows.map((r) => toJob(r as unknown as Row)), total };

@@ -34,6 +34,7 @@ export type Job = {
 	employerType?: string;
 	roleId: string;
 	roleName?: string;
+	roleCategory?: string;
 	title: string;
 	description: string;
 	salaryMinCents: string;
@@ -48,8 +49,14 @@ export type Job = {
 export type JobFilter = {
 	q?: string;
 	roleId?: string;
+	roleCategory?: string;
 	location?: string;
 	status?: JobStatus;
+	employerType?: "business" | "household";
+	salaryMinCents?: number;
+	salaryMaxCents?: number;
+	postedWithinDays?: number;
+	sort?: "newest" | "salary_high" | "salary_low";
 	employerId?: string;
 	page?: number;
 	limit?: number;

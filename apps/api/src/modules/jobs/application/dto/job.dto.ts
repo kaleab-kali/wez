@@ -1,6 +1,6 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
+import { IsEnum, IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
 
 export class CreateJobDto {
 	@ApiProperty()
@@ -63,12 +63,49 @@ export class ListJobsDto {
 	@ApiProperty({ required: false })
 	@IsOptional()
 	@IsString()
+	roleCategory?: string;
+
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
 	location?: string;
 
 	@ApiProperty({ required: false, enum: ["open", "closed", "filled"] })
 	@IsOptional()
 	@IsEnum(["open", "closed", "filled"] as const)
 	status?: "open" | "closed" | "filled";
+
+	@ApiProperty({ required: false, enum: ["business", "household"] })
+	@IsOptional()
+	@IsEnum(["business", "household"] as const)
+	employerType?: "business" | "household";
+
+	@ApiProperty({ required: false, description: "Minimum desired salary in cents" })
+	@IsOptional()
+	@IsInt()
+	@Min(0)
+	@Type(() => Number)
+	salaryMinCents?: number;
+
+	@ApiProperty({ required: false, description: "Maximum desired salary in cents" })
+	@IsOptional()
+	@IsInt()
+	@Min(0)
+	@Type(() => Number)
+	salaryMaxCents?: number;
+
+	@ApiProperty({ required: false, description: "Only jobs posted in the last N days" })
+	@IsOptional()
+	@IsInt()
+	@Min(1)
+	@Max(365)
+	@Type(() => Number)
+	postedWithinDays?: number;
+
+	@ApiProperty({ required: false, enum: ["newest", "salary_high", "salary_low"] })
+	@IsOptional()
+	@IsIn(["newest", "salary_high", "salary_low"] as const)
+	sort?: "newest" | "salary_high" | "salary_low";
 
 	@ApiProperty({ required: false })
 	@IsOptional()
