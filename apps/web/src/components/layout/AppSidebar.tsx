@@ -16,7 +16,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { WezLogo } from "#components/branding/WezLogo";
 import { adminAuthApi, useAdminSession } from "#shared/lib/admin-auth-client";
-import { hasHqAdminRole } from "#shared/lib/staff-roles";
+import { hasHqAdminRole, STAFF_ROLES, type StaffRole } from "#shared/lib/staff-roles";
 import {
 	Sidebar,
 	SidebarContent,
@@ -34,29 +34,123 @@ type NavItem = {
 	labelKey: string;
 	to: string;
 	icon: typeof DashboardSquare01Icon;
+	roles?: readonly StaffRole[];
 };
 
 // Operations sidebar — visible to all staff. Order: most-used first.
 const OPERATIONS: ReadonlyArray<NavItem> = [
 	{ labelKey: "nav.dashboard", to: "/staff/dashboard", icon: DashboardSquare01Icon },
-	{ labelKey: "nav.workers", to: "/staff/workers", icon: UserMultipleIcon },
-	{ labelKey: "nav.employers", to: "/staff/employers", icon: ContactBookIcon },
-	{ labelKey: "nav.jobs", to: "/staff/jobs", icon: Briefcase02Icon },
-	{ labelKey: "nav.hireRequests", to: "/staff/hire-requests", icon: NoteEditIcon },
-	{ labelKey: "nav.referrals", to: "/staff/referrals", icon: ContactBookIcon },
-	{ labelKey: "nav.placements", to: "/staff/placements", icon: Briefcase02Icon },
+	{
+		labelKey: "nav.workers",
+		to: "/staff/workers",
+		icon: UserMultipleIcon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+	},
+	{
+		labelKey: "nav.employers",
+		to: "/staff/employers",
+		icon: ContactBookIcon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+	},
+	{
+		labelKey: "nav.jobs",
+		to: "/staff/jobs",
+		icon: Briefcase02Icon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+	},
+	{
+		labelKey: "nav.hireRequests",
+		to: "/staff/hire-requests",
+		icon: NoteEditIcon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+	},
+	{
+		labelKey: "nav.referrals",
+		to: "/staff/referrals",
+		icon: ContactBookIcon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+	},
+	{
+		labelKey: "nav.placements",
+		to: "/staff/placements",
+		icon: Briefcase02Icon,
+		roles: [
+			STAFF_ROLES.superAdmin,
+			STAFF_ROLES.opsManager,
+			STAFF_ROLES.financeManager,
+			STAFF_ROLES.stationSupervisor,
+			STAFF_ROLES.agent,
+		],
+	},
 ];
 
 // HQ admin sidebar — only visible to roles that manage platform-wide config.
 const ADMINISTRATION: ReadonlyArray<NavItem> = [
-	{ labelKey: "admin.nav.overview", to: "/staff-admin", icon: DashboardSquare01Icon },
-	{ labelKey: "admin.nav.staffUsers", to: "/staff-admin/staff-users", icon: ContactBookIcon },
-	{ labelKey: "admin.nav.stations", to: "/staff-admin/stations", icon: StoreLocation02Icon },
-	{ labelKey: "admin.nav.locations", to: "/staff-admin/locations", icon: StoreLocation02Icon },
-	{ labelKey: "admin.nav.roleCatalog", to: "/staff-admin/role-catalog", icon: Coins01Icon },
-	{ labelKey: "admin.nav.hiringPolicy", to: "/staff-admin/hiring-policy", icon: NoteEditIcon },
-	{ labelKey: "admin.nav.lookups", to: "/staff-admin/lookups", icon: Book02Icon },
-	{ labelKey: "admin.nav.auditLog", to: "/staff-admin/audit-log", icon: SecurityIcon },
+	{
+		labelKey: "admin.nav.overview",
+		to: "/staff-admin",
+		icon: DashboardSquare01Icon,
+		roles: [
+			STAFF_ROLES.superAdmin,
+			STAFF_ROLES.opsManager,
+			STAFF_ROLES.complianceOfficer,
+			STAFF_ROLES.hrManager,
+			STAFF_ROLES.financeManager,
+			STAFF_ROLES.itManager,
+			STAFF_ROLES.trainingManager,
+			STAFF_ROLES.executiveViewer,
+		],
+	},
+	{
+		labelKey: "admin.nav.staffUsers",
+		to: "/staff-admin/staff-users",
+		icon: ContactBookIcon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.hrManager],
+	},
+	{
+		labelKey: "admin.nav.stations",
+		to: "/staff-admin/stations",
+		icon: StoreLocation02Icon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+	},
+	{
+		labelKey: "admin.nav.locations",
+		to: "/staff-admin/locations",
+		icon: StoreLocation02Icon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+	},
+	{
+		labelKey: "admin.nav.roleCatalog",
+		to: "/staff-admin/role-catalog",
+		icon: Coins01Icon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+	},
+	{
+		labelKey: "admin.nav.hiringPolicy",
+		to: "/staff-admin/hiring-policy",
+		icon: NoteEditIcon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.itManager],
+	},
+	{
+		labelKey: "admin.nav.lookups",
+		to: "/staff-admin/lookups",
+		icon: Book02Icon,
+		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+	},
+	{
+		labelKey: "admin.nav.auditLog",
+		to: "/staff-admin/audit-log",
+		icon: SecurityIcon,
+		roles: [
+			STAFF_ROLES.superAdmin,
+			STAFF_ROLES.opsManager,
+			STAFF_ROLES.complianceOfficer,
+			STAFF_ROLES.hrManager,
+			STAFF_ROLES.financeManager,
+			STAFF_ROLES.itManager,
+			STAFF_ROLES.executiveViewer,
+		],
+	},
 	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 ];
 
@@ -64,13 +158,20 @@ const ACCOUNT: ReadonlyArray<NavItem> = [
 	{ labelKey: "admin.nav.sessions", to: "/staff-admin/sessions", icon: UserMultipleIcon },
 ];
 
+const hasAnyRole = (userRoles: readonly string[], allowedRoles: readonly StaffRole[] | undefined) =>
+	!allowedRoles || allowedRoles.some((allowedRole) => userRoles.includes(allowedRole));
+
 export const AppSidebar = React.memo(
 	() => {
 		const { t } = useTranslation();
 		const { data: session } = useAdminSession();
 		const user = session?.user as { name?: string; email?: string; role?: string; roles?: string[] } | undefined;
 		const role = user?.role;
-		const showHQ = hasHqAdminRole(user?.roles, role);
+		const userRoles = React.useMemo(
+			() => Array.from(new Set([role, ...(user?.roles ?? [])].filter((item): item is string => Boolean(item)))),
+			[role, user?.roles],
+		);
+		const showHQ = hasHqAdminRole(userRoles, role);
 		const location = useLocation();
 
 		const onSignOut = React.useCallback(async () => {
@@ -79,20 +180,22 @@ export const AppSidebar = React.memo(
 		}, []);
 
 		const renderItems = (items: ReadonlyArray<NavItem>) =>
-			items.map((item) => {
-				const active =
-					location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));
-				return (
-					<SidebarMenuItem key={item.to}>
-						<SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)}>
-							<Link to={item.to}>
-								<HugeiconsIcon icon={item.icon} className="size-4" />
-								<span>{t(item.labelKey)}</span>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				);
-			});
+			items
+				.filter((item) => hasAnyRole(userRoles, item.roles))
+				.map((item) => {
+					const active =
+						location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));
+					return (
+						<SidebarMenuItem key={item.to}>
+							<SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)}>
+								<Link to={item.to}>
+									<HugeiconsIcon icon={item.icon} className="size-4" />
+									<span>{t(item.labelKey)}</span>
+								</Link>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					);
+				});
 
 		return (
 			<Sidebar collapsible="icon" className="border-r">

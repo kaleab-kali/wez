@@ -6,6 +6,7 @@ export const STAFF_ROLES = {
 	financeManager: "finance_manager",
 	itManager: "it_manager",
 	trainingManager: "training_manager",
+	executiveViewer: "executive_viewer",
 	stationSupervisor: "station_supervisor",
 	agent: "agent",
 	instructor: "instructor",
@@ -21,7 +22,7 @@ export const HQ_ADMIN_ROLES = new Set<string>([
 	STAFF_ROLES.financeManager,
 	STAFF_ROLES.itManager,
 	STAFF_ROLES.trainingManager,
-	"executive_viewer",
+	STAFF_ROLES.executiveViewer,
 ]);
 
 export const isHqAdminRole = (role: string | undefined | null) => !!role && HQ_ADMIN_ROLES.has(role);
