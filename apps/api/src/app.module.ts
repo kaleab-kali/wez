@@ -1,6 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_FILTER, APP_GUARD } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
@@ -26,6 +26,7 @@ import { PrismaModule } from "#shared/database/prisma.module";
 import { EmailModule } from "#shared/email/email.module";
 import { DomainEventBusModule } from "#shared/events/domain-event.bus";
 import { GlobalExceptionFilter } from "#shared/filters/global-exception.filter";
+import { IdempotencyInterceptor } from "#shared/idempotency/idempotency.interceptor";
 import { CorrelationIdMiddleware } from "#shared/logger/correlation-id.middleware";
 import { LoggerModule } from "#shared/logger/logger.module";
 import { StorageModule } from "#shared/storage/storage.module";
@@ -60,6 +61,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 	],
 	providers: [
 		{ provide: APP_FILTER, useClass: GlobalExceptionFilter },
+		{ provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
 		{ provide: APP_GUARD, useClass: WezAuthGuard },
 		{ provide: APP_GUARD, useClass: ThrottlerGuard },
 	],
