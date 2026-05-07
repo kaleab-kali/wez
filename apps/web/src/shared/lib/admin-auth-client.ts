@@ -55,6 +55,7 @@ export type AdminSessionUser = {
 	name: string;
 	email: string;
 	role: string;
+	roles?: string[];
 	active: boolean;
 	twoFactorEnabled: boolean;
 };

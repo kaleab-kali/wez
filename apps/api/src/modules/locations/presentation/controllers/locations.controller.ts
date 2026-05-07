@@ -14,6 +14,7 @@ export class LocationsAdminController {
 	constructor(private readonly service: LocationsService) {}
 
 	@Get()
+	@RequireAdminRole("super_admin", "ops_manager", "hr_manager")
 	@ApiOperation({ summary: "List lookup-managed locations" })
 	@ApiResponse({ status: 200, description: "Locations returned" })
 	async list(

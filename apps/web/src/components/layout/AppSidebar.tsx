@@ -16,7 +16,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { WezLogo } from "#components/branding/WezLogo";
 import { adminAuthApi, useAdminSession } from "#shared/lib/admin-auth-client";
-import { isHqAdminRole } from "#shared/lib/staff-roles";
+import { hasHqAdminRole } from "#shared/lib/staff-roles";
 import {
 	Sidebar,
 	SidebarContent,
@@ -68,9 +68,9 @@ export const AppSidebar = React.memo(
 	() => {
 		const { t } = useTranslation();
 		const { data: session } = useAdminSession();
-		const user = session?.user as { name?: string; email?: string; role?: string } | undefined;
+		const user = session?.user as { name?: string; email?: string; role?: string; roles?: string[] } | undefined;
 		const role = user?.role;
-		const showHQ = isHqAdminRole(role);
+		const showHQ = hasHqAdminRole(user?.roles, role);
 		const location = useLocation();
 
 		const onSignOut = React.useCallback(async () => {

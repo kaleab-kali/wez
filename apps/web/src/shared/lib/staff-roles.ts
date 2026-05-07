@@ -21,6 +21,9 @@ export const HQ_ADMIN_ROLES = new Set<string>([
 	STAFF_ROLES.financeManager,
 	STAFF_ROLES.itManager,
 	STAFF_ROLES.trainingManager,
+	"executive_viewer",
 ]);
 
 export const isHqAdminRole = (role: string | undefined | null) => !!role && HQ_ADMIN_ROLES.has(role);
+export const hasHqAdminRole = (roles: readonly string[] | undefined | null, primaryRole?: string | null) =>
+	roles?.some((role) => HQ_ADMIN_ROLES.has(role)) ?? isHqAdminRole(primaryRole);

@@ -14,6 +14,7 @@ export class StationsController {
 	constructor(private readonly service: StationsService) {}
 
 	@Get()
+	@RequireAdminRole("super_admin", "ops_manager", "hr_manager")
 	@ApiOperation({ summary: "List all stations" })
 	@ApiResponse({ status: 200, description: "Paginated list" })
 	async list(@Query("includeInactive") includeInactive?: string) {
@@ -22,6 +23,7 @@ export class StationsController {
 	}
 
 	@Get(":id")
+	@RequireAdminRole("super_admin", "ops_manager", "hr_manager")
 	@ApiOperation({ summary: "Get a station by id" })
 	async findById(@Param("id") id: string) {
 		return { data: await this.service.getById(id) };
@@ -43,6 +45,7 @@ export class StationsController {
 	}
 
 	@Get(":id/assignments")
+	@RequireAdminRole("super_admin", "ops_manager", "hr_manager")
 	@ApiOperation({ summary: "List active agent assignments at a station" })
 	async listAssignments(@Param("id") id: string) {
 		return { data: await this.service.listAssignments(id) };

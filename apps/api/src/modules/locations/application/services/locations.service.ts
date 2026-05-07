@@ -20,6 +20,7 @@ export class LocationsService {
 
 	async create(dto: CreateLocationDto) {
 		await this.assertParent(dto.kind, dto.parentId);
+		this.assertType(dto.kind, dto.type);
 		const existing = await this.prisma.location.findUnique({ where: { code: dto.code } });
 		if (existing) throw new ConflictException({ code: "LOCATION_CODE_EXISTS" });
 		return this.prisma.location.create({
@@ -36,9 +37,15 @@ export class LocationsService {
 	}
 
 	async update(id: string, dto: UpdateLocationDto) {
-		await this.get(id);
-		if (dto.kind || dto.parentId) {
-			await this.assertParent(dto.kind, dto.parentId);
+		const current = await this.get(id);
+		const nextKind = dto.kind ?? current.kind;
+		const nextParentId = dto.parentId ?? current.parentId ?? undefined;
+		const nextType = dto.type ?? current.type;
+		await this.assertParent(nextKind, nextParentId);
+		this.assertType(nextKind, nextType);
+		if (dto.code && dto.code !== current.code) {
+			const existing = await this.prisma.location.findUnique({ where: { code: dto.code }, select: { id: true } });
+			if (existing) throw new ConflictException({ code: "LOCATION_CODE_EXISTS" });
 		}
 		return this.prisma.location.update({
 			where: { id },
@@ -57,6 +64,16 @@ export class LocationsService {
 
 	async deactivate(id: string) {
 		await this.get(id);
+		const activeChild = await this.prisma.location.findFirst({
+			where: { parentId: id, active: true, deletedAt: null },
+			select: { id: true },
+		});
+		if (activeChild) throw new ConflictException({ code: "LOCATION_HAS_ACTIVE_CHILDREN" });
+		const station = await this.prisma.station.findFirst({
+			where: { localityId: id },
+			select: { id: true },
+		});
+		if (station) throw new ConflictException({ code: "LOCATION_IN_USE_BY_STATION" });
 		return this.prisma.location.update({
 			where: { id },
 			data: { active: false, deletedAt: new Date() },
@@ -79,6 +96,17 @@ export class LocationsService {
 		}
 		if (kind === "locality" && parent.kind !== "sub_area") {
 			throw new BadRequestException({ code: "LOCALITY_PARENT_MUST_BE_SUB_AREA" });
+		}
+	}
+
+	private assertType(kind: string, type: string) {
+		const typeByKind: Record<string, readonly string[]> = {
+			admin_area: ["city_administration", "region"],
+			sub_area: ["subcity", "zone"],
+			locality: ["woreda", "kebele", "custom"],
+		};
+		if (!typeByKind[kind]?.includes(type)) {
+			throw new BadRequestException({ code: "LOCATION_TYPE_DOES_NOT_MATCH_KIND" });
 		}
 	}
 }

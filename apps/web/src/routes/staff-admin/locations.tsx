@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 
 const LOCATION_KINDS = ["admin_area", "sub_area", "locality"] as const;
 const LOCATION_TYPES: Record<Location["kind"], readonly string[]> = {
-	admin_area: ["region", "city_admin"],
+	admin_area: ["region", "city_administration"],
 	sub_area: ["subcity", "zone"],
 	locality: ["woreda", "kebele", "custom"],
 };
@@ -21,7 +21,7 @@ const LocationCreateForm = React.memo(() => {
 	const { t } = useTranslation();
 	const create = useCreateLocation();
 	const [kind, setKind] = React.useState<Location["kind"]>("admin_area");
-	const [type, setType] = React.useState("city_admin");
+	const [type, setType] = React.useState("city_administration");
 	const [parentId, setParentId] = React.useState("");
 	const [code, setCode] = React.useState("");
 	const [nameEn, setNameEn] = React.useState("");

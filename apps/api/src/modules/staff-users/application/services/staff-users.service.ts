@@ -36,7 +36,7 @@ export class StaffUsersService {
 		});
 	}
 
-	async create(dto: CreateStaffUserDto, actorId: string, actorRoles: readonly WezAdminRole[]) {
+	async create(dto: CreateStaffUserDto, actorRoles: readonly WezAdminRole[]) {
 		if (!isStaffRole(dto.primaryRole)) throw new BadRequestException({ code: "INVALID_STAFF_ROLE" });
 		this.assertCanManageRole(actorRoles, dto.primaryRole);
 		const existing = await this.prisma.adminUser.findUnique({ where: { email: dto.email } });
@@ -49,23 +49,50 @@ export class StaffUsersService {
 			where: { id: user.id },
 			data: { role: dto.primaryRole },
 		});
-		await this.assignRole(updated.id, { role: dto.primaryRole, scopeType: "global" }, actorId, actorRoles);
 		return { user: updated, temporaryPassword };
 	}
 
 	async update(id: string, dto: UpdateStaffUserDto, actorRoles: readonly WezAdminRole[]) {
-		await this.get(id);
+		const existing = await this.get(id);
 		if (dto.primaryRole) {
 			this.assertCanManageRole(actorRoles, dto.primaryRole);
 		}
-		return this.prisma.adminUser.update({
-			where: { id },
-			data: {
-				name: dto.name,
-				email: dto.email,
-				role: dto.primaryRole,
-				active: dto.active,
-			},
+		if (dto.email && dto.email !== existing.email) {
+			const emailOwner = await this.prisma.adminUser.findUnique({ where: { email: dto.email }, select: { id: true } });
+			if (emailOwner) throw new ConflictException({ code: "STAFF_EMAIL_EXISTS" });
+		}
+		return this.prisma.$transaction(async (tx) => {
+			const updated = await tx.adminUser.update({
+				where: { id },
+				data: {
+					name: dto.name,
+					email: dto.email,
+					role: dto.primaryRole,
+					active: dto.active,
+				},
+			});
+			const roleChangedAwayFromAgent =
+				dto.primaryRole !== undefined && existing.role === "agent" && dto.primaryRole !== "agent";
+			const roleChangedAwayFromSupervisor =
+				dto.primaryRole !== undefined &&
+				existing.role === "station_supervisor" &&
+				dto.primaryRole !== "station_supervisor";
+			if (dto.active === false || roleChangedAwayFromAgent) {
+				await tx.agentAssignment.updateMany({
+					where: { userId: id, active: true, removedAt: null },
+					data: { active: false, removedAt: new Date() },
+				});
+			}
+			if (dto.active === false || roleChangedAwayFromSupervisor) {
+				await tx.station.updateMany({ where: { supervisorUserId: id }, data: { supervisorUserId: null } });
+			}
+			if (dto.active === false) {
+				await tx.staffRoleAssignment.updateMany({
+					where: { adminUserId: id, active: true, revokedAt: null },
+					data: { active: false, revokedAt: new Date(), revokeReason: "Staff user deactivated" },
+				});
+			}
+			return updated;
 		});
 	}
 
@@ -113,9 +140,11 @@ export class StaffUsersService {
 		});
 	}
 
-	async revokeRole(assignmentId: string, reason: string | undefined) {
+	async revokeRole(assignmentId: string, reason: string | undefined, actorRoles: readonly WezAdminRole[]) {
 		const assignment = await this.prisma.staffRoleAssignment.findUnique({ where: { id: assignmentId } });
 		if (!assignment) throw new NotFoundException({ code: "STAFF_ROLE_ASSIGNMENT_NOT_FOUND" });
+		if (!isStaffRole(assignment.role)) throw new BadRequestException({ code: "INVALID_STAFF_ROLE" });
+		this.assertCanManageRole(actorRoles, assignment.role);
 		return this.prisma.$transaction(async (tx) => {
 			const revoked = await tx.staffRoleAssignment.update({
 				where: { id: assignmentId },
@@ -161,10 +190,12 @@ export class StaffUsersService {
 		if (!location || location.kind !== scopeType) throw new BadRequestException({ code: "SCOPE_LOCATION_NOT_FOUND" });
 	}
 
-	private assertCanManageRole(actorRoles: readonly WezAdminRole[], targetRole: WezAdminRole) {
+	private assertCanManageRole(actorRoles: readonly WezAdminRole[], targetRole: string) {
+		if (!isStaffRole(targetRole)) throw new BadRequestException({ code: "INVALID_STAFF_ROLE" });
+		const role = targetRole as WezAdminRole;
 		if (actorRoles.includes("super_admin")) return;
-		if (actorRoles.includes("ops_manager") && !OPS_BLOCKED_ROLES.includes(targetRole)) return;
-		if (actorRoles.includes("hr_manager") && HR_MANAGED_ROLES.includes(targetRole)) return;
+		if (actorRoles.includes("ops_manager") && !OPS_BLOCKED_ROLES.includes(role)) return;
+		if (actorRoles.includes("hr_manager") && HR_MANAGED_ROLES.includes(role)) return;
 		throw new BadRequestException({ code: "STAFF_ROLE_MANAGEMENT_NOT_ALLOWED" });
 	}
 

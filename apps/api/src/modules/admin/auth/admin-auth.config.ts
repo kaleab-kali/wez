@@ -60,12 +60,20 @@ export const adminAuth = betterAuth({
 		customSession(async ({ user, session }) => {
 			const fresh = await prisma.adminUser.findUnique({
 				where: { id: user.id },
-				select: { role: true, active: true, twoFactorEnabled: true },
+				select: {
+					role: true,
+					active: true,
+					twoFactorEnabled: true,
+					roleAssignments: { where: { active: true, revokedAt: null }, select: { role: true } },
+				},
 			});
+			const role = fresh?.role ?? "support";
+			const roles = Array.from(new Set([role, ...(fresh?.roleAssignments.map((assignment) => assignment.role) ?? [])]));
 			return {
 				user: {
 					...user,
-					role: fresh?.role ?? "support",
+					role,
+					roles,
 					active: fresh?.active ?? true,
 					twoFactorEnabled: fresh?.twoFactorEnabled ?? false,
 				},

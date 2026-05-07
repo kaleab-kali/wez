@@ -34,7 +34,7 @@ export class StaffUsersController {
 		@Body() dto: CreateStaffUserDto,
 		@Req() req: WezRequest & { adminUser?: { id: string; roles?: WezAdminRole[] } },
 	) {
-		return { data: await this.service.create(dto, req.adminUser?.id ?? "system", req.adminUser?.roles ?? []) };
+		return { data: await this.service.create(dto, req.adminUser?.roles ?? []) };
 	}
 
 	@Patch(":id")
@@ -62,7 +62,11 @@ export class StaffUsersController {
 	@Post("role-assignments/:assignmentId/revoke")
 	@ApiOperation({ summary: "Revoke a staff role assignment" })
 	@ApiBody({ type: RevokeStaffRoleDto })
-	async revokeRole(@Param("assignmentId") assignmentId: string, @Body() dto: RevokeStaffRoleDto) {
-		return { data: await this.service.revokeRole(assignmentId, dto.reason) };
+	async revokeRole(
+		@Param("assignmentId") assignmentId: string,
+		@Body() dto: RevokeStaffRoleDto,
+		@Req() req: WezRequest & { adminUser?: { roles?: WezAdminRole[] } },
+	) {
+		return { data: await this.service.revokeRole(assignmentId, dto.reason, req.adminUser?.roles ?? []) };
 	}
 }

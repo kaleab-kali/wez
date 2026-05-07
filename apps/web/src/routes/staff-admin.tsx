@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
-import { isHqAdminRole } from "#shared/lib/staff-roles";
+import { hasHqAdminRole } from "#shared/lib/staff-roles";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -34,8 +34,8 @@ function StaffAdminLayout() {
 		}
 	}, [isPending, isError, session, navigate]);
 
-	const role = (session?.user as { role?: string } | undefined)?.role;
-	const canAccessAdmin = isHqAdminRole(role);
+	const user = session?.user as { role?: string; roles?: string[] } | undefined;
+	const canAccessAdmin = hasHqAdminRole(user?.roles, user?.role);
 
 	React.useEffect(() => {
 		if (!isPending && session?.user && !canAccessAdmin) {
