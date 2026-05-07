@@ -102,6 +102,7 @@ const ReferralCard = React.memo(
 		const [note, setNote] = React.useState("");
 		const [reason, setReason] = React.useState("");
 		const [error, setError] = React.useState("");
+		const fieldId = React.useId();
 		const pending = referral.status === "pending_employer";
 
 		React.useEffect(() => {
@@ -169,8 +170,9 @@ const ReferralCard = React.memo(
 					{pending && (
 						<div className="grid gap-3 lg:grid-cols-5">
 							<div className="space-y-2">
-								<Label>{t("hireRequests.station")}</Label>
+								<Label htmlFor={`${fieldId}-station`}>{t("hireRequests.station")}</Label>
 								<select
+									id={`${fieldId}-station`}
 									value={stationId}
 									onChange={(event) => setStationId(event.target.value)}
 									className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -184,8 +186,9 @@ const ReferralCard = React.memo(
 								</select>
 							</div>
 							<div className="space-y-2">
-								<Label>{t("workers.filterRole")}</Label>
+								<Label htmlFor={`${fieldId}-role`}>{t("workers.filterRole")}</Label>
 								<select
+									id={`${fieldId}-role`}
 									value={roleId}
 									onChange={(event) => setRoleId(event.target.value)}
 									disabled={!!jobRoleId}
@@ -200,16 +203,17 @@ const ReferralCard = React.memo(
 								</select>
 							</div>
 							<div className="space-y-2">
-								<Label>{t("hireRequests.proposedSalary")}</Label>
+								<Label htmlFor={`${fieldId}-salary`}>{t("hireRequests.proposedSalary")}</Label>
 								<Input
+									id={`${fieldId}-salary`}
 									type="number"
 									value={salary}
 									onChange={(event) => setSalary(event.target.value === "" ? "" : Number(event.target.value))}
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label>{t("hireRequests.note")}</Label>
-								<Input value={note} onChange={(event) => setNote(event.target.value)} />
+								<Label htmlFor={`${fieldId}-note`}>{t("hireRequests.note")}</Label>
+								<Input id={`${fieldId}-note`} value={note} onChange={(event) => setNote(event.target.value)} />
 							</div>
 							<div className="flex items-end gap-2">
 								<Button type="button" onClick={handleAccept} disabled={busy}>
@@ -220,8 +224,12 @@ const ReferralCard = React.memo(
 								</Button>
 							</div>
 							<div className="space-y-2 lg:col-span-4">
-								<Label>{t("referrals.declineReason")}</Label>
-								<Input value={reason} onChange={(event) => setReason(event.target.value)} />
+								<Label htmlFor={`${fieldId}-decline-reason`}>{t("referrals.declineReason")}</Label>
+								<Input
+									id={`${fieldId}-decline-reason`}
+									value={reason}
+									onChange={(event) => setReason(event.target.value)}
+								/>
 							</div>
 							<div className="flex items-end">
 								<Button type="button" variant="outline" onClick={handleDecline} disabled={busy}>
