@@ -4,6 +4,7 @@ import { JobsModule } from "#modules/jobs/jobs.module";
 import { NotificationModule } from "#modules/notification/notification.module";
 import { AgreementPdfService } from "./application/services/agreement-pdf.service";
 import { PlacementNotificationsService } from "./application/services/placement-notifications.service";
+import { PlacementStationAccessService } from "./application/services/placement-station-access.service";
 import { PlacementsService } from "./application/services/placements.service";
 import { PlacementsRepository } from "./infrastructure/repositories/placements.repository";
 import { PlacementsController } from "./presentation/controllers/placements.controller";
@@ -11,7 +12,13 @@ import { PlacementsController } from "./presentation/controllers/placements.cont
 @Module({
 	imports: [AuditLogModule, JobsModule, NotificationModule],
 	controllers: [PlacementsController],
-	providers: [AgreementPdfService, PlacementNotificationsService, PlacementsRepository, PlacementsService],
+	providers: [
+		AgreementPdfService,
+		PlacementNotificationsService,
+		PlacementStationAccessService,
+		PlacementsRepository,
+		PlacementsService,
+	],
 	exports: [PlacementsService],
 })
 export class PlacementsModule {}
