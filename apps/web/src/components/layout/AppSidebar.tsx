@@ -16,7 +16,13 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { WezLogo } from "#components/branding/WezLogo";
 import { adminAuthApi, useAdminSession } from "#shared/lib/admin-auth-client";
-import { hasHqAdminRole, STAFF_ROLES, type StaffRole } from "#shared/lib/staff-roles";
+import {
+	effectiveStaffRoles,
+	hasAnyStaffRole,
+	hasHqAdminRole,
+	STAFF_ACCESS_ROLES,
+	type StaffRole,
+} from "#shared/lib/staff-roles";
 import {
 	Sidebar,
 	SidebarContent,
@@ -44,43 +50,37 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 		labelKey: "nav.workers",
 		to: "/staff/workers",
 		icon: UserMultipleIcon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+		roles: STAFF_ACCESS_ROLES.workerEmployerOperations,
 	},
 	{
 		labelKey: "nav.employers",
 		to: "/staff/employers",
 		icon: ContactBookIcon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+		roles: STAFF_ACCESS_ROLES.workerEmployerOperations,
 	},
 	{
 		labelKey: "nav.jobs",
 		to: "/staff/jobs",
 		icon: Briefcase02Icon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+		roles: STAFF_ACCESS_ROLES.demandOperations,
 	},
 	{
 		labelKey: "nav.hireRequests",
 		to: "/staff/hire-requests",
 		icon: NoteEditIcon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+		roles: STAFF_ACCESS_ROLES.demandOperations,
 	},
 	{
 		labelKey: "nav.referrals",
 		to: "/staff/referrals",
 		icon: ContactBookIcon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+		roles: STAFF_ACCESS_ROLES.demandOperations,
 	},
 	{
 		labelKey: "nav.placements",
 		to: "/staff/placements",
 		icon: Briefcase02Icon,
-		roles: [
-			STAFF_ROLES.superAdmin,
-			STAFF_ROLES.opsManager,
-			STAFF_ROLES.financeManager,
-			STAFF_ROLES.stationSupervisor,
-			STAFF_ROLES.agent,
-		],
+		roles: STAFF_ACCESS_ROLES.placementOperations,
 	},
 ];
 
@@ -90,66 +90,49 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 		labelKey: "admin.nav.overview",
 		to: "/staff-admin",
 		icon: DashboardSquare01Icon,
-		roles: [
-			STAFF_ROLES.superAdmin,
-			STAFF_ROLES.opsManager,
-			STAFF_ROLES.complianceOfficer,
-			STAFF_ROLES.hrManager,
-			STAFF_ROLES.financeManager,
-			STAFF_ROLES.itManager,
-			STAFF_ROLES.trainingManager,
-			STAFF_ROLES.executiveViewer,
-		],
+		roles: STAFF_ACCESS_ROLES.hqOverview,
 	},
 	{
 		labelKey: "admin.nav.staffUsers",
 		to: "/staff-admin/staff-users",
 		icon: ContactBookIcon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.hrManager],
+		roles: STAFF_ACCESS_ROLES.staffUsers,
 	},
 	{
 		labelKey: "admin.nav.stations",
 		to: "/staff-admin/stations",
 		icon: StoreLocation02Icon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+		roles: STAFF_ACCESS_ROLES.platformConfig,
 	},
 	{
 		labelKey: "admin.nav.locations",
 		to: "/staff-admin/locations",
 		icon: StoreLocation02Icon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+		roles: STAFF_ACCESS_ROLES.platformConfig,
 	},
 	{
 		labelKey: "admin.nav.roleCatalog",
 		to: "/staff-admin/role-catalog",
 		icon: Coins01Icon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+		roles: STAFF_ACCESS_ROLES.platformConfig,
 	},
 	{
 		labelKey: "admin.nav.hiringPolicy",
 		to: "/staff-admin/hiring-policy",
 		icon: NoteEditIcon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.itManager],
+		roles: STAFF_ACCESS_ROLES.hiringPolicy,
 	},
 	{
 		labelKey: "admin.nav.lookups",
 		to: "/staff-admin/lookups",
 		icon: Book02Icon,
-		roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+		roles: STAFF_ACCESS_ROLES.platformConfig,
 	},
 	{
 		labelKey: "admin.nav.auditLog",
 		to: "/staff-admin/audit-log",
 		icon: SecurityIcon,
-		roles: [
-			STAFF_ROLES.superAdmin,
-			STAFF_ROLES.opsManager,
-			STAFF_ROLES.complianceOfficer,
-			STAFF_ROLES.hrManager,
-			STAFF_ROLES.financeManager,
-			STAFF_ROLES.itManager,
-			STAFF_ROLES.executiveViewer,
-		],
+		roles: STAFF_ACCESS_ROLES.auditLog,
 	},
 	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 ];
@@ -158,19 +141,13 @@ const ACCOUNT: ReadonlyArray<NavItem> = [
 	{ labelKey: "admin.nav.sessions", to: "/staff-admin/sessions", icon: UserMultipleIcon },
 ];
 
-const hasAnyRole = (userRoles: readonly string[], allowedRoles: readonly StaffRole[] | undefined) =>
-	!allowedRoles || allowedRoles.some((allowedRole) => userRoles.includes(allowedRole));
-
 export const AppSidebar = React.memo(
 	() => {
 		const { t } = useTranslation();
 		const { data: session } = useAdminSession();
 		const user = session?.user as { name?: string; email?: string; role?: string; roles?: string[] } | undefined;
 		const role = user?.role;
-		const userRoles = React.useMemo(
-			() => Array.from(new Set([role, ...(user?.roles ?? [])].filter((item): item is string => Boolean(item)))),
-			[role, user?.roles],
-		);
+		const userRoles = React.useMemo(() => effectiveStaffRoles(role, user?.roles), [role, user?.roles]);
 		const showHQ = hasHqAdminRole(userRoles, role);
 		const location = useLocation();
 
@@ -181,7 +158,7 @@ export const AppSidebar = React.memo(
 
 		const renderItems = (items: ReadonlyArray<NavItem>) =>
 			items
-				.filter((item) => hasAnyRole(userRoles, item.roles))
+				.filter((item) => hasAnyStaffRole(userRoles, item.roles))
 				.map((item) => {
 					const active =
 						location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));

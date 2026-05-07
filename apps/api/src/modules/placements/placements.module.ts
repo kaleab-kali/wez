@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AuditLogModule } from "#modules/audit-log/audit-log.module";
 import { JobsModule } from "#modules/jobs/jobs.module";
 import { NotificationModule } from "#modules/notification/notification.module";
+import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { AgreementPdfService } from "./application/services/agreement-pdf.service";
 import { PlacementAgreementSnapshotService } from "./application/services/placement-agreement-snapshot.service";
 import { PlacementFinalizationPolicyService } from "./application/services/placement-finalization-policy.service";
@@ -22,6 +23,7 @@ import { PlacementsController } from "./presentation/controllers/placements.cont
 		PlacementStationAccessService,
 		PlacementsRepository,
 		PlacementsService,
+		StaffAccessService,
 	],
 	exports: [PlacementsService],
 })

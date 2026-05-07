@@ -81,6 +81,8 @@ export class PrismaReferralsRepository implements IReferralsRepository {
 		const where: Record<string, unknown> = {};
 		if (filter.employerId) where.employerId = filter.employerId;
 		if (filter.workerId) where.workerId = filter.workerId;
+		if (filter.agentId) where.agentId = filter.agentId;
+		if (!filter.agentId && filter.agentIds) where.agentId = { in: filter.agentIds };
 		if (filter.status) where.status = filter.status;
 
 		const page = Math.max(1, filter.page ?? 1);

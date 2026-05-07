@@ -5,6 +5,7 @@ import { PlatformSettingsModule } from "#modules/platform-settings/platform-sett
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersModule } from "#modules/workers/workers.module";
+import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { HireRequestExpiryService } from "./application/services/hire-request-expiry.service";
 import { HireRequestsService } from "./application/services/hire-requests.service";
 import { HIRE_REQUESTS_REPO } from "./domain/repositories/hire-requests.repository";
@@ -24,6 +25,7 @@ import { HireRequestsController } from "./presentation/controllers/hire-requests
 	providers: [
 		HireRequestsService,
 		HireRequestExpiryService,
+		StaffAccessService,
 		{ provide: HIRE_REQUESTS_REPO, useClass: PrismaHireRequestsRepository },
 	],
 	exports: [HireRequestsService],

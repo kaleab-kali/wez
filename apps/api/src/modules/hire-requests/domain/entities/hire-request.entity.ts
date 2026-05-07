@@ -44,6 +44,7 @@ export interface HireRequestFilter {
 	employerId?: string;
 	workerId?: string;
 	stationId?: string;
+	stationIds?: readonly string[];
 	status?: HireRequestStatus;
 	page?: number;
 	limit?: number;

@@ -129,6 +129,7 @@ export class PrismaHireRequestsRepository implements IHireRequestsRepository {
 		if (filter.employerId) where.employerId = filter.employerId;
 		if (filter.workerId) where.workerId = filter.workerId;
 		if (filter.stationId) where.stationId = filter.stationId;
+		if (!filter.stationId && filter.stationIds) where.stationId = { in: filter.stationIds };
 		if (filter.status) where.status = filter.status;
 
 		const page = Math.max(1, filter.page ?? 1);

@@ -14,6 +14,7 @@ import { NotificationOutboxService } from "#modules/notification/application/ser
 import type { IWorkersRepository } from "#modules/workers/domain/repositories/workers.repository";
 import { WORKERS_REPO } from "#modules/workers/domain/repositories/workers.repository";
 import type { WezSession } from "#shared/auth/session";
+import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { type IReferralsRepository, REFERRALS_REPO } from "../../domain/repositories/referrals.repository";
 import type { AcceptReferralDto, CreateReferralDto, DeferReferralDto, ListReferralsDto } from "../dto/referral.dto";
 
@@ -23,6 +24,12 @@ const DECLINED_STATUS = "declined";
 const EXPIRED_STATUS = "expired";
 const REFERRAL_TTL_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REFERRAL_GLOBAL_ACCESS_ROLES = ["super_admin"] as const;
+const EMPTY_SCOPE_ID = "__none__";
+type ScopedReferralFilter = ListReferralsDto & {
+	readonly agentId?: string;
+	readonly agentIds?: readonly string[];
+};
 
 @Injectable()
 export class ReferralsService {
@@ -33,6 +40,7 @@ export class ReferralsService {
 		private readonly jobs: JobsService,
 		private readonly hireRequests: HireRequestsService,
 		private readonly notifications: NotificationOutboxService,
+		private readonly staffAccess: StaffAccessService,
 	) {}
 
 	async listForSession(session: WezSession, filter: ListReferralsDto) {
@@ -43,7 +51,14 @@ export class ReferralsService {
 		return { data: items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 } };
 	}
 
-	async create(agentId: string, dto: CreateReferralDto) {
+	async create(session: WezSession, dto: CreateReferralDto) {
+		if (session.kind !== "staff") throw new ForbiddenException({ code: "STAFF_SESSION_REQUIRED" });
+		if (!this.staffAccess.hasAnyRole(session, REFERRAL_GLOBAL_ACCESS_ROLES)) {
+			if (!this.staffAccess.isStationScoped(session)) throw new ForbiddenException({ code: "STATION_SCOPE_REQUIRED" });
+			const stationIds = await this.staffAccess.stationIdsForSession(session);
+			if (stationIds.length === 0) throw new ForbiddenException({ code: "NO_ASSIGNED_STATION" });
+		}
+
 		const [worker, employer] = await Promise.all([
 			this.workers.findById(dto.workerId),
 			this.employers.findById(dto.employerId),
@@ -64,7 +79,7 @@ export class ReferralsService {
 			workerId: worker.id,
 			employerId: employer.id,
 			jobId: dto.jobId ?? null,
-			agentId,
+			agentId: session.user.id,
 			note: dto.note ?? null,
 			status: PENDING_STATUS,
 			expiresAt: new Date(Date.now() + REFERRAL_TTL_DAYS * DAY_MS),
@@ -139,7 +154,12 @@ export class ReferralsService {
 			throw new ConflictException({ code: "REFERRAL_EXPIRED" });
 		}
 
-		if (session.kind === "staff") return referral;
+		if (session.kind === "staff") {
+			if (this.staffAccess.hasAnyRole(session, REFERRAL_GLOBAL_ACCESS_ROLES)) return referral;
+			const agentIds = await this.staffAccess.agentIdsForSession(session);
+			if (!agentIds.includes(referral.agentId)) throw new ForbiddenException({ code: "REFERRAL_NOT_IN_SCOPE" });
+			return referral;
+		}
 
 		const employer = await this.employers.findByUserId(session.user.id);
 		if (!employer || employer.id !== referral.employerId) {
@@ -148,8 +168,14 @@ export class ReferralsService {
 		return referral;
 	}
 
-	private async scopeFilter(session: WezSession, filter: ListReferralsDto) {
-		if (session.kind === "staff") return filter;
+	private async scopeFilter(session: WezSession, filter: ListReferralsDto): Promise<ScopedReferralFilter> {
+		if (session.kind === "staff") {
+			if (this.staffAccess.hasAnyRole(session, REFERRAL_GLOBAL_ACCESS_ROLES)) return filter;
+			if (!this.staffAccess.isStationScoped(session)) throw new ForbiddenException({ code: "STATION_SCOPE_REQUIRED" });
+			const agentIds = await this.staffAccess.agentIdsForSession(session);
+			if (agentIds.length === 0) return { ...filter, agentId: EMPTY_SCOPE_ID };
+			return { ...filter, agentIds };
+		}
 
 		if (session.user.role?.startsWith("employer_")) {
 			const employer = await this.employers.findByUserId(session.user.id);

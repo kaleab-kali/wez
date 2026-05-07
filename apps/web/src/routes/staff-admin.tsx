@@ -1,7 +1,7 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
-import { hasHqAdminRole } from "#shared/lib/staff-roles";
+import { hasHqAdminRole, hasStaffRouteAccess } from "#shared/lib/staff-roles";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -26,6 +26,7 @@ LoadingScreen.displayName = "LoadingScreen";
 
 function StaffAdminLayout() {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { data: session, isPending, isError } = useAdminSession();
 
 	React.useEffect(() => {
@@ -36,15 +37,16 @@ function StaffAdminLayout() {
 
 	const user = session?.user as { role?: string; roles?: string[] } | undefined;
 	const canAccessAdmin = hasHqAdminRole(user?.roles, user?.role);
+	const canAccessRoute = hasStaffRouteAccess(location.pathname, user?.role, user?.roles);
 
 	React.useEffect(() => {
-		if (!isPending && session?.user && !canAccessAdmin) {
+		if (!isPending && session?.user && (!canAccessAdmin || !canAccessRoute)) {
 			navigate({ to: "/staff/dashboard", replace: true });
 		}
-	}, [isPending, session, canAccessAdmin, navigate]);
+	}, [isPending, session, canAccessAdmin, canAccessRoute, navigate]);
 
 	if (isPending || !session?.user) return <LoadingScreen />;
-	if (!canAccessAdmin) return <LoadingScreen />;
+	if (!canAccessAdmin || !canAccessRoute) return <LoadingScreen />;
 
 	return (
 		<SidebarProvider>

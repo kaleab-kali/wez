@@ -27,6 +27,8 @@ export type ReferralPatch = Partial<{
 export interface ReferralFilter {
 	employerId?: string;
 	workerId?: string;
+	agentId?: string;
+	agentIds?: readonly string[];
 	status?: ReferralStatus;
 	page?: number;
 	limit?: number;

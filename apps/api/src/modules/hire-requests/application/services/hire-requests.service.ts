@@ -17,8 +17,13 @@ import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.re
 import type { IWorkersRepository } from "#modules/workers/domain/repositories/workers.repository";
 import { WORKERS_REPO } from "#modules/workers/domain/repositories/workers.repository";
 import type { WezSession } from "#shared/auth/session";
+import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { HIRE_REQUESTS_REPO, type IHireRequestsRepository } from "../../domain/repositories/hire-requests.repository";
 import type { CancelHireRequestDto, CreateHireRequestDto, ListHireRequestsDto } from "../dto/hire-request.dto";
+
+const HIRE_REQUEST_GLOBAL_ACCESS_ROLES = ["super_admin"] as const;
+const EMPTY_SCOPE_ID = "__none__";
+type ScopedHireRequestFilter = ListHireRequestsDto & { readonly stationIds?: readonly string[] };
 
 @Injectable()
 export class HireRequestsService {
@@ -30,9 +35,10 @@ export class HireRequestsService {
 		@Inject(STATIONS_REPO) private readonly stations: IStationsRepository,
 		private readonly platformSettings: PlatformSettingsService,
 		private readonly notifications: NotificationOutboxService,
+		private readonly staffAccess: StaffAccessService,
 	) {}
 
-	async list(filter: ListHireRequestsDto) {
+	async list(filter: ScopedHireRequestFilter) {
 		const { items, total } = await this.repo.listByFilter(filter);
 		const page = filter.page ?? 1;
 		const limit = filter.limit ?? 20;
@@ -44,7 +50,18 @@ export class HireRequestsService {
 
 	async listForSession(session: WezSession, filter: ListHireRequestsDto) {
 		if (session.kind === "staff") {
-			return this.list(filter);
+			if (this.staffAccess.hasAnyRole(session, HIRE_REQUEST_GLOBAL_ACCESS_ROLES)) {
+				return this.list(filter);
+			}
+			if (!this.staffAccess.isStationScoped(session)) throw new ForbiddenException({ code: "STATION_SCOPE_REQUIRED" });
+			const stationIds = await this.staffAccess.stationIdsForSession(session);
+			if (filter.stationId && !stationIds.includes(filter.stationId)) {
+				throw new ForbiddenException({ code: "NOT_YOUR_STATION" });
+			}
+			if (stationIds.length === 0) {
+				return this.list({ ...filter, stationId: EMPTY_SCOPE_ID });
+			}
+			return this.list({ ...filter, stationIds: filter.stationId ? undefined : stationIds });
 		}
 
 		if (session.user.role?.startsWith("employer_")) {
@@ -68,7 +85,36 @@ export class HireRequestsService {
 		return r;
 	}
 
-	async create(currentUserId: string, dto: CreateHireRequestDto, asAgent: boolean) {
+	async getByIdForSession(session: WezSession, id: string) {
+		const request = await this.getById(id);
+		if (session.kind === "staff") {
+			await this.staffAccess.assertStationAccess(session, request.stationId, HIRE_REQUEST_GLOBAL_ACCESS_ROLES);
+			return request;
+		}
+
+		if (session.user.role?.startsWith("employer_")) {
+			const employer = await this.employers.findByUserId(session.user.id);
+			if (!employer || request.employerId !== employer.id) {
+				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
+			}
+			return request;
+		}
+
+		if (session.user.role === "worker") {
+			const worker = await this.workers.findByUserId(session.user.id);
+			if (!worker || request.workerId !== worker.id) {
+				throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_OWNED" });
+			}
+			return request;
+		}
+
+		throw new ForbiddenException({ code: "HIRE_REQUEST_NOT_AVAILABLE" });
+	}
+
+	async create(currentUserId: string, dto: CreateHireRequestDto, asAgent: boolean, session?: WezSession) {
+		if (asAgent && session) {
+			await this.staffAccess.assertStationAccess(session, dto.stationId, HIRE_REQUEST_GLOBAL_ACCESS_ROLES);
+		}
 		return this.createWithSourceReferral(currentUserId, dto, asAgent, null);
 	}
 
@@ -82,14 +128,7 @@ export class HireRequestsService {
 		asAgent: boolean,
 		sourceReferralId: string | null,
 	) {
-		// Resolve employerId
-		let employerId = dto.employerId;
-		if (!employerId) {
-			if (asAgent) throw new BadRequestException({ code: "EMPLOYER_ID_REQUIRED" });
-			const own = await this.employers.findByUserId(currentUserId);
-			if (!own) throw new ForbiddenException({ code: "NO_EMPLOYER_PROFILE" });
-			employerId = own.id;
-		}
+		const employerId = await this.resolveEmployerId(currentUserId, dto.employerId, asAgent);
 		const employer = await this.employers.findById(employerId);
 		if (!employer) throw new NotFoundException({ code: "EMPLOYER_NOT_FOUND" });
 		if (employer.rating === "red") throw new ForbiddenException({ code: "EMPLOYER_BANNED" });
@@ -151,6 +190,14 @@ export class HireRequestsService {
 		return request;
 	}
 
+	private async resolveEmployerId(currentUserId: string, employerId: string | undefined, asAgent: boolean) {
+		if (employerId) return employerId;
+		if (asAgent) throw new BadRequestException({ code: "EMPLOYER_ID_REQUIRED" });
+		const own = await this.employers.findByUserId(currentUserId);
+		if (!own) throw new ForbiddenException({ code: "NO_EMPLOYER_PROFILE" });
+		return own.id;
+	}
+
 	async cancel(id: string, dto: CancelHireRequestDto) {
 		const req = await this.getById(id);
 		if (req.status !== "awaiting_visit") {
@@ -166,6 +213,7 @@ export class HireRequestsService {
 	async cancelForSession(session: WezSession, id: string, dto: CancelHireRequestDto) {
 		const req = await this.getById(id);
 		if (session.kind === "staff") {
+			await this.staffAccess.assertStationAccess(session, req.stationId, HIRE_REQUEST_GLOBAL_ACCESS_ROLES);
 			const updated = await this.cancel(id, dto);
 			await this.enqueueStaffCancelledNotifications(req, dto.reason);
 			return updated;
@@ -181,7 +229,7 @@ export class HireRequestsService {
 			return updated;
 		}
 
-		throw new ForbiddenException({ code: "CANNOT_CANCEL_HIRE_REQUEST" });
+		throw new ForbiddenException({ code: "CANCEL_NOT_ALLOWED" });
 	}
 
 	async expireDue() {

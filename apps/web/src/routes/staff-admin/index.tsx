@@ -13,7 +13,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAdminDashboardMetrics } from "#features/admin-dashboard/api/admin-dashboard.queries";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
-import { STAFF_ROLES, type StaffRole } from "#shared/lib/staff-roles";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES, type StaffRole } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -65,9 +65,6 @@ const TileLink = React.memo(
 	(p, n) => p.to === n.to && p.title === n.title && p.badge?.label === n.badge?.label,
 );
 TileLink.displayName = "TileLink";
-
-const hasAnyRole = (userRoles: readonly string[], allowedRoles: readonly StaffRole[] | undefined) =>
-	!allowedRoles || allowedRoles.some((allowedRole) => userRoles.includes(allowedRole));
 
 const centsToBirr = (value: string) => {
 	const cents = Number(value);
@@ -130,10 +127,7 @@ const AdminDashboard = React.memo(() => {
 		| { name?: string; role?: string; roles?: string[]; twoFactorEnabled?: boolean }
 		| undefined;
 	const role = user?.role ?? "support";
-	const userRoles = React.useMemo(
-		() => Array.from(new Set([role, ...(user?.roles ?? [])].filter((item): item is string => Boolean(item)))),
-		[role, user?.roles],
-	);
+	const userRoles = React.useMemo(() => effectiveStaffRoles(role, user?.roles), [role, user?.roles]);
 	const twoFactorEnabled = user?.twoFactorEnabled ?? false;
 	const adminTiles = React.useMemo<readonly AdminTile[]>(
 		() => [
@@ -142,42 +136,42 @@ const AdminDashboard = React.memo(() => {
 				icon: ContactBookIcon,
 				title: t("staffUsers.title"),
 				description: t("staffUsers.subtitle"),
-				roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.hrManager],
+				roles: STAFF_ACCESS_ROLES.staffUsers,
 			},
 			{
 				to: "/staff-admin/stations",
 				icon: StoreLocation02Icon,
 				title: t("admin.stationsAndAgents"),
 				description: t("admin.nav.stations"),
-				roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+				roles: STAFF_ACCESS_ROLES.platformConfig,
 			},
 			{
 				to: "/staff-admin/locations",
 				icon: StoreLocation02Icon,
 				title: t("locations.title"),
 				description: t("locations.subtitle"),
-				roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+				roles: STAFF_ACCESS_ROLES.platformConfig,
 			},
 			{
 				to: "/staff-admin/role-catalog",
 				icon: Coins01Icon,
 				title: t("admin.roleCatalogLink"),
 				description: t("roleCatalog.subtitle"),
-				roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+				roles: STAFF_ACCESS_ROLES.platformConfig,
 			},
 			{
 				to: "/staff-admin/hiring-policy",
 				icon: NoteEditIcon,
 				title: t("platformSettings.hiringPolicy"),
 				description: t("platformSettings.hiringPolicyBody"),
-				roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager, STAFF_ROLES.itManager],
+				roles: STAFF_ACCESS_ROLES.hiringPolicy,
 			},
 			{
 				to: "/staff-admin/lookups",
 				icon: Book02Icon,
 				title: t("admin.nav.lookups"),
 				description: t("locations.subtitle"),
-				roles: [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager],
+				roles: STAFF_ACCESS_ROLES.platformConfig,
 			},
 			{
 				to: "/staff-admin/2fa",
@@ -283,7 +277,7 @@ const AdminDashboard = React.memo(() => {
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 					{adminTiles
-						.filter((tile) => hasAnyRole(userRoles, tile.roles))
+						.filter((tile) => hasAnyStaffRole(userRoles, tile.roles))
 						.map((tile) => (
 							<TileLink
 								key={tile.to}
