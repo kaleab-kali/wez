@@ -9,6 +9,7 @@ import {
 	useEndPlacement,
 	usePlacements,
 } from "#features/placements/api/placement.queries";
+import { FreshPlacementForm } from "#features/placements/components/fresh-placement-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -336,6 +337,7 @@ const PlacementsPage = React.memo(() => {
 					<option value="cancelled">{t("placements.statusCancelled")}</option>
 				</select>
 			</div>
+			<FreshPlacementForm />
 
 			{isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}
 			<div className="space-y-3">

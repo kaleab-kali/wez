@@ -120,6 +120,29 @@ export const useFinalizePlacement = (hireRequestId: string) => {
 	});
 };
 
+export const useFinalizeFreshPlacement = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (input: {
+			workerId: string;
+			employerId: string;
+			roleId: string;
+			stationId: string;
+			startDate: string;
+			salaryCents: number;
+			paymentMethod: PaymentMethod;
+			paymentReference: string;
+			paymentReceivedAt: string;
+			cashDoubleConfirmed?: boolean;
+		}) => send<{ data: Placement }>(`${BASE}/fresh/finalize`, "POST", input).then((b) => b.data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: placementKeys.all });
+			qc.invalidateQueries({ queryKey: workerKeys.all });
+			qc.invalidateQueries({ queryKey: hireRequestKeys.all });
+		},
+	});
+};
+
 export const useEndPlacement = () => {
 	const qc = useQueryClient();
 	return useMutation({
