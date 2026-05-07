@@ -53,7 +53,9 @@ export type Placement = {
 	endDate: string | null;
 	endedReason: string | null;
 	ratingByEmployer: string | null;
+	ratingCommentByEmployer: string | null;
 	ratingByWorker: string | null;
+	ratingCommentByWorker: string | null;
 	salaryCents: string;
 	commissionCents: string;
 	paymentMethod: PaymentMethod | string;
@@ -125,13 +127,17 @@ export const useEndPlacement = () => {
 			endDate: string;
 			endedReason: string;
 			ratingByEmployer?: number;
+			ratingCommentByEmployer?: string;
 			ratingByWorker?: number;
+			ratingCommentByWorker?: string;
 		}) =>
 			send<{ data: Placement }>(`${BASE}/${input.id}/end`, "POST", {
 				endDate: input.endDate,
 				endedReason: input.endedReason,
 				ratingByEmployer: input.ratingByEmployer,
+				ratingCommentByEmployer: input.ratingCommentByEmployer,
 				ratingByWorker: input.ratingByWorker,
+				ratingCommentByWorker: input.ratingCommentByWorker,
 			}).then((b) => b.data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: placementKeys.all });

@@ -54,6 +54,12 @@ export class EndPlacementDto {
 	@Type(() => Number)
 	ratingByEmployer?: number;
 
+	@ApiProperty({ required: false, description: "Employer comment about the worker" })
+	@IsOptional()
+	@IsString()
+	@MaxLength(500)
+	ratingCommentByEmployer?: string;
+
 	@ApiProperty({ required: false, minimum: 1, maximum: 5 })
 	@IsOptional()
 	@IsInt()
@@ -61,6 +67,12 @@ export class EndPlacementDto {
 	@Max(5)
 	@Type(() => Number)
 	ratingByWorker?: number;
+
+	@ApiProperty({ required: false, description: "Worker comment about the employer, private to staff" })
+	@IsOptional()
+	@IsString()
+	@MaxLength(500)
+	ratingCommentByWorker?: string;
 }
 
 export class ListPlacementsDto {

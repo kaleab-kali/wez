@@ -305,7 +305,9 @@ export class PlacementsService {
 					endDate,
 					endedReason: dto.endedReason,
 					ratingByEmployer: dto.ratingByEmployer,
+					ratingCommentByEmployer: dto.ratingCommentByEmployer,
 					ratingByWorker: dto.ratingByWorker,
+					ratingCommentByWorker: dto.ratingCommentByWorker,
 				},
 				include: {
 					worker: { select: { fullName: true, phone: true } },
@@ -334,7 +336,9 @@ export class PlacementsService {
 					endDate: dto.endDate,
 					endedReason: dto.endedReason,
 					ratingByEmployer: dto.ratingByEmployer,
+					ratingCommentByEmployer: dto.ratingCommentByEmployer,
 					ratingByWorker: dto.ratingByWorker,
+					ratingCommentByWorker: dto.ratingCommentByWorker,
 				},
 			});
 			return ended;
