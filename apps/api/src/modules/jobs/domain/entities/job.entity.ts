@@ -10,9 +10,13 @@ export interface Job {
 	roleCategory?: string;
 	title: string;
 	description: string;
+	schedule?: string | null;
+	requirements?: string | null;
+	perks?: string | null;
 	salaryMinCents: bigint;
 	salaryMaxCents: bigint;
 	location: string;
+	autoCloseOnPlacement: boolean;
 	status: JobStatus;
 	postedAt: Date;
 	createdAt: Date;
@@ -23,9 +27,13 @@ export type NewJob = Omit<Job, "id" | "postedAt" | "createdAt" | "updatedAt">;
 export type JobPatch = Partial<{
 	title: string;
 	description: string;
+	schedule: string | null;
+	requirements: string | null;
+	perks: string | null;
 	salaryMinCents: bigint;
 	salaryMaxCents: bigint;
 	location: string;
+	autoCloseOnPlacement: boolean;
 	status: JobStatus;
 }>;
 

@@ -1,6 +1,6 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
+import { IsBoolean, IsEnum, IsIn, IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
 
 export class CreateJobDto {
 	@ApiProperty()
@@ -17,6 +17,24 @@ export class CreateJobDto {
 	@IsString()
 	@Length(2, 5000)
 	description!: string;
+
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
+	@Length(2, 500)
+	schedule?: string;
+
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
+	@Length(2, 2000)
+	requirements?: string;
+
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
+	@Length(2, 2000)
+	perks?: string;
 
 	@ApiProperty({ description: "Min salary in cents" })
 	@IsInt()
@@ -40,6 +58,11 @@ export class CreateJobDto {
 	@IsOptional()
 	@IsString()
 	employerId?: string;
+
+	@ApiProperty({ required: false, default: true })
+	@IsOptional()
+	@IsBoolean()
+	autoCloseOnPlacement?: boolean;
 }
 
 export class UpdateJobDto extends PartialType(CreateJobDto) {

@@ -37,9 +37,13 @@ export type Job = {
 	roleCategory?: string;
 	title: string;
 	description: string;
+	schedule?: string | null;
+	requirements?: string | null;
+	perks?: string | null;
 	salaryMinCents: string;
 	salaryMaxCents: string;
 	location: string;
+	autoCloseOnPlacement: boolean;
 	status: JobStatus;
 	postedAt: string;
 	createdAt: string;
@@ -66,9 +70,13 @@ export type JobInput = {
 	roleId: string;
 	title: string;
 	description: string;
+	schedule?: string;
+	requirements?: string;
+	perks?: string;
 	salaryMinCents: number;
 	salaryMaxCents: number;
 	location: string;
+	autoCloseOnPlacement?: boolean;
 	employerId?: string;
 };
 

@@ -1,18 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { type JobInput, useCreateJob } from "#features/jobs/api/job.queries";
+import { type JobInput, useJob, useUpdateJob } from "#features/jobs/api/job.queries";
 import { JobForm } from "#features/jobs/components/job-form";
 import { authClient } from "#shared/lib/auth-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const EMPLOYER_ROLES = new Set(["employer_business", "employer_household"]);
 
-const NewCustomerJobPage = React.memo(() => {
+const EditCustomerJobPage = React.memo(() => {
+	const { id } = Route.useParams();
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const { data: session, isPending: sessionPending } = authClient.useSession();
-	const createJob = useCreateJob();
+	const { data: job, isLoading } = useJob(id);
+	const updateJob = useUpdateJob(id);
 	const role = (session?.user as { role?: string } | undefined)?.role;
 	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 
@@ -22,10 +24,10 @@ const NewCustomerJobPage = React.memo(() => {
 
 	const onSubmit = React.useCallback(
 		async (input: JobInput) => {
-			await createJob.mutateAsync(input);
+			await updateJob.mutateAsync(input);
 			navigate({ to: "/app/jobs" });
 		},
-		[createJob, navigate],
+		[navigate, updateJob],
 	);
 
 	return (
@@ -35,17 +37,26 @@ const NewCustomerJobPage = React.memo(() => {
 			</Link>
 			<Card>
 				<CardHeader>
-					<CardTitle>{t("jobs.postJob")}</CardTitle>
+					<CardTitle>{t("jobs.editJob")}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<JobForm submitLabel={t("jobs.postJob")} pending={createJob.isPending} onSubmit={onSubmit} />
+					{isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}
+					{job && (
+						<JobForm
+							initialJob={job}
+							submitLabel={t("jobs.saveJob")}
+							pending={updateJob.isPending}
+							roleEditable={false}
+							onSubmit={onSubmit}
+						/>
+					)}
 				</CardContent>
 			</Card>
 		</div>
 	);
 });
-NewCustomerJobPage.displayName = "NewCustomerJobPage";
+EditCustomerJobPage.displayName = "EditCustomerJobPage";
 
-export const Route = createFileRoute("/app/jobs/new")({
-	component: NewCustomerJobPage,
+export const Route = createFileRoute("/app/jobs/$id/edit")({
+	component: EditCustomerJobPage,
 });

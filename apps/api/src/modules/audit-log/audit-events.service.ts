@@ -43,6 +43,10 @@ export type RecordAuditEventInput = {
 export class AuditEventsService {
 	constructor(private readonly prisma: PrismaService) {}
 
+	async recordEvent(input: RecordAuditEventInput): Promise<void> {
+		await this.record(this.prisma, input);
+	}
+
 	async record(writer: AuditEventWriter, input: RecordAuditEventInput): Promise<void> {
 		await writer.auditEvent.create({
 			data: {

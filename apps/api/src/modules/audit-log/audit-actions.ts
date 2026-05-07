@@ -1,4 +1,7 @@
 export const AUDIT_ACTIONS = {
+	jobCreated: "job.created",
+	jobUpdated: "job.updated",
+	jobClosed: "job.closed",
 	placementFinalized: "placement.finalized",
 	placementEnded: "placement.ended",
 } as const;
@@ -6,6 +9,7 @@ export const AUDIT_ACTIONS = {
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 
 export const AUDIT_TARGET_TYPES = {
+	job: "job",
 	placement: "placement",
 } as const;
 

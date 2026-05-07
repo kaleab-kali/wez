@@ -13,9 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const AUDIT_ACTIONS = ["placement.finalized", "placement.ended"] as const;
+const AUDIT_ACTIONS = ["job.created", "job.updated", "job.closed", "placement.finalized", "placement.ended"] as const;
 const ACTOR_ROLES = ["super_admin", "ops_manager", "compliance_officer", "finance_manager", "agent"] as const;
-const TARGET_TYPES = ["placement"] as const;
+const TARGET_TYPES = ["job", "placement"] as const;
 const DEFAULT_LIMIT = 25;
 const FIRST_PAGE = 1;
 const CSV_FILENAME = "wez-audit-events.csv";
@@ -27,16 +27,27 @@ const metadataValue = (event: AuditEvent, key: string) => {
 	const value = event.metadata?.[key];
 	return value === null || value === undefined ? "-" : String(value);
 };
+const formatChangedFields = (event: AuditEvent) => metadataValue(event, "changedFields").replaceAll(",", ", ");
 const centsToBirr = (value: string) => {
 	const cents = Number(value);
 	return Number.isFinite(cents) ? `${(cents / 100).toLocaleString()} ETB` : "-";
 };
 const actionTitle = (action: string) => {
+	if (action === "job.created") return "Job created";
+	if (action === "job.updated") return "Job updated";
+	if (action === "job.closed") return "Job closed";
 	if (action === "placement.finalized") return "Placement finalized";
 	if (action === "placement.ended") return "Placement ended";
 	return action;
 };
 const actionSentence = (event: AuditEvent) => {
+	if (event.targetType === "job") {
+		const title =
+			metadataValue(event, "afterTitle") !== "-" ? metadataValue(event, "afterTitle") : metadataValue(event, "title");
+		if (event.action === "job.created") return `${event.actorRole} created job "${title}".`;
+		if (event.action === "job.closed") return `${event.actorRole} closed job "${title}".`;
+		return `${event.actorRole} updated job "${title}".`;
+	}
 	const summary = event.targetSummary;
 	if (!summary) return `${event.actorRole} updated a ${event.targetType ?? "record"}.`;
 	if (event.action === "placement.finalized") {
@@ -169,7 +180,7 @@ const TechnicalDetails = React.memo(({ event }: { readonly event: AuditEvent }) 
 				Event <span className="font-mono">{compactId(event.id)}</span>
 			</span>
 			<span>
-				Placement <span className="font-mono">{compactId(event.targetId)}</span>
+				{event.targetType ?? "Target"} <span className="font-mono">{compactId(event.targetId)}</span>
 			</span>
 		</div>
 	);
@@ -177,6 +188,39 @@ const TechnicalDetails = React.memo(({ event }: { readonly event: AuditEvent }) 
 TechnicalDetails.displayName = "TechnicalDetails";
 
 const EventFacts = React.memo(({ event }: { readonly event: AuditEvent }) => {
+	if (event.targetType === "job") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Changed fields</p>
+					<p className="mt-1 truncate font-medium">{formatChangedFields(event)}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Job title</p>
+					<p className="mt-1 truncate font-medium">
+						{metadataValue(event, "afterTitle") !== "-"
+							? metadataValue(event, "afterTitle")
+							: metadataValue(event, "title")}
+					</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Salary range</p>
+					<p className="mt-1 font-medium">
+						{centsToBirr(metadataValue(event, "afterSalaryMinCents"))} -{" "}
+						{centsToBirr(metadataValue(event, "afterSalaryMaxCents"))}
+					</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">
+						{metadataValue(event, "afterStatus") !== "-"
+							? metadataValue(event, "afterStatus")
+							: metadataValue(event, "status")}
+					</p>
+				</div>
+			</div>
+		);
+	}
 	const summary = event.targetSummary;
 	const salary = centsToBirr(summary?.salaryCents ?? metadataValue(event, "salaryCents"));
 	const commission = centsToBirr(summary?.commissionCents ?? metadataValue(event, "commissionCents"));
@@ -226,7 +270,13 @@ const AuditEventCard = React.memo(({ event }: { readonly event: AuditEvent }) =>
 				</div>
 			</div>
 			<div className="grid min-w-64 gap-1 rounded-md border bg-muted/20 p-3 text-sm">
-				<p className="font-medium">{event.targetSummary?.roleName ?? event.targetType ?? "Record"}</p>
+				<p className="font-medium">
+					{event.targetType === "job"
+						? metadataValue(event, "afterTitle") !== "-"
+							? metadataValue(event, "afterTitle")
+							: metadataValue(event, "title")
+						: (event.targetSummary?.roleName ?? event.targetType ?? "Record")}
+				</p>
 				<p className="text-muted-foreground">{event.targetSummary?.stationName ?? "No station recorded"}</p>
 				<p className="text-xs text-muted-foreground">{event.action}</p>
 			</div>

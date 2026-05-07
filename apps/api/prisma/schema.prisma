@@ -478,9 +478,13 @@ model Job {
   role              Role      @relation(fields: [roleId], references: [id])
   title             String
   description       String
+  schedule          String?
+  requirements      String?
+  perks             String?
   salaryMinCents    BigInt
   salaryMaxCents    BigInt
   location          String
+  autoCloseOnPlacement Boolean @default(true)
   // open | closed | filled
   status            String    @default("open")
   postedAt          DateTime  @default(now())

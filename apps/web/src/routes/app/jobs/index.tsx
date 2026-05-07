@@ -296,11 +296,25 @@ const CustomerJobsPage = React.memo(() => {
 						<CardContent className="space-y-3">
 							<p className="text-sm text-muted-foreground">{job.description}</p>
 							<div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-								<span>{t("jobs.posted", { date: new Date(job.postedAt).toLocaleDateString() })}</span>
-								{isEmployer && job.status === "open" && (
-									<Button variant="outline" size="sm" onClick={() => onClose(job.id)} disabled={closeJob.isPending}>
-										{t("jobs.close")}
-									</Button>
+								<div className="space-y-1">
+									<span>{t("jobs.posted", { date: new Date(job.postedAt).toLocaleDateString() })}</span>
+									{job.schedule && <p>{t("jobs.scheduleValue", { value: job.schedule })}</p>}
+									{job.requirements && <p>{t("jobs.requirementsValue", { value: job.requirements })}</p>}
+									{job.perks && <p>{t("jobs.perksValue", { value: job.perks })}</p>}
+								</div>
+								{isEmployer && (
+									<div className="flex gap-2">
+										<Button variant="outline" size="sm" asChild>
+											<Link to="/app/jobs/$id/edit" params={{ id: job.id }}>
+												{t("jobs.edit")}
+											</Link>
+										</Button>
+										{job.status === "open" && (
+											<Button variant="outline" size="sm" onClick={() => onClose(job.id)} disabled={closeJob.isPending}>
+												{t("jobs.close")}
+											</Button>
+										)}
+									</div>
 								)}
 							</div>
 						</CardContent>

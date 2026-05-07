@@ -12,9 +12,13 @@ type Row = {
 	role?: { name: string; category: string } | null;
 	title: string;
 	description: string;
+	schedule: string | null;
+	requirements: string | null;
+	perks: string | null;
 	salaryMinCents: bigint;
 	salaryMaxCents: bigint;
 	location: string;
+	autoCloseOnPlacement: boolean;
 	status: string;
 	postedAt: Date;
 	createdAt: Date;
@@ -31,9 +35,13 @@ const toJob = (row: Row): Job => ({
 	roleCategory: row.role?.category,
 	title: row.title,
 	description: row.description,
+	schedule: row.schedule,
+	requirements: row.requirements,
+	perks: row.perks,
 	salaryMinCents: row.salaryMinCents,
 	salaryMaxCents: row.salaryMaxCents,
 	location: row.location,
+	autoCloseOnPlacement: row.autoCloseOnPlacement,
 	status: row.status as JobStatus,
 	postedAt: row.postedAt,
 	createdAt: row.createdAt,
@@ -67,9 +75,13 @@ export class PrismaJobsRepository implements IJobsRepository {
 				roleId: data.roleId,
 				title: data.title,
 				description: data.description,
+				schedule: data.schedule,
+				requirements: data.requirements,
+				perks: data.perks,
 				salaryMinCents: data.salaryMinCents,
 				salaryMaxCents: data.salaryMaxCents,
 				location: data.location,
+				autoCloseOnPlacement: data.autoCloseOnPlacement,
 				status: data.status,
 			},
 			include: JOB_SUMMARY_INCLUDE,
