@@ -35,6 +35,7 @@ export const am = {
 		dashboard: "ዳሽቦርድ",
 		workers: "ሰራተኞች",
 		employers: "ቀጣሪዎች",
+		jobs: "ስራዎች",
 		hireRequests: "የቅጥር ጥያቄዎች",
 		referrals: "ሪፈራሎች",
 		placements: "ምደባዎች",
@@ -391,6 +392,9 @@ export const am = {
 	jobs: {
 		title: "ስራዎች",
 		create: "ስራ ይለጥፉ",
+		staffSubtitle: "ለቀጣሪዎች ስራ ይለጥፉ እና ክፍት ፍላጎትን ይከታተሉ።",
+		createOnBehalf: "ለቀጣሪ ስራ ይለጥፉ",
+		selectEmployer: "ቀጣሪ ይምረጡ",
 		editJob: "ስራ ያስተካክሉ",
 		saveJob: "ስራ ያስቀምጡ",
 		edit: "አስተካክል",

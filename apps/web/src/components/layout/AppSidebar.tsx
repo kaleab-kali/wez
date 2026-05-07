@@ -41,6 +41,7 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 	{ labelKey: "nav.dashboard", to: "/staff/dashboard", icon: DashboardSquare01Icon },
 	{ labelKey: "nav.workers", to: "/staff/workers", icon: UserMultipleIcon },
 	{ labelKey: "nav.employers", to: "/staff/employers", icon: ContactBookIcon },
+	{ labelKey: "nav.jobs", to: "/staff/jobs", icon: Briefcase02Icon },
 	{ labelKey: "nav.hireRequests", to: "/staff/hire-requests", icon: NoteEditIcon },
 	{ labelKey: "nav.referrals", to: "/staff/referrals", icon: ContactBookIcon },
 	{ labelKey: "nav.placements", to: "/staff/placements", icon: Briefcase02Icon },

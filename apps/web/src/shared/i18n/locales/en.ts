@@ -33,6 +33,7 @@ export const en = {
 		dashboard: "Dashboard",
 		workers: "Workers",
 		employers: "Employers",
+		jobs: "Jobs",
 		hireRequests: "Hire requests",
 		referrals: "Referrals",
 		placements: "Placements",
@@ -399,6 +400,9 @@ export const en = {
 	jobs: {
 		title: "Jobs",
 		subtitle: "Create and manage job posts for your employer account.",
+		staffSubtitle: "Create job posts on behalf of employers and monitor open demand.",
+		createOnBehalf: "Post job for employer",
+		selectEmployer: "Select employer",
 		browseJobs: "Browse jobs",
 		workerCatalogBody: "Browse open jobs that Wez employers have posted.",
 		searchPlaceholder: "Title or description",
