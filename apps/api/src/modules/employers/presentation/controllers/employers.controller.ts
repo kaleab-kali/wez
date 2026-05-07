@@ -1,5 +1,6 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Public } from "#modules/auth/guards/wez-auth.guard";
 import { hasPermission } from "#modules/auth/permissions";
 import { requirePermission, requireSession, type WezRequest } from "#shared/auth/session";
 import {
@@ -39,6 +40,7 @@ export class EmployersController {
 	}
 
 	@Post("signup")
+	@Public()
 	@ApiOperation({ summary: "Create customer login and employer profile" })
 	@ApiBody({ type: SignupEmployerDto })
 	async signup(@Body() dto: SignupEmployerDto) {

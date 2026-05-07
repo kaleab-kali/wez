@@ -1,10 +1,13 @@
-import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, type ExecutionContext, Injectable, SetMetadata, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import { getSession, type WezSession } from "#shared/auth/session";
 
-const PUBLIC_KEY = "PUBLIC";
-const OPTIONAL_KEY = "OPTIONAL";
+export const PUBLIC_KEY = "PUBLIC";
+export const OPTIONAL_KEY = "OPTIONAL";
+
+export const Public = () => SetMetadata(PUBLIC_KEY, true);
+export const OptionalAuth = () => SetMetadata(OPTIONAL_KEY, true);
 
 type RequestWithWezSession = Request & {
 	wezSession?: WezSession | null;
