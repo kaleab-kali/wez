@@ -82,6 +82,38 @@ const EmployerDetailPage = React.memo(() => {
 								<p className="font-mono">{e.businessLicense}</p>
 							</div>
 						)}
+						{e.businessLicenseExpiresAt && (
+							<div>
+								<p className="text-muted-foreground text-xs">{t("employers.licenseExpiry")}</p>
+								<p>{new Date(e.businessLicenseExpiresAt).toLocaleDateString()}</p>
+							</div>
+						)}
+						{e.businessCategory && (
+							<div>
+								<p className="text-muted-foreground text-xs">{t("employers.businessCategory")}</p>
+								<p>{e.businessCategory}</p>
+							</div>
+						)}
+						{e.businessAddress && (
+							<div>
+								<p className="text-muted-foreground text-xs">{t("employers.businessAddress")}</p>
+								<p>{e.businessAddress}</p>
+							</div>
+						)}
+					</CardContent>
+				</Card>
+			)}
+
+			{e.type === "household" && e.secondaryContact && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base">{t("landing.household")}</CardTitle>
+					</CardHeader>
+					<CardContent className="grid grid-cols-2 text-sm gap-3">
+						<div>
+							<p className="text-muted-foreground text-xs">{t("employers.secondaryContact")}</p>
+							<p className="font-mono">{e.secondaryContact}</p>
+						</div>
 					</CardContent>
 				</Card>
 			)}

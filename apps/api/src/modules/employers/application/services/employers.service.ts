@@ -34,6 +34,10 @@ export class EmployersService {
 		if (dto.type === "business") {
 			if (!dto.tin) throw new BadRequestException({ code: "TIN_REQUIRED" });
 			if (!dto.businessLicense) throw new BadRequestException({ code: "LICENSE_REQUIRED" });
+			if (!dto.businessLicenseExpiresAt) throw new BadRequestException({ code: "LICENSE_EXPIRY_REQUIRED" });
+			if (new Date(dto.businessLicenseExpiresAt).getTime() <= Date.now()) {
+				throw new BadRequestException({ code: "LICENSE_EXPIRED" });
+			}
 			const t = await this.repo.findByTin(dto.tin);
 			if (t) throw new ConflictException({ code: "TIN_TAKEN" });
 		} else {
@@ -52,7 +56,11 @@ export class EmployersService {
 			area: dto.area,
 			tin: dto.tin ?? null,
 			businessLicense: dto.businessLicense ?? null,
+			businessLicenseExpiresAt: dto.businessLicenseExpiresAt ? new Date(dto.businessLicenseExpiresAt) : null,
+			businessAddress: dto.businessAddress ?? null,
+			businessCategory: dto.businessCategory ?? null,
 			fayda: dto.fayda ?? null,
+			secondaryContact: dto.secondaryContact ?? null,
 			registeredByAgentId: asAgent ? currentUserId : null,
 		});
 
@@ -68,6 +76,10 @@ export class EmployersService {
 
 	async update(id: string, dto: UpdateEmployerDto) {
 		await this.getById(id);
-		return this.repo.update(id, dto);
+		const patch = {
+			...dto,
+			businessLicenseExpiresAt: dto.businessLicenseExpiresAt ? new Date(dto.businessLicenseExpiresAt) : undefined,
+		};
+		return this.repo.update(id, patch);
 	}
 }

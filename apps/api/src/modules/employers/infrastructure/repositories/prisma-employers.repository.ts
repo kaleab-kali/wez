@@ -21,7 +21,11 @@ type Row = {
 	area: string;
 	tin: string | null;
 	businessLicense: string | null;
+	businessLicenseExpiresAt: Date | null;
+	businessAddress: string | null;
+	businessCategory: string | null;
 	fayda: string | null;
+	secondaryContact: string | null;
 	rating: string;
 	placementsCount: number;
 	complaintsCount: number;
@@ -41,7 +45,11 @@ const toEmployer = (row: Row): Employer => ({
 	area: row.area,
 	tin: row.tin,
 	businessLicense: row.businessLicense,
+	businessLicenseExpiresAt: row.businessLicenseExpiresAt,
+	businessAddress: row.businessAddress,
+	businessCategory: row.businessCategory,
 	fayda: row.fayda,
+	secondaryContact: row.secondaryContact,
 	rating: row.rating as EmployerRating,
 	placementsCount: row.placementsCount,
 	complaintsCount: row.complaintsCount,
@@ -86,7 +94,11 @@ export class PrismaEmployersRepository implements IEmployersRepository {
 				area: data.area,
 				tin: data.tin,
 				businessLicense: data.businessLicense,
+				businessLicenseExpiresAt: data.businessLicenseExpiresAt,
+				businessAddress: data.businessAddress,
+				businessCategory: data.businessCategory,
 				fayda: data.fayda,
+				secondaryContact: data.secondaryContact,
 				registeredByAgentId: data.registeredByAgentId,
 			},
 		});

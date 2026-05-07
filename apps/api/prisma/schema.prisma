@@ -441,7 +441,11 @@ model Employer {
   area                     String
   tin                      String?
   businessLicense          String?
+  businessLicenseExpiresAt DateTime? @db.Date
+  businessAddress          String?
+  businessCategory         String?
   fayda                    String?
+  secondaryContact         String?
   // green | yellow | orange | red
   rating                   String    @default("green")
   placementsCount          Int       @default(0)

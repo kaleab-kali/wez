@@ -12,7 +12,11 @@ export interface Employer {
 	area: string;
 	tin: string | null;
 	businessLicense: string | null;
+	businessLicenseExpiresAt: Date | null;
+	businessAddress: string | null;
+	businessCategory: string | null;
 	fayda: string | null;
+	secondaryContact: string | null;
 	rating: EmployerRating;
 	placementsCount: number;
 	complaintsCount: number;
@@ -31,7 +35,11 @@ export interface NewEmployer {
 	area: string;
 	tin: string | null;
 	businessLicense: string | null;
+	businessLicenseExpiresAt: Date | null;
+	businessAddress: string | null;
+	businessCategory: string | null;
 	fayda: string | null;
+	secondaryContact: string | null;
 	registeredByAgentId: string | null;
 }
 
@@ -43,7 +51,11 @@ export type EmployerPatch = Partial<{
 	area: string;
 	tin: string;
 	businessLicense: string;
+	businessLicenseExpiresAt: Date;
+	businessAddress: string;
+	businessCategory: string;
 	fayda: string;
+	secondaryContact: string;
 	rating: EmployerRating;
 }>;
 

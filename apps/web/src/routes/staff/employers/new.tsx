@@ -15,6 +15,51 @@ export const Route = createFileRoute("/staff/employers/new")({
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 const FAYDA = /^F-\d{4}-\d{4}-[A-Z]{2}$/;
 
+type EmployerFormState = {
+	readonly type: "business" | "household";
+	readonly name: string;
+	readonly contactName: string;
+	readonly phone: string;
+	readonly email: string;
+	readonly area: string;
+	readonly tin: string;
+	readonly businessLicense: string;
+	readonly businessLicenseExpiresAt: string;
+	readonly businessAddress: string;
+	readonly businessCategory: string;
+	readonly fayda: string;
+	readonly secondaryContact: string;
+};
+
+const validateEmployerForm = (form: EmployerFormState, t: (key: string) => string) => {
+	if (!ETHIOPIAN_PHONE.test(form.phone)) return t("workers.register.invalidPhone");
+	if (form.type === "household" && form.fayda && !FAYDA.test(form.fayda)) return t("workers.register.invalidFayda");
+	if (
+		form.type === "business" &&
+		form.businessLicenseExpiresAt &&
+		new Date(form.businessLicenseExpiresAt).getTime() <= Date.now()
+	) {
+		return t("employers.licenseExpired");
+	}
+	return "";
+};
+
+const buildEmployerPayload = (form: EmployerFormState) => ({
+	type: form.type,
+	name: form.name,
+	contactName: form.contactName || undefined,
+	phone: form.phone,
+	email: form.email || undefined,
+	area: form.area,
+	tin: form.type === "business" ? form.tin : undefined,
+	businessLicense: form.type === "business" ? form.businessLicense : undefined,
+	businessLicenseExpiresAt: form.type === "business" ? form.businessLicenseExpiresAt : undefined,
+	businessAddress: form.type === "business" ? form.businessAddress || undefined : undefined,
+	businessCategory: form.type === "business" ? form.businessCategory || undefined : undefined,
+	fayda: form.type === "household" ? form.fayda : undefined,
+	secondaryContact: form.type === "household" ? form.secondaryContact || undefined : undefined,
+});
+
 function RegisterEmployerPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
@@ -29,39 +74,62 @@ function RegisterEmployerPage() {
 	const [area, setArea] = React.useState("");
 	const [tin, setTin] = React.useState("");
 	const [businessLicense, setBusinessLicense] = React.useState("");
+	const [businessLicenseExpiresAt, setBusinessLicenseExpiresAt] = React.useState("");
+	const [businessAddress, setBusinessAddress] = React.useState("");
+	const [businessCategory, setBusinessCategory] = React.useState("");
 	const [fayda, setFayda] = React.useState("");
+	const [secondaryContact, setSecondaryContact] = React.useState("");
 	const [error, setError] = React.useState("");
 
 	const onSubmit = React.useCallback(
 		async (e: React.FormEvent) => {
 			e.preventDefault();
 			setError("");
-			if (!ETHIOPIAN_PHONE.test(phone)) {
-				setError(t("workers.register.invalidPhone"));
-				return;
-			}
-			if (type === "household" && fayda && !FAYDA.test(fayda)) {
-				setError(t("workers.register.invalidFayda"));
+			const form = {
+				type,
+				name,
+				contactName,
+				phone,
+				email,
+				area,
+				tin,
+				businessLicense,
+				businessLicenseExpiresAt,
+				businessAddress,
+				businessCategory,
+				fayda,
+				secondaryContact,
+			};
+			const validationError = validateEmployerForm(form, t);
+			if (validationError) {
+				setError(validationError);
 				return;
 			}
 			try {
-				const created = await createE.mutateAsync({
-					type,
-					name,
-					contactName: contactName || undefined,
-					phone,
-					email: email || undefined,
-					area,
-					tin: type === "business" ? tin : undefined,
-					businessLicense: type === "business" ? businessLicense : undefined,
-					fayda: type === "household" ? fayda : undefined,
-				});
+				const created = await createE.mutateAsync(buildEmployerPayload(form));
 				navigate({ to: "/staff/employers/$id", params: { id: created.id } });
 			} catch (err) {
 				setError(err instanceof Error ? err.message : t("common.error"));
 			}
 		},
-		[type, name, contactName, phone, email, area, tin, businessLicense, fayda, createE, navigate, t],
+		[
+			type,
+			name,
+			contactName,
+			phone,
+			email,
+			area,
+			tin,
+			businessLicense,
+			businessLicenseExpiresAt,
+			businessAddress,
+			businessCategory,
+			fayda,
+			secondaryContact,
+			createE,
+			navigate,
+			t,
+		],
 	);
 
 	return (
@@ -151,18 +219,56 @@ function RegisterEmployerPage() {
 										required
 									/>
 								</div>
+								<div className="space-y-2">
+									<Label htmlFor="licenseExpiry">{t("employers.licenseExpiry")}</Label>
+									<Input
+										id="licenseExpiry"
+										type="date"
+										value={businessLicenseExpiresAt}
+										onChange={(e) => setBusinessLicenseExpiresAt(e.target.value)}
+										required
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-3">
+									<div className="space-y-2">
+										<Label htmlFor="businessCategory">{t("employers.businessCategory")}</Label>
+										<Input
+											id="businessCategory"
+											value={businessCategory}
+											onChange={(e) => setBusinessCategory(e.target.value)}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="businessAddress">{t("employers.businessAddress")}</Label>
+										<Input
+											id="businessAddress"
+											value={businessAddress}
+											onChange={(e) => setBusinessAddress(e.target.value)}
+										/>
+									</div>
+								</div>
 							</>
 						) : (
-							<div className="space-y-2">
-								<Label htmlFor="fayda">{t("workers.register.fayda")}</Label>
-								<Input
-									id="fayda"
-									value={fayda}
-									onChange={(e) => setFayda(e.target.value)}
-									placeholder="F-XXXX-XXXX-XX"
-									required
-								/>
-							</div>
+							<>
+								<div className="space-y-2">
+									<Label htmlFor="fayda">{t("workers.register.fayda")}</Label>
+									<Input
+										id="fayda"
+										value={fayda}
+										onChange={(e) => setFayda(e.target.value)}
+										placeholder="F-XXXX-XXXX-XX"
+										required
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="secondaryContact">{t("employers.secondaryContact")}</Label>
+									<Input
+										id="secondaryContact"
+										value={secondaryContact}
+										onChange={(e) => setSecondaryContact(e.target.value)}
+									/>
+								</div>
+							</>
 						)}
 						<Button type="submit" className="w-full" disabled={createE.isPending}>
 							{createE.isPending ? t("common.saving") : t("common.create")}

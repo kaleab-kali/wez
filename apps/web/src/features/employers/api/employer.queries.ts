@@ -35,7 +35,11 @@ export type Employer = {
 	area: string;
 	tin: string | null;
 	businessLicense: string | null;
+	businessLicenseExpiresAt: string | null;
+	businessAddress: string | null;
+	businessCategory: string | null;
 	fayda: string | null;
+	secondaryContact: string | null;
 	rating: "green" | "yellow" | "orange" | "red";
 	placementsCount: number;
 	complaintsCount: number;
@@ -102,7 +106,11 @@ export const useCreateEmployer = () => {
 			area: string;
 			tin?: string;
 			businessLicense?: string;
+			businessLicenseExpiresAt?: string;
+			businessAddress?: string;
+			businessCategory?: string;
 			fayda?: string;
+			secondaryContact?: string;
 		}) => send<{ data: Employer }>(BASE, "POST", input).then((b) => b.data),
 		onSuccess: () => qc.invalidateQueries({ queryKey: employerKeys.all }),
 	});

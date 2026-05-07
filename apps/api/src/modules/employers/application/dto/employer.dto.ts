@@ -1,9 +1,10 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Length, Matches, Max, Min } from "class-validator";
+import { IsDateString, IsEmail, IsEnum, IsInt, IsOptional, IsString, Length, Matches, Max, Min } from "class-validator";
 
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 const FAYDA = /^F-\d{4}-\d{4}-[A-Z]{2}$/;
+const ERCA_TIN = /^(TIN-\d{6}|\d{10})$/;
 
 export class CreateEmployerDto {
 	@ApiProperty({ enum: ["business", "household"] })
@@ -40,7 +41,7 @@ export class CreateEmployerDto {
 	@ApiProperty({ required: false, description: "Business TIN" })
 	@IsOptional()
 	@IsString()
-	@Length(0, 20)
+	@Matches(ERCA_TIN, { message: "TIN must be 10 digits or TIN-XXXXXX" })
 	tin?: string;
 
 	@ApiProperty({ required: false, description: "Business license number" })
@@ -49,12 +50,35 @@ export class CreateEmployerDto {
 	@Length(0, 50)
 	businessLicense?: string;
 
+	@ApiProperty({ required: false, description: "Business license expiry date, YYYY-MM-DD" })
+	@IsOptional()
+	@IsDateString()
+	businessLicenseExpiresAt?: string;
+
+	@ApiProperty({ required: false, description: "Business address" })
+	@IsOptional()
+	@IsString()
+	@Length(0, 300)
+	businessAddress?: string;
+
+	@ApiProperty({ required: false, description: "Business category, e.g. hotel or restaurant" })
+	@IsOptional()
+	@IsString()
+	@Length(0, 80)
+	businessCategory?: string;
+
 	// Household-only
 	@ApiProperty({ required: false, description: "Household head Fayda" })
 	@IsOptional()
 	@IsString()
 	@Matches(FAYDA, { message: "Fayda must look like F-XXXX-XXXX-XX" })
 	fayda?: string;
+
+	@ApiProperty({ required: false, description: "Secondary household contact" })
+	@IsOptional()
+	@IsString()
+	@Length(0, 200)
+	secondaryContact?: string;
 }
 
 export class UpdateEmployerDto extends PartialType(CreateEmployerDto) {

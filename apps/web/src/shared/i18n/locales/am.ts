@@ -378,6 +378,11 @@ export const am = {
 	employers: {
 		title: "ቀጣሪዎች",
 		register: "ቀጣሪ ይመዝግቡ",
+		licenseExpiry: "License expiry",
+		licenseExpired: "Business license is expired.",
+		businessCategory: "Business type",
+		businessAddress: "Business address",
+		secondaryContact: "Secondary contact",
 		ratingGreen: "በጥሩ ደረጃ",
 		ratingYellow: "ማስታወቂያ",
 		ratingOrange: "ማስጠንቀቂያ",
