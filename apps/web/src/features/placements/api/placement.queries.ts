@@ -56,6 +56,7 @@ export type Placement = {
 	ratingCommentByEmployer: string | null;
 	ratingByWorker: string | null;
 	ratingCommentByWorker: string | null;
+	ratingWindowClosesAt: string | null;
 	salaryCents: string;
 	commissionCents: string;
 	paymentMethod: PaymentMethod | string;

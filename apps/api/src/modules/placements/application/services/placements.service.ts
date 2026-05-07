@@ -21,6 +21,8 @@ import { AgreementPdfService } from "./agreement-pdf.service";
 
 const STORAGE_ORGANIZATION_ID = "wez";
 const AGREEMENT_FOLDER = "agreements";
+const RATING_WINDOW_DAYS = 30;
+const MILLISECONDS_PER_DAY = 86_400_000;
 
 @Injectable()
 export class PlacementsService {
@@ -98,6 +100,7 @@ export class PlacementsService {
 				...item,
 				job: item.hireRequest?.job ?? null,
 				hireRequest: undefined,
+				ratingWindowClosesAt: this.ratingWindowClosesAt(item.endDate),
 			})),
 			meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
 		};
@@ -357,11 +360,16 @@ export class PlacementsService {
 			endDate: dto.endDate,
 			endedReason: dto.endedReason,
 		});
-		return updated;
+		return { ...updated, ratingWindowClosesAt: this.ratingWindowClosesAt(updated.endDate) };
 	}
 
 	private calculateCommission(salaryCents: bigint, commType: string, commValue: number): bigint {
 		return commType === "percent" ? (salaryCents * BigInt(commValue)) / 100n : BigInt(commValue) * 100n;
+	}
+
+	private ratingWindowClosesAt(endDate: Date | null): string | null {
+		if (!endDate) return null;
+		return new Date(endDate.getTime() + RATING_WINDOW_DAYS * MILLISECONDS_PER_DAY).toISOString();
 	}
 
 	private async enqueuePlacementFinalizedNotifications(input: {

@@ -512,6 +512,7 @@ export const en = {
 		workerRatingComment: "Worker rating comment",
 		employerRating: "Employer rating",
 		employerRatingComment: "Employer rating comment",
+		ratingWindowClosesAt: "Rating window closes",
 		confirmEnd: "Confirm end",
 		statusActive: "Active",
 		statusEnded: "Ended",

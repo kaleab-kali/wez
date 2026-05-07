@@ -179,6 +179,11 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 							{placement.endDate ? new Date(placement.endDate).toLocaleDateString() : "-"} -{" "}
 							{placement.endedReason ?? "-"}
 						</p>
+						{placement.ratingWindowClosesAt && (
+							<p className="mt-1 text-xs text-muted-foreground">
+								{t("placements.ratingWindowClosesAt")}: {formatDate(placement.ratingWindowClosesAt)}
+							</p>
+						)}
 						{(placement.ratingCommentByEmployer || placement.ratingCommentByWorker) && (
 							<div className="mt-2 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
 								{placement.ratingCommentByEmployer && (
