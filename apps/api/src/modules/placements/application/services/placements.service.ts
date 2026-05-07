@@ -109,6 +109,9 @@ export class PlacementsService {
 		const paymentReceivedAt = new Date(dto.paymentReceivedAt);
 		const placementId = randomUUID();
 		const finalizedByAgentId = session.user.id;
+		if (dto.paymentMethod === "cash" && dto.cashDoubleConfirmed !== true) {
+			throw new BadRequestException({ code: "CASH_DOUBLE_CONFIRMATION_REQUIRED" });
+		}
 		const requestSnapshot = await this.prisma.hireRequest.findUnique({
 			where: { id: hireRequestId },
 			include: { role: true, placement: true, worker: true, employer: true, station: true },

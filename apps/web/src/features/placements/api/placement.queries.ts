@@ -3,6 +3,8 @@ import { hireRequestKeys } from "#features/hire-requests/api/hire-request.querie
 import { workerKeys } from "#features/workers/api/worker.queries";
 
 const BASE = "/api/v1/placements";
+export const PAYMENT_METHODS = ["telebirr", "cbe_birr", "bank", "cash"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
@@ -54,7 +56,7 @@ export type Placement = {
 	ratingByWorker: string | null;
 	salaryCents: string;
 	commissionCents: string;
-	paymentMethod: string;
+	paymentMethod: PaymentMethod | string;
 	paymentReference: string;
 	paymentReceivedAt: string;
 	agreementPdfUrl: string | null;
@@ -99,9 +101,10 @@ export const useFinalizePlacement = (hireRequestId: string) => {
 		mutationFn: (input: {
 			startDate: string;
 			salaryCents: number;
-			paymentMethod: string;
+			paymentMethod: PaymentMethod;
 			paymentReference: string;
 			paymentReceivedAt: string;
+			cashDoubleConfirmed?: boolean;
 		}) =>
 			send<{ data: Placement }>(`${BASE}/from-hire-request/${hireRequestId}/finalize`, "POST", input).then(
 				(b) => b.data,

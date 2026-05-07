@@ -5,6 +5,7 @@ import { CORRELATION_ID_HEADER } from "#shared/logger/logger.constants";
 
 const DOMAIN_ERROR_MESSAGES: Record<string, string> = {
 	ALREADY_FINALIZED: "This request has already been finalized.",
+	CASH_DOUBLE_CONFIRMATION_REQUIRED: "Cash payment must be double-confirmed before placement.",
 	EMPLOYER_BANNED: "This employer account is restricted.",
 	EMPLOYER_ID_REQUIRED: "Employer is required.",
 	HIRE_REQUEST_NOT_AWAITING_VISIT: "Only awaiting hire requests can be finalized.",

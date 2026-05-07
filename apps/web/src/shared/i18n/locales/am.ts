@@ -479,6 +479,12 @@ export const am = {
 		commissionRule: "Commission rule",
 		amountToCollect: "Amount to collect",
 		paymentMethod: "Payment method",
+		paymentMethods: {
+			telebirr: "Telebirr",
+			cbe_birr: "CBE Birr",
+			bank: "Bank",
+			cash: "Cash",
+		},
 		paymentReference: "Payment reference",
 		finalizedBy: "Finalized by",
 		created: "Created",
@@ -502,6 +508,8 @@ export const am = {
 		paymentReceivedConfirm: "Payment received and verified",
 		paymentReceivedConfirmBody:
 			"This creates the placement, marks the worker currently placed, and completes the hire request.",
+		cashDoubleConfirm: "Cash counted and confirmed by a second staff member",
+		cashDoubleConfirmBody: "Cash placements require a second check before the placement can be finalized.",
 	},
 	platformSettings: {
 		hiringPolicy: "Hiring policy",

@@ -1,6 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+
+export const PAYMENT_METHODS = ["telebirr", "cbe_birr", "bank", "cash"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export class FinalizePlacementDto {
 	@ApiProperty({ description: "Placement start date" })
@@ -13,10 +16,9 @@ export class FinalizePlacementDto {
 	@Type(() => Number)
 	salaryCents!: number;
 
-	@ApiProperty()
-	@IsString()
-	@MaxLength(40)
-	paymentMethod!: string;
+	@ApiProperty({ enum: PAYMENT_METHODS })
+	@IsEnum(PAYMENT_METHODS)
+	paymentMethod!: PaymentMethod;
 
 	@ApiProperty()
 	@IsString()
@@ -26,6 +28,12 @@ export class FinalizePlacementDto {
 	@ApiProperty({ description: "Timestamp when placement payment was received" })
 	@IsDateString()
 	paymentReceivedAt!: string;
+
+	@ApiProperty({ required: false, description: "Required when payment method is cash" })
+	@IsOptional()
+	@IsBoolean()
+	@Type(() => Boolean)
+	cashDoubleConfirmed?: boolean;
 }
 
 export class EndPlacementDto {

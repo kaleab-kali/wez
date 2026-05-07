@@ -6,7 +6,7 @@ import {
 	type HireRequestFilter,
 	useHireRequests,
 } from "#features/hire-requests/api/hire-request.queries";
-import { useFinalizePlacement } from "#features/placements/api/placement.queries";
+import { PAYMENT_METHODS, type PaymentMethod, useFinalizePlacement } from "#features/placements/api/placement.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -184,11 +184,13 @@ const FinalizePlacementForm = React.memo(
 		const { t } = useTranslation();
 		const finalize = useFinalizePlacement(request.id);
 		const [salary, setSalary] = React.useState(Number(request.proposedSalaryCents) / 100);
-		const [paymentMethod, setPaymentMethod] = React.useState("cash");
+		const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("cash");
 		const [paymentReference, setPaymentReference] = React.useState("");
 		const [startDate, setStartDate] = React.useState(() => new Date().toISOString().slice(0, 10));
 		const [paymentReceived, setPaymentReceived] = React.useState(false);
+		const [cashDoubleConfirmed, setCashDoubleConfirmed] = React.useState(false);
 		const [error, setError] = React.useState("");
+		const isCash = paymentMethod === "cash";
 		const commissionCents = React.useMemo(() => calculateCommissionCents(request, salary), [request, salary]);
 		const roleRange = React.useMemo(() => {
 			if (!request.roleSalaryMinCents || !request.roleSalaryMaxCents) return "-";
@@ -206,13 +208,14 @@ const FinalizePlacementForm = React.memo(
 						paymentMethod,
 						paymentReference,
 						paymentReceivedAt: new Date().toISOString(),
+						cashDoubleConfirmed: isCash ? cashDoubleConfirmed : undefined,
 					});
 					onClose();
 				} catch (err) {
 					setError(err instanceof Error ? err.message : t("common.error"));
 				}
 			},
-			[finalize, onClose, paymentMethod, paymentReference, salary, startDate, t],
+			[cashDoubleConfirmed, finalize, isCash, onClose, paymentMethod, paymentReference, salary, startDate, t],
 		);
 
 		if (!open) {
@@ -271,12 +274,22 @@ const FinalizePlacementForm = React.memo(
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor={`method-${request.id}`}>{t("placements.paymentMethod")}</Label>
-					<Input
+					<select
 						id={`method-${request.id}`}
 						value={paymentMethod}
-						onChange={(event) => setPaymentMethod(event.target.value)}
+						onChange={(event) => {
+							setPaymentMethod(event.target.value as PaymentMethod);
+							setCashDoubleConfirmed(false);
+						}}
+						className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
 						required
-					/>
+					>
+						{PAYMENT_METHODS.map((method) => (
+							<option key={method} value={method}>
+								{t(`placements.paymentMethods.${method}`)}
+							</option>
+						))}
+					</select>
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor={`reference-${request.id}`}>{t("placements.paymentReference")}</Label>
@@ -301,11 +314,30 @@ const FinalizePlacementForm = React.memo(
 						<span className="block text-xs text-muted-foreground">{t("placements.paymentReceivedConfirmBody")}</span>
 					</span>
 				</label>
+				{isCash && (
+					<label
+						htmlFor={`cash-confirmed-${request.id}`}
+						className="flex items-start gap-2 rounded-md border p-3 md:col-span-4"
+					>
+						<input
+							id={`cash-confirmed-${request.id}`}
+							type="checkbox"
+							checked={cashDoubleConfirmed}
+							onChange={(event) => setCashDoubleConfirmed(event.target.checked)}
+							className="mt-1"
+							required
+						/>
+						<span>
+							<span className="block text-sm font-medium">{t("placements.cashDoubleConfirm")}</span>
+							<span className="block text-xs text-muted-foreground">{t("placements.cashDoubleConfirmBody")}</span>
+						</span>
+					</label>
+				)}
 				<div className="flex gap-2 md:col-span-4">
 					<Button type="button" variant="outline" onClick={onClose}>
 						{t("common.cancel")}
 					</Button>
-					<Button type="submit" disabled={finalize.isPending || !paymentReceived}>
+					<Button type="submit" disabled={finalize.isPending || !paymentReceived || (isCash && !cashDoubleConfirmed)}>
 						{finalize.isPending ? t("common.saving") : t("placements.confirmFinalize")}
 					</Button>
 				</div>
