@@ -3,6 +3,8 @@ import { hireRequestKeys } from "#features/hire-requests/api/hire-request.querie
 import { workerKeys } from "#features/workers/api/worker.queries";
 
 const BASE = "/api/v1/placements";
+export const PAYMENT_METHODS = ["telebirr", "cbe_birr", "bank", "cash"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
@@ -51,10 +53,13 @@ export type Placement = {
 	endDate: string | null;
 	endedReason: string | null;
 	ratingByEmployer: string | null;
+	ratingCommentByEmployer: string | null;
 	ratingByWorker: string | null;
+	ratingCommentByWorker: string | null;
+	ratingWindowClosesAt: string | null;
 	salaryCents: string;
 	commissionCents: string;
-	paymentMethod: string;
+	paymentMethod: PaymentMethod | string;
 	paymentReference: string;
 	paymentReceivedAt: string;
 	agreementPdfUrl: string | null;
@@ -99,9 +104,10 @@ export const useFinalizePlacement = (hireRequestId: string) => {
 		mutationFn: (input: {
 			startDate: string;
 			salaryCents: number;
-			paymentMethod: string;
+			paymentMethod: PaymentMethod;
 			paymentReference: string;
 			paymentReceivedAt: string;
+			cashDoubleConfirmed?: boolean;
 		}) =>
 			send<{ data: Placement }>(`${BASE}/from-hire-request/${hireRequestId}/finalize`, "POST", input).then(
 				(b) => b.data,
@@ -114,6 +120,29 @@ export const useFinalizePlacement = (hireRequestId: string) => {
 	});
 };
 
+export const useFinalizeFreshPlacement = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (input: {
+			workerId: string;
+			employerId: string;
+			roleId: string;
+			stationId: string;
+			startDate: string;
+			salaryCents: number;
+			paymentMethod: PaymentMethod;
+			paymentReference: string;
+			paymentReceivedAt: string;
+			cashDoubleConfirmed?: boolean;
+		}) => send<{ data: Placement }>(`${BASE}/fresh/finalize`, "POST", input).then((b) => b.data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: placementKeys.all });
+			qc.invalidateQueries({ queryKey: workerKeys.all });
+			qc.invalidateQueries({ queryKey: hireRequestKeys.all });
+		},
+	});
+};
+
 export const useEndPlacement = () => {
 	const qc = useQueryClient();
 	return useMutation({
@@ -122,13 +151,17 @@ export const useEndPlacement = () => {
 			endDate: string;
 			endedReason: string;
 			ratingByEmployer?: number;
+			ratingCommentByEmployer?: string;
 			ratingByWorker?: number;
+			ratingCommentByWorker?: string;
 		}) =>
 			send<{ data: Placement }>(`${BASE}/${input.id}/end`, "POST", {
 				endDate: input.endDate,
 				endedReason: input.endedReason,
 				ratingByEmployer: input.ratingByEmployer,
+				ratingCommentByEmployer: input.ratingCommentByEmployer,
 				ratingByWorker: input.ratingByWorker,
+				ratingCommentByWorker: input.ratingCommentByWorker,
 			}).then((b) => b.data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: placementKeys.all });

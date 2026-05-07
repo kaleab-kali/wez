@@ -32,6 +32,24 @@ export type AgreementPdfPayload = {
 	finalizedBy: string;
 };
 
+const ENGLISH_TERMS = [
+	"The employer confirms the worker, role, salary, and start date recorded above.",
+	"Wez commission is system-calculated from the active role catalog and is not negotiated at the desk.",
+	"Placement is active only after payment is received and verified by the station agent.",
+	"Complaints may be filed at any Wez station. Serious complaints may be referred to compliance.",
+	"Workers are not charged placement fees by Wez.",
+	"This agreement is printed for physical signature or thumbprint by the parties.",
+] as const;
+
+const AMHARIC_TERMS = [
+	"አሠሪው ከላይ የተመዘገበውን ሠራተኛ፣ የሥራ ዓይነት፣ ደመወዝ እና የመጀመሪያ ቀን ያረጋግጣል።",
+	"የዌዝ ኮሚሽን በስርዓቱ ከተዋቀረው የሚና ካታሎግ ይሰላል፤ በጣቢያ ላይ አይደራደርም።",
+	"ምደባው ክፍያ ተቀብሎ በጣቢያ ወኪል ከተረጋገጠ በኋላ ብቻ ንቁ ይሆናል።",
+	"ቅሬታ በማንኛውም የዌዝ ጣቢያ ሊቀርብ ይችላል። ከባድ ቅሬታዎች ወደ ተገዢነት ቡድን ሊመሩ ይችላሉ።",
+	"ሠራተኞች ለምደባ በዌዝ ክፍያ አይከፍሉም።",
+	"ይህ ስምምነት በወረቀት ታትሞ በተዋዋይ ወገኖች ፊርማ ወይም አሻራ ይረጋገጣል።",
+] as const;
+
 const money = (cents: bigint): string => `${(cents / CURRENCY_DIVISOR).toLocaleString()} ETB`;
 
 const addKeyValue = (doc: PDFKit.PDFDocument, label: string, value: string) => {
@@ -52,6 +70,17 @@ const addAmharicText = (doc: PDFKit.PDFDocument, value: string, hasAmharicFont: 
 		return;
 	}
 	doc.font("Helvetica-Oblique").text("Amharic copy requires AGREEMENT_AMHARIC_FONT_PATH to point at an Ethiopic font.");
+};
+
+const addTerms = (doc: PDFKit.PDFDocument, hasAmharicFont: boolean) => {
+	doc.fontSize(FONT_SIZE_BODY).font("Helvetica");
+	for (const [index, term] of ENGLISH_TERMS.entries()) {
+		doc.text(`${index + 1}. ${term}`);
+	}
+	doc.moveDown();
+	for (const [index, term] of AMHARIC_TERMS.entries()) {
+		addAmharicText(doc, `${index + 1}. ${term}`, hasAmharicFont);
+	}
 };
 
 @Injectable()
@@ -100,21 +129,12 @@ export class AgreementPdfService {
 			doc.font(AMHARIC_FONT_NAME).text("ውሎች");
 		}
 		doc.moveDown(0.5);
-		doc.fontSize(FONT_SIZE_BODY).font("Helvetica");
-		doc.text("1. The employer confirms the worker, role, salary, and start date recorded above.");
-		doc.text("2. Wez commission is system-calculated from the active role catalog and is not negotiated at the desk.");
-		doc.text("3. Placement is active only after payment is received and verified by the station agent.");
-		doc.text("4. Complaints may be filed at any Wez station. Serious complaints may be referred to compliance.");
-		doc.text("5. Workers are not charged placement fees by Wez.");
-		doc.moveDown();
-		addAmharicText(doc, "1. አሠሪው ከላይ የተመዘገበውን ሠራተኛ፣ የሥራ ዓይነት፣ ደመወዝ እና የመጀመሪያ ቀን ያረጋግጣል።", hasAmharicFont);
-		addAmharicText(doc, "2. የዌዝ ኮሚሽን በስርዓቱ ከሚተዳደረው የሚና ካታሎግ ይሰላል።", hasAmharicFont);
-		addAmharicText(doc, "3. ምደባው ክፍያ ተቀብሎ ከተረጋገጠ በኋላ ብቻ ንቁ ይሆናል።", hasAmharicFont);
+		addTerms(doc, hasAmharicFont);
 
 		doc.moveDown(2);
-		doc.font("Helvetica-Bold").text("Signatures");
+		doc.font("Helvetica-Bold").text("Printed agreement signatures");
 		if (hasAmharicFont) {
-			doc.font(AMHARIC_FONT_NAME).text("ፊርማ");
+			doc.font(AMHARIC_FONT_NAME).text("የታተመ ስምምነት ፊርማዎች");
 		}
 		doc.moveDown();
 		doc.font("Helvetica").text("Worker signature or thumbprint: ________________________________");

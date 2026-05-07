@@ -9,6 +9,7 @@ import {
 	useEndPlacement,
 	usePlacements,
 } from "#features/placements/api/placement.queries";
+import { FreshPlacementForm } from "#features/placements/components/fresh-placement-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +40,9 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 	const [isEnding, setIsEnding] = React.useState(false);
 	const [endReason, setEndReason] = React.useState("");
 	const [ratingByEmployer, setRatingByEmployer] = React.useState("");
+	const [ratingCommentByEmployer, setRatingCommentByEmployer] = React.useState("");
 	const [ratingByWorker, setRatingByWorker] = React.useState("");
+	const [ratingCommentByWorker, setRatingCommentByWorker] = React.useState("");
 	const workerName = placement.worker?.fullName ?? `Worker ${placement.workerId.slice(0, 8)}`;
 	const employerName = placement.employer?.name ?? `Employer ${placement.employerId.slice(0, 8)}`;
 	const paymentLabel = `${placement.paymentMethod.toUpperCase()} ${placement.paymentReference}`;
@@ -51,7 +54,9 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 		setIsEnding(false);
 		setEndReason("");
 		setRatingByEmployer("");
+		setRatingCommentByEmployer("");
 		setRatingByWorker("");
+		setRatingCommentByWorker("");
 	}, []);
 	const onEndReasonChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 		setEndReason(event.target.value);
@@ -59,8 +64,14 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 	const onRatingByEmployerChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 		setRatingByEmployer(event.target.value);
 	}, []);
+	const onRatingCommentByEmployerChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setRatingCommentByEmployer(event.target.value);
+	}, []);
 	const onRatingByWorkerChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 		setRatingByWorker(event.target.value);
+	}, []);
+	const onRatingCommentByWorkerChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setRatingCommentByWorker(event.target.value);
 	}, []);
 	const onSubmitEnd = React.useCallback(() => {
 		endPlacement.mutate(
@@ -69,11 +80,23 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 				endDate: today,
 				endedReason: endReason,
 				ratingByEmployer: ratingByEmployer ? Number(ratingByEmployer) : undefined,
+				ratingCommentByEmployer: ratingCommentByEmployer.trim() || undefined,
 				ratingByWorker: ratingByWorker ? Number(ratingByWorker) : undefined,
+				ratingCommentByWorker: ratingCommentByWorker.trim() || undefined,
 			},
 			{ onSuccess: onCancelEnd },
 		);
-	}, [endPlacement, endReason, onCancelEnd, placement.id, ratingByEmployer, ratingByWorker, today]);
+	}, [
+		endPlacement,
+		endReason,
+		onCancelEnd,
+		placement.id,
+		ratingByEmployer,
+		ratingByWorker,
+		ratingCommentByEmployer,
+		ratingCommentByWorker,
+		today,
+	]);
 
 	return (
 		<Card>
@@ -141,10 +164,10 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 							href={placement.agreementPdfUrl}
 							target="_blank"
 							rel="noreferrer"
-							className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
+							className="inline-flex items-center gap-2 rounded-md border border-primary/30 px-3 py-2 font-medium text-primary hover:bg-primary/5"
 						>
 							<HugeiconsIcon icon={NoteEditIcon} className="size-4" />
-							{t("placements.agreement")}
+							{t("placements.printAgreement")}
 						</a>
 					) : (
 						<p>{t("placements.agreementPending")}</p>
@@ -157,6 +180,27 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 							{placement.endDate ? new Date(placement.endDate).toLocaleDateString() : "-"} -{" "}
 							{placement.endedReason ?? "-"}
 						</p>
+						{placement.ratingWindowClosesAt && (
+							<p className="mt-1 text-xs text-muted-foreground">
+								{t("placements.ratingWindowClosesAt")}: {formatDate(placement.ratingWindowClosesAt)}
+							</p>
+						)}
+						{(placement.ratingCommentByEmployer || placement.ratingCommentByWorker) && (
+							<div className="mt-2 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+								{placement.ratingCommentByEmployer && (
+									<p>
+										<span className="font-medium text-foreground">{t("placements.workerRatingComment")}:</span>{" "}
+										{placement.ratingCommentByEmployer}
+									</p>
+								)}
+								{placement.ratingCommentByWorker && (
+									<p>
+										<span className="font-medium text-foreground">{t("placements.employerRatingComment")}:</span>{" "}
+										{placement.ratingCommentByWorker}
+									</p>
+								)}
+							</div>
+						)}
 					</div>
 				)}
 				{canEnd && !isEnding && (
@@ -207,6 +251,38 @@ const PlacementRow = React.memo(({ placement }: { readonly placement: Placement 
 									max={5}
 									value={ratingByWorker}
 									onChange={onRatingByWorkerChange}
+								/>
+							</div>
+						</div>
+						<div className="mt-3 grid gap-3 md:grid-cols-2">
+							<div>
+								<label
+									className="text-xs font-medium text-muted-foreground"
+									htmlFor={`rating-employer-comment-${placement.id}`}
+								>
+									{t("placements.workerRatingComment")}
+								</label>
+								<textarea
+									id={`rating-employer-comment-${placement.id}`}
+									value={ratingCommentByEmployer}
+									onChange={onRatingCommentByEmployerChange}
+									maxLength={500}
+									className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+								/>
+							</div>
+							<div>
+								<label
+									className="text-xs font-medium text-muted-foreground"
+									htmlFor={`rating-worker-comment-${placement.id}`}
+								>
+									{t("placements.employerRatingComment")}
+								</label>
+								<textarea
+									id={`rating-worker-comment-${placement.id}`}
+									value={ratingCommentByWorker}
+									onChange={onRatingCommentByWorkerChange}
+									maxLength={500}
+									className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 								/>
 							</div>
 						</div>
@@ -261,6 +337,7 @@ const PlacementsPage = React.memo(() => {
 					<option value="cancelled">{t("placements.statusCancelled")}</option>
 				</select>
 			</div>
+			<FreshPlacementForm />
 
 			{isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}
 			<div className="space-y-3">

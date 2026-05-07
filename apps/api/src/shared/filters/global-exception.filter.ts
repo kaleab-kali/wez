@@ -5,21 +5,28 @@ import { CORRELATION_ID_HEADER } from "#shared/logger/logger.constants";
 
 const DOMAIN_ERROR_MESSAGES: Record<string, string> = {
 	ALREADY_FINALIZED: "This request has already been finalized.",
+	CASH_DOUBLE_CONFIRMATION_REQUIRED: "Cash payment must be double-confirmed before placement.",
 	EMPLOYER_BANNED: "This employer account is restricted.",
 	EMPLOYER_ID_REQUIRED: "Employer is required.",
 	HIRE_REQUEST_NOT_AWAITING_VISIT: "Only awaiting hire requests can be finalized.",
 	INVALID_ROLE: "Selected role is not available.",
+	EMPLOYER_NOT_FOUND: "Selected employer was not found.",
 	NO_EMPLOYER_PROFILE: "No employer profile is linked to this account.",
 	NO_WORKER_PROFILE: "No worker profile is linked to this account.",
+	NOT_YOUR_STATION: "This record belongs to a different station.",
 	PAYMENT_REQUIRED: "Payment must be confirmed before placement.",
 	PERCENT_OUT_OF_RANGE: "Percent commission must be between 0 and 100.",
 	PLACEMENT_ALREADY_EXISTS: "A placement already exists for this hire request.",
 	ROLE_ID_TAKEN: "This role ID is already used.",
+	ROLE_NOT_FOUND: "Selected role was not found.",
 	SALARY_OUT_OF_ROLE_RANGE: "Salary is outside the configured role range.",
 	SALARY_RANGE_INVALID: "Salary minimum must be less than or equal to salary maximum.",
 	STATION_NOT_FOUND: "Selected station was not found.",
+	STATION_INACTIVE: "Selected station is not active.",
 	WORKER_DOES_NOT_PERFORM_ROLE: "This worker is not registered for the selected role.",
 	WORKER_NOT_AVAILABLE: "This worker is not available for new hire requests.",
+	WORKER_NOT_FOUND: "Selected worker was not found.",
+	STAFF_SESSION_REQUIRED: "A staff session is required.",
 } as const;
 
 @Catch()
