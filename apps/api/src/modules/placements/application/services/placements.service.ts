@@ -28,6 +28,11 @@ const STORAGE_ORGANIZATION_ID = "wez";
 const AGREEMENT_FOLDER = "agreements";
 const RATING_WINDOW_DAYS = 30;
 const MILLISECONDS_PER_DAY = 86_400_000;
+const STATION_SCOPED_ROLES = ["agent", "station_supervisor"] as const;
+
+type PlacementListFilter = ListPlacementsDto & {
+	readonly stationIds?: string[];
+};
 
 @Injectable()
 export class PlacementsService {
@@ -43,6 +48,13 @@ export class PlacementsService {
 
 	async listForSession(session: WezSession, filter: ListPlacementsDto) {
 		if (session.kind === "staff") {
+			if (this.isStationScopedRole(session.user.role)) {
+				const stationIds = await this.stationIdsForSession(session);
+				if (filter.stationId && !stationIds.includes(filter.stationId)) {
+					throw new ForbiddenException({ code: "NOT_YOUR_STATION" });
+				}
+				return this.list({ ...filter, stationIds: filter.stationId ? undefined : stationIds });
+			}
 			return this.list(filter);
 		}
 
@@ -57,7 +69,7 @@ export class PlacementsService {
 		return this.list({ ...filter, employerId, workerId: undefined });
 	}
 
-	async list(filter: ListPlacementsDto) {
+	async list(filter: PlacementListFilter) {
 		const { items, total, page, limit } = await this.placements.list(filter);
 
 		return {
@@ -90,6 +102,7 @@ export class PlacementsService {
 			include: { role: true, placement: true, worker: true, employer: true, station: true },
 		});
 		if (!requestSnapshot) throw new NotFoundException({ code: "HIRE_REQUEST_NOT_FOUND" });
+		await this.assertStationAccess(session, requestSnapshot.stationId);
 		this.assertFinalizeReady(requestSnapshot, salaryCents);
 
 		const commissionCents = this.calculateCommission(
@@ -267,6 +280,7 @@ export class PlacementsService {
 		if (!role.active) throw new ConflictException({ code: "INVALID_ROLE" });
 		if (!station.active) throw new ConflictException({ code: "STATION_INACTIVE" });
 		if (!workerRole) throw new BadRequestException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
+		await this.assertStationAccess(session, station.id);
 		this.assertFreshReady({ worker, employer, role }, salaryCents);
 
 		const commissionCents = this.calculateCommission(salaryCents, role.commType, role.commValue);
@@ -309,6 +323,7 @@ export class PlacementsService {
 				if (!currentRole.active) throw new ConflictException({ code: "INVALID_ROLE" });
 				if (!currentStation.active) throw new ConflictException({ code: "STATION_INACTIVE" });
 				if (!currentWorkerRole) throw new BadRequestException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
+				await this.assertStationAccess(session, currentStation.id);
 				this.assertFreshReady({ worker: currentWorker, employer: currentEmployer, role: currentRole }, salaryCents);
 				const currentCommissionCents = this.calculateCommission(
 					salaryCents,
@@ -422,6 +437,7 @@ export class PlacementsService {
 			if (placement.status !== "active") {
 				throw new ConflictException({ code: "PLACEMENT_NOT_ACTIVE" });
 			}
+			await this.assertStationAccess(session, placement.stationId);
 
 			const endDate = new Date(dto.endDate);
 			if (endDate < placement.startDate) {
@@ -517,6 +533,37 @@ export class PlacementsService {
 
 	private calculateCommission(salaryCents: bigint, commType: string, commValue: number): bigint {
 		return commType === "percent" ? (salaryCents * BigInt(commValue)) / 100n : BigInt(commValue) * 100n;
+	}
+
+	private async assertStationAccess(session: WezSession, stationId: string) {
+		if (session.kind !== "staff") {
+			throw new ForbiddenException({ code: "STAFF_SESSION_REQUIRED" });
+		}
+		const role = session.user.role ?? "";
+		if (!this.isStationScopedRole(role)) return;
+		if (role === "agent") {
+			const assignment = await this.prisma.agentAssignment.findFirst({
+				where: { userId: session.user.id, stationId, active: true, removedAt: null },
+				select: { id: true },
+			});
+			if (!assignment) throw new ForbiddenException({ code: "NOT_YOUR_STATION" });
+			return;
+		}
+		const station = await this.prisma.station.findFirst({
+			where: { id: stationId, supervisorUserId: session.user.id },
+			select: { id: true },
+		});
+		if (!station) throw new ForbiddenException({ code: "NOT_YOUR_STATION" });
+	}
+
+	private isStationScopedRole(role: string | null | undefined): boolean {
+		return STATION_SCOPED_ROLES.includes((role ?? "") as (typeof STATION_SCOPED_ROLES)[number]);
+	}
+
+	private async stationIdsForSession(session: WezSession): Promise<string[]> {
+		if (session.user.role === "agent") return this.placements.activeAgentStationIds(session.user.id);
+		if (session.user.role === "station_supervisor") return this.placements.supervisedStationIds(session.user.id);
+		return [];
 	}
 
 	private ratingWindowClosesAt(endDate: Date | null): string | null {

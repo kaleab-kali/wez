@@ -2,6 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
 import type { ListPlacementsDto } from "../../application/dto/placement.dto";
 
+type PlacementListFilter = ListPlacementsDto & {
+	readonly stationIds?: string[];
+};
+
 @Injectable()
 export class PlacementsRepository {
 	constructor(private readonly prisma: PrismaService) {}
@@ -22,14 +26,30 @@ export class PlacementsRepository {
 		return employer?.id ?? null;
 	}
 
-	async list(filter: ListPlacementsDto) {
+	async activeAgentStationIds(userId: string): Promise<string[]> {
+		const assignments = await this.prisma.agentAssignment.findMany({
+			where: { userId, active: true, removedAt: null },
+			select: { stationId: true },
+		});
+		return assignments.map((assignment) => assignment.stationId);
+	}
+
+	async supervisedStationIds(userId: string): Promise<string[]> {
+		const stations = await this.prisma.station.findMany({
+			where: { supervisorUserId: userId },
+			select: { id: true },
+		});
+		return stations.map((station) => station.id);
+	}
+
+	async list(filter: PlacementListFilter) {
 		const page = filter.page ?? 1;
 		const limit = filter.limit ?? 20;
 		const where = {
 			status: filter.status,
 			workerId: filter.workerId,
 			employerId: filter.employerId,
-			stationId: filter.stationId,
+			stationId: filter.stationId ?? (filter.stationIds ? { in: filter.stationIds } : undefined),
 		};
 		const [items, total] = await this.prisma.$transaction([
 			this.prisma.placement.findMany({
