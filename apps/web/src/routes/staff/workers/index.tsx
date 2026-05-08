@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
@@ -27,7 +28,7 @@ const FilterPanel = React.memo(
 	({ filter, onChange }: { readonly filter: WorkerFilter; readonly onChange: (next: WorkerFilter) => void }) => {
 		const { t } = useTranslation();
 		const { data: roles } = usePublicRoles();
-		const { data: woredas } = useLookupKind("woredas");
+		const { data: localities } = usePublicLocations({ kind: "locality" });
 		const { data: languages } = useLookupKind("languages");
 		const set = React.useCallback(
 			<K extends keyof WorkerFilter>(k: K, v: WorkerFilter[K]) => onChange({ ...filter, [k]: v, page: 1 }),
@@ -103,9 +104,9 @@ const FilterPanel = React.memo(
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						>
 							<option value="">{t("common.any")}</option>
-							{woredas?.map((w) => (
-								<option key={w.value} value={w.value}>
-									{w.labelEn}
+							{localities?.map((locality) => (
+								<option key={locality.id} value={locality.code}>
+									{locality.nameEn}
 								</option>
 							))}
 						</select>
@@ -217,6 +218,9 @@ const WorkerCard = React.memo(
 									{w.area} · {w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} ·{" "}
 									{t("workers.expYearsShort", { n: w.experienceYears })}
 								</CardDescription>
+								{w.registeredAtStationName && (
+									<div className="mt-1 text-[11px] text-muted-foreground">{w.registeredAtStationName}</div>
+								)}
 							</div>
 							<div className="flex flex-col items-end gap-1 shrink-0">
 								<Badge variant={TIER_VARIANT[w.tier]} className="capitalize">

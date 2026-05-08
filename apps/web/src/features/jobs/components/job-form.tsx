@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import type { Job, JobInput } from "#features/jobs/api/job.queries";
-import { useLookupKind } from "#features/lookups/api/lookup.queries";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ export const JobForm = React.memo(
 	({ initialJob, submitLabel, pending, roleEditable = true, onSubmit }: JobFormProps) => {
 		const { t } = useTranslation();
 		const { data: roles } = usePublicRoles();
-		const { data: woredas } = useLookupKind("woredas");
+		const { data: localities } = usePublicLocations({ kind: "locality" });
 		const [error, setError] = React.useState("");
 		const [values, setValues] = React.useState<JobFormValues>({
 			roleId: initialJob?.roleId ?? "",
@@ -200,9 +200,9 @@ export const JobForm = React.memo(
 						className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 					>
 						<option value="">-</option>
-						{woredas?.map((woreda) => (
-							<option key={woreda.value} value={woreda.value}>
-								{woreda.labelEn}
+						{localities?.map((locality) => (
+							<option key={locality.id} value={locality.code}>
+								{locality.nameEn}
 							</option>
 						))}
 					</select>

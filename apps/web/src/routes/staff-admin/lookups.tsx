@@ -12,7 +12,7 @@ export const Route = createFileRoute("/staff-admin/lookups")({
 	component: LookupsPage,
 });
 
-const KINDS = ["languages", "woredas", "religions"] as const;
+const KINDS = ["languages", "religions"] as const;
 
 const RowToggle = React.memo(
 	({ id, archived }: { readonly id: string; readonly archived: boolean }) => {

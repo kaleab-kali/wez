@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useLocations } from "#features/locations/api/location.queries";
-import { useCreateStation, useStations } from "#features/stations/api/station.queries";
+import { useStaffUsers } from "#features/staff-users/api/staff-user.queries";
+import {
+	type Station,
+	useAssignStationAgent,
+	useCreateStation,
+	useRemoveStationAssignment,
+	useStationAssignments,
+	useStations,
+	useUpdateStation,
+} from "#features/stations/api/station.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,9 +202,143 @@ const StationCreateForm = React.memo(() => {
 });
 StationCreateForm.displayName = "StationCreateForm";
 
+const StationRow = React.memo(
+	({
+		station,
+		agentOptions,
+	}: {
+		readonly station: Station;
+		readonly agentOptions: readonly { id: string; name: string }[];
+	}) => {
+		const { t } = useTranslation();
+		const update = useUpdateStation(station.id);
+		const assign = useAssignStationAgent(station.id);
+		const remove = useRemoveStationAssignment(station.id);
+		const { data: assignments } = useStationAssignments(station.id);
+		const [phone, setPhone] = React.useState(station.phone ?? "");
+		const [agentId, setAgentId] = React.useState("");
+		const [error, setError] = React.useState("");
+
+		const agentNameById = React.useMemo(
+			() => new Map(agentOptions.map((agent) => [agent.id, agent.name])),
+			[agentOptions],
+		);
+
+		const onSave = React.useCallback(async () => {
+			setError("");
+			try {
+				await update.mutateAsync({ phone: phone || null });
+			} catch (err) {
+				setError(err instanceof Error ? err.message : t("common.error"));
+			}
+		}, [phone, t, update]);
+
+		const onToggleActive = React.useCallback(async () => {
+			setError("");
+			try {
+				await update.mutateAsync({ active: !station.active });
+			} catch (err) {
+				setError(err instanceof Error ? err.message : t("common.error"));
+			}
+		}, [station.active, t, update]);
+
+		const onAssign = React.useCallback(async () => {
+			if (!agentId) return;
+			setError("");
+			try {
+				await assign.mutateAsync(agentId);
+				setAgentId("");
+			} catch (err) {
+				setError(err instanceof Error ? err.message : t("common.error"));
+			}
+		}, [agentId, assign, t]);
+
+		return (
+			<tr className="border-t align-top">
+				<td className="py-2.5">
+					<div className="font-medium">{station.name}</div>
+					<div className="text-xs text-muted-foreground">{station.address}</div>
+					{error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+				</td>
+				<td>{station.woreda}</td>
+				<td>{station.custom ? t("stations.custom") : t("stations.standard")}</td>
+				<td>
+					<div className="flex max-w-48 gap-2">
+						<Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+2519XXXXXXXX" />
+						<Button type="button" size="sm" variant="outline" disabled={update.isPending} onClick={onSave}>
+							{t("common.save")}
+						</Button>
+					</div>
+				</td>
+				<td>
+					<Badge variant={station.active ? "default" : "secondary"} className="text-[10px]">
+						{station.active ? t("common.yes") : t("common.no")}
+					</Badge>
+				</td>
+				<td>
+					<div className="space-y-2">
+						<div className="flex flex-wrap gap-1">
+							{assignments?.map((assignment) => (
+								<span key={assignment.id} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs">
+									{agentNameById.get(assignment.userId) ?? assignment.userId}
+									<Button
+										type="button"
+										size="sm"
+										variant="ghost"
+										className="h-5 px-1 text-xs"
+										disabled={remove.isPending}
+										onClick={() => remove.mutate(assignment.id)}
+									>
+										{t("staffUsers.revoke")}
+									</Button>
+								</span>
+							))}
+						</div>
+						<div className="flex gap-2">
+							<select
+								value={agentId}
+								onChange={(e) => setAgentId(e.target.value)}
+								className="h-9 rounded-md border bg-background px-2 text-sm"
+							>
+								<option value="">{t("stations.assignAgent")}</option>
+								{agentOptions.map((agent) => (
+									<option key={agent.id} value={agent.id}>
+										{agent.name}
+									</option>
+								))}
+							</select>
+							<Button type="button" size="sm" disabled={!agentId || assign.isPending} onClick={onAssign}>
+								{t("stations.assignAgent")}
+							</Button>
+						</div>
+					</div>
+				</td>
+				<td className="text-right">
+					<Button type="button" size="sm" variant="outline" disabled={update.isPending} onClick={onToggleActive}>
+						{station.active ? t("stations.deactivate") : t("stations.activate")}
+					</Button>
+				</td>
+			</tr>
+		);
+	},
+);
+StationRow.displayName = "StationRow";
+
 const StationsPage = React.memo(() => {
 	const { t } = useTranslation();
 	const { data, isLoading } = useStations(true);
+	const { data: staffUsers } = useStaffUsers();
+	const agentOptions = React.useMemo(
+		() =>
+			(staffUsers ?? [])
+				.filter(
+					(user) =>
+						user.active &&
+						(user.role === "agent" || user.roleAssignments.some((assignment) => assignment.role === "agent")),
+				)
+				.map((user) => ({ id: user.id, name: user.name })),
+		[staffUsers],
+	);
 
 	return (
 		<div className="max-w-5xl space-y-4">
@@ -220,21 +363,13 @@ const StationsPage = React.memo(() => {
 								<th className="font-medium">{t("stations.type")}</th>
 								<th className="font-medium">{t("stations.phone")}</th>
 								<th className="font-medium">{t("stations.active")}</th>
+								<th className="font-medium">{t("stations.agents")}</th>
+								<th className="text-right font-medium">{t("common.actions")}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{data?.map((station) => (
-								<tr key={station.id} className="border-t">
-									<td className="py-2.5 font-medium">{station.name}</td>
-									<td>{station.woreda}</td>
-									<td>{station.custom ? t("stations.custom") : t("stations.standard")}</td>
-									<td className="font-mono text-xs">{station.phone ?? "-"}</td>
-									<td>
-										<Badge variant={station.active ? "default" : "secondary"} className="text-[10px]">
-											{station.active ? t("common.yes") : t("common.no")}
-										</Badge>
-									</td>
-								</tr>
+								<StationRow key={station.id} station={station} agentOptions={agentOptions} />
 							))}
 						</tbody>
 					</table>

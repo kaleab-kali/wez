@@ -82,3 +82,28 @@ export const useCreateLocation = () => {
 		onSuccess: () => qc.invalidateQueries({ queryKey: locationKeys.all }),
 	});
 };
+
+export const useUpdateLocation = (id: string) => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (input: {
+			code?: string;
+			kind?: Location["kind"];
+			type?: string;
+			nameEn?: string;
+			nameAm?: string;
+			parentId?: string | null;
+			sortOrder?: number;
+			active?: boolean;
+		}) => send<{ data: Location }>(`${ADMIN_BASE}/${id}`, "PATCH", input).then((b) => b.data),
+		onSuccess: () => qc.invalidateQueries({ queryKey: locationKeys.all }),
+	});
+};
+
+export const useDeactivateLocation = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) => send<{ data: Location }>(`${ADMIN_BASE}/${id}`, "DELETE").then((b) => b.data),
+		onSuccess: () => qc.invalidateQueries({ queryKey: locationKeys.all }),
+	});
+};

@@ -99,6 +99,12 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 		roles: STAFF_ACCESS_ROLES.staffUsers,
 	},
 	{
+		labelKey: "admin.nav.accessReview",
+		to: "/staff-admin/access-review",
+		icon: SecurityIcon,
+		roles: STAFF_ACCESS_ROLES.accessReview,
+	},
+	{
 		labelKey: "admin.nav.stations",
 		to: "/staff-admin/stations",
 		icon: StoreLocation02Icon,

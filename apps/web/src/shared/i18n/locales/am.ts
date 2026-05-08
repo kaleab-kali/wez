@@ -1,6 +1,17 @@
 // Amharic translations. Proper nouns (Wez, Fayda, Telebirr) kept as-is or transliterated.
 
 export const am = {
+	accessReview: {
+		title: "Access review",
+		subtitle: "Review every active staff role assignment and its operational scope.",
+		currentAccess: "Current access",
+		role: "Role",
+		scopeType: "Scope type",
+		scope: "Scope",
+		global: "Global",
+		missingScope: "Missing scope",
+		empty: "No access assignments yet.",
+	},
 	brand: {
 		tagline: "የሰራተኛ ምደባ ስርዓት",
 	},

@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
 import React from "react";
-import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { adminAuthApi, useAdminSession } from "#shared/lib/admin-auth-client";
 import { hasStaffRouteAccess } from "#shared/lib/staff-roles";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -8,6 +8,15 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/staff")({
+	beforeLoad: async ({ location }) => {
+		const session = await adminAuthApi.me().catch(() => {
+			throw redirect({ to: "/staff-login" });
+		});
+		const user = session?.user as { role?: string; roles?: string[] } | undefined;
+		if (!hasStaffRouteAccess(location.pathname, user?.role, user?.roles)) {
+			throw redirect({ to: "/staff/dashboard", replace: true });
+		}
+	},
 	component: StaffLayout,
 });
 

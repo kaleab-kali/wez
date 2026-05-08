@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { usePublicStations } from "#features/stations/api/station.queries";
@@ -61,7 +62,7 @@ const initialState: FormState = {
 const StepIdentity = React.memo(
 	({ state, set, onNext }: { readonly state: FormState; readonly set: SetState; readonly onNext: () => void }) => {
 		const { t } = useTranslation();
-		const { data: woredas } = useLookupKind("woredas");
+		const { data: localities } = usePublicLocations({ kind: "locality" });
 		return (
 			<form
 				className="grid grid-cols-1 md:grid-cols-2 gap-3"
@@ -125,9 +126,9 @@ const StepIdentity = React.memo(
 						className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 					>
 						<option value="">—</option>
-						{woredas?.map((w) => (
-							<option key={w.value} value={w.value}>
-								{w.labelEn}
+						{localities?.map((locality) => (
+							<option key={locality.id} value={locality.code}>
+								{locality.nameEn}
 							</option>
 						))}
 					</select>

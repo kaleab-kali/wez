@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateEmployer } from "#features/employers/api/employer.queries";
-import { useLookupKind } from "#features/lookups/api/lookup.queries";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,7 @@ function RegisterEmployerPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const createE = useCreateEmployer();
-	const { data: woredas } = useLookupKind("woredas");
+	const { data: localities } = usePublicLocations({ kind: "locality" });
 
 	const [type, setType] = React.useState<"business" | "household">("business");
 	const [name, setName] = React.useState("");
@@ -197,9 +197,9 @@ function RegisterEmployerPage() {
 								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 							>
 								<option value="">—</option>
-								{woredas?.map((w) => (
-									<option key={w.value} value={w.value}>
-										{w.labelEn}
+								{localities?.map((locality) => (
+									<option key={locality.id} value={locality.code}>
+										{locality.nameEn}
 									</option>
 								))}
 							</select>

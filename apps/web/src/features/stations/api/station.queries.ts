@@ -41,6 +41,15 @@ export type Station = {
 	updatedAt: string;
 };
 
+export type AgentAssignment = {
+	id: string;
+	userId: string;
+	stationId: string;
+	active: boolean;
+	assignedAt: string;
+	removedAt: string | null;
+};
+
 export const stationKeys = {
 	all: ["stations"] as const,
 	lists: () => [...stationKeys.all, "list"] as const,
@@ -86,6 +95,37 @@ export const useUpdateStation = (id: string) => {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: stationKeys.lists() });
 			qc.invalidateQueries({ queryKey: stationKeys.detail(id) });
+		},
+	});
+};
+
+export const useStationAssignments = (stationId: string | null) =>
+	useQuery({
+		queryKey: stationId ? stationKeys.assignments(stationId) : [...stationKeys.all, "assignments", "none"],
+		queryFn: () => get<{ data: AgentAssignment[] }>(`${ADMIN_BASE}/${stationId}/assignments`).then((b) => b.data),
+		enabled: Boolean(stationId),
+	});
+
+export const useAssignStationAgent = (stationId: string) => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (userId: string) =>
+			send<{ data: AgentAssignment }>(`${ADMIN_BASE}/${stationId}/assignments`, "POST", { userId }).then((b) => b.data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: stationKeys.assignments(stationId) });
+			qc.invalidateQueries({ queryKey: stationKeys.lists() });
+		},
+	});
+};
+
+export const useRemoveStationAssignment = (stationId: string) => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (assignmentId: string) =>
+			send<{ data: AgentAssignment }>(`${ADMIN_BASE}/assignments/${assignmentId}`, "DELETE").then((b) => b.data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: stationKeys.assignments(stationId) });
+			qc.invalidateQueries({ queryKey: stationKeys.lists() });
 		},
 	});
 };

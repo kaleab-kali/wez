@@ -1,7 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { type Location, useCreateLocation, useLocations } from "#features/locations/api/location.queries";
+import {
+	type Location,
+	useCreateLocation,
+	useDeactivateLocation,
+	useLocations,
+	useUpdateLocation,
+} from "#features/locations/api/location.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,6 +152,100 @@ const LocationCreateForm = React.memo(() => {
 });
 LocationCreateForm.displayName = "LocationCreateForm";
 
+const LocationRow = React.memo(({ location }: { readonly location: Location }) => {
+	const { t } = useTranslation();
+	const update = useUpdateLocation(location.id);
+	const deactivate = useDeactivateLocation();
+	const [editing, setEditing] = React.useState(false);
+	const [nameEn, setNameEn] = React.useState(location.nameEn);
+	const [nameAm, setNameAm] = React.useState(location.nameAm ?? "");
+	const [error, setError] = React.useState("");
+
+	const onSave = React.useCallback(async () => {
+		setError("");
+		try {
+			await update.mutateAsync({ nameEn, nameAm: nameAm || undefined });
+			setEditing(false);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : t("common.error"));
+		}
+	}, [nameAm, nameEn, t, update]);
+
+	const onDeactivate = React.useCallback(async () => {
+		setError("");
+		try {
+			await deactivate.mutateAsync(location.id);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : t("common.error"));
+		}
+	}, [deactivate, location.id, t]);
+
+	if (editing) {
+		return (
+			<tr className="border-t align-top">
+				<td className="py-2.5">
+					<Input value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+					{error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+				</td>
+				<td>
+					<Input value={nameAm} onChange={(e) => setNameAm(e.target.value)} />
+				</td>
+				<td className="capitalize">{formatKind(location.kind)}</td>
+				<td className="capitalize">{formatKind(location.type)}</td>
+				<td className="font-mono text-xs">{location.code}</td>
+				<td>
+					<Badge variant={location.active ? "default" : "secondary"} className="text-[10px]">
+						{location.active ? t("common.yes") : t("common.no")}
+					</Badge>
+				</td>
+				<td className="text-right">
+					<div className="flex justify-end gap-2">
+						<Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)}>
+							{t("common.cancel")}
+						</Button>
+						<Button type="button" size="sm" disabled={update.isPending || !nameEn} onClick={onSave}>
+							{update.isPending ? t("common.saving") : t("common.save")}
+						</Button>
+					</div>
+				</td>
+			</tr>
+		);
+	}
+
+	return (
+		<tr className="border-t">
+			<td className="py-2.5 font-medium">{location.nameEn}</td>
+			<td>{location.nameAm ?? "-"}</td>
+			<td className="capitalize">{formatKind(location.kind)}</td>
+			<td className="capitalize">{formatKind(location.type)}</td>
+			<td className="font-mono text-xs">{location.code}</td>
+			<td>
+				<Badge variant={location.active ? "default" : "secondary"} className="text-[10px]">
+					{location.active ? t("common.yes") : t("common.no")}
+				</Badge>
+				{error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+			</td>
+			<td className="text-right">
+				<div className="flex justify-end gap-2">
+					<Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
+						{t("common.edit")}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						disabled={!location.active || deactivate.isPending}
+						onClick={onDeactivate}
+					>
+						{t("locations.deactivate")}
+					</Button>
+				</div>
+			</td>
+		</tr>
+	);
+});
+LocationRow.displayName = "LocationRow";
+
 const LocationsTable = React.memo(({ rows }: { readonly rows: readonly Location[] }) => {
 	const { t } = useTranslation();
 	return (
@@ -159,25 +259,17 @@ const LocationsTable = React.memo(({ rows }: { readonly rows: readonly Location[
 						<thead className="border-b text-left text-xs uppercase text-muted-foreground">
 							<tr>
 								<th className="py-2 font-medium">{t("locations.nameEn")}</th>
+								<th className="font-medium">{t("locations.nameAm")}</th>
 								<th className="font-medium">{t("locations.level")}</th>
 								<th className="font-medium">{t("locations.type")}</th>
 								<th className="font-medium">{t("locations.code")}</th>
 								<th className="font-medium">{t("stations.active")}</th>
+								<th className="text-right font-medium">{t("common.actions")}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{rows.map((location) => (
-								<tr key={location.id} className="border-t">
-									<td className="py-2.5 font-medium">{location.nameEn}</td>
-									<td className="capitalize">{formatKind(location.kind)}</td>
-									<td className="capitalize">{formatKind(location.type)}</td>
-									<td className="font-mono text-xs">{location.code}</td>
-									<td>
-										<Badge variant={location.active ? "default" : "secondary"} className="text-[10px]">
-											{location.active ? t("common.yes") : t("common.no")}
-										</Badge>
-									</td>
-								</tr>
+								<LocationRow key={location.id} location={location} />
 							))}
 						</tbody>
 					</table>
