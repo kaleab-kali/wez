@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -40,10 +41,23 @@ QuickAction.displayName = "QuickAction";
 const DashboardPage = React.memo(() => {
 	const { t } = useTranslation();
 	const { data: session } = useAdminSession();
-	const user = session?.user as { name?: string; role?: string } | undefined;
+	const user = session?.user as { name?: string; role?: string; roles?: string[] } | undefined;
 	const role = user?.role ?? "support";
 	const name = user?.name ?? "";
-	const isAgent = role === "agent" || role === "station_supervisor";
+	const userRoles = React.useMemo(() => effectiveStaffRoles(role, user?.roles), [role, user?.roles]);
+	const canBrowseWorkers = React.useMemo(
+		() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.workerEmployerOperations),
+		[userRoles],
+	);
+	const canCreateWorker = React.useMemo(
+		() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.workerEmployerCreation),
+		[userRoles],
+	);
+	const canViewPlacements = React.useMemo(
+		() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.placementOperations),
+		[userRoles],
+	);
+	const hasQuickActions = canBrowseWorkers || canCreateWorker || canViewPlacements;
 
 	return (
 		<div className="space-y-8 max-w-6xl">
@@ -57,30 +71,36 @@ const DashboardPage = React.memo(() => {
 				</Badge>
 			</header>
 
-			{isAgent && (
+			{hasQuickActions && (
 				<section className="space-y-3">
 					<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
 						{t("dashboard.quickActions")}
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-						<QuickAction
-							to="/staff/workers"
-							title={t("dashboard.browseWorkersTitle")}
-							description={t("dashboard.browseWorkersDesc")}
-							icon={UserMultipleIcon}
-						/>
-						<QuickAction
-							to="/staff/workers/new"
-							title={t("dashboard.registerWorkerTitle")}
-							description={t("dashboard.registerWorkerDesc")}
-							icon={Edit01Icon}
-						/>
-						<QuickAction
-							to="/staff/placements"
-							title={t("dashboard.placementsTitle")}
-							description={t("dashboard.placementsDesc")}
-							icon={Briefcase02Icon}
-						/>
+						{canBrowseWorkers && (
+							<QuickAction
+								to="/staff/workers"
+								title={t("dashboard.browseWorkersTitle")}
+								description={t("dashboard.browseWorkersDesc")}
+								icon={UserMultipleIcon}
+							/>
+						)}
+						{canCreateWorker && (
+							<QuickAction
+								to="/staff/workers/new"
+								title={t("dashboard.registerWorkerTitle")}
+								description={t("dashboard.registerWorkerDesc")}
+								icon={Edit01Icon}
+							/>
+						)}
+						{canViewPlacements && (
+							<QuickAction
+								to="/staff/placements"
+								title={t("dashboard.placementsTitle")}
+								description={t("dashboard.placementsDesc")}
+								icon={Briefcase02Icon}
+							/>
+						)}
 					</div>
 				</section>
 			)}

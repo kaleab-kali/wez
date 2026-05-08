@@ -282,6 +282,7 @@ const staffPermissions: Record<WezStaffRole, ReadonlyArray<Permission>> = {
 		"job:list",
 		"hire_request:read",
 		"hire_request:list",
+		"referral:read",
 		"referral:list",
 		"placement:read",
 		"placement:list",

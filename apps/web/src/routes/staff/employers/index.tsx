@@ -4,6 +4,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { type Employer, type EmployerFilter, useEmployers } from "#features/employers/api/employer.queries";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +67,13 @@ function EmployersBrowsePage() {
 	const { t } = useTranslation();
 	const [filter, setFilter] = React.useState<EmployerFilter>({ page: 1, limit: 20 });
 	const { data, isLoading } = useEmployers(filter);
+	const { data: session } = useAdminSession();
+	const user = session?.user as { role?: string; roles?: string[] } | undefined;
+	const userRoles = React.useMemo(() => effectiveStaffRoles(user?.role, user?.roles), [user?.role, user?.roles]);
+	const canCreateEmployer = React.useMemo(
+		() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.workerEmployerCreation),
+		[userRoles],
+	);
 
 	return (
 		<div className="space-y-6">
@@ -73,12 +82,14 @@ function EmployersBrowsePage() {
 					<h1 className="text-2xl font-bold tracking-tight">{t("employers.title")}</h1>
 					<p className="text-sm text-muted-foreground mt-1">{data?.meta.total ?? 0}</p>
 				</div>
-				<Link to="/staff/employers/new">
-					<Button>
-						<HugeiconsIcon icon={UserAdd01Icon} className="size-4 mr-2" />
-						{t("employers.register")}
-					</Button>
-				</Link>
+				{canCreateEmployer && (
+					<Link to="/staff/employers/new">
+						<Button>
+							<HugeiconsIcon icon={UserAdd01Icon} className="size-4 mr-2" />
+							{t("employers.register")}
+						</Button>
+					</Link>
+				)}
 			</header>
 			<div className="flex gap-6 items-start">
 				<Card className="w-72 shrink-0">

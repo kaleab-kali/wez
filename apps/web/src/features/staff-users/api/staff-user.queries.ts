@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE = "/api/v1/admin/staff-users";
+const ACCESS_REVIEW_BASE = "/api/v1/admin/access-review";
 
 const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
@@ -68,15 +69,33 @@ export type StaffUser = {
 	agentAssignments: Array<{ id: string; stationId: string; assignedAt: string; station: { name: string } }>;
 };
 
+export type StaffAccessReviewRow = {
+	id: string;
+	name: string;
+	email: string;
+	role: string;
+	scopeType: ScopeType | string;
+	scopeId: string | null;
+	scopeLabel: string | null;
+	active: boolean;
+};
+
 export const staffUserKeys = {
 	all: ["staff-users"] as const,
 	list: () => [...staffUserKeys.all, "list"] as const,
+	accessReview: () => [...staffUserKeys.all, "access-review"] as const,
 };
 
 export const useStaffUsers = () =>
 	useQuery({
 		queryKey: staffUserKeys.list(),
 		queryFn: () => get<{ data: StaffUser[] }>(BASE).then((b) => b.data),
+	});
+
+export const useStaffAccessReview = () =>
+	useQuery({
+		queryKey: staffUserKeys.accessReview(),
+		queryFn: () => get<{ data: StaffAccessReviewRow[] }>(ACCESS_REVIEW_BASE).then((b) => b.data),
 	});
 
 export const useCreateStaffUser = () => {

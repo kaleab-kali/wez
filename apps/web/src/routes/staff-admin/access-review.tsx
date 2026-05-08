@@ -1,33 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useLocations } from "#features/locations/api/location.queries";
-import { useStaffUsers } from "#features/staff-users/api/staff-user.queries";
-import { useStations } from "#features/stations/api/station.queries";
+import { type StaffAccessReviewRow, useStaffAccessReview } from "#features/staff-users/api/staff-user.queries";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const formatOption = (value: string) => value.replace(/_/g, " ");
-type AccessReviewRow = {
-	readonly id: string;
-	readonly name: string;
-	readonly email: string;
-	readonly role: string;
-	readonly scopeType: string;
-	readonly scopeId: string | null;
-	readonly active: boolean;
-};
 
-type ScopeLookup = {
-	readonly locationById: ReadonlyMap<string, string>;
-	readonly stationById: ReadonlyMap<string, string>;
-};
-
-const scopeLabel = (row: AccessReviewRow, lookup: ScopeLookup, globalLabel: string, missingScopeLabel: string) => {
+const scopeLabel = (row: StaffAccessReviewRow, globalLabel: string, missingScopeLabel: string) => {
 	if (row.scopeType === "global") return globalLabel;
 	if (!row.scopeId) return missingScopeLabel;
-	if (row.scopeType === "station") return lookup.stationById.get(row.scopeId) ?? row.scopeId;
-	return lookup.locationById.get(row.scopeId) ?? row.scopeId;
+	return row.scopeLabel ?? row.scopeId;
 };
 
 const AccessRow = React.memo(
@@ -35,7 +18,6 @@ const AccessRow = React.memo(
 		name,
 		email,
 		row,
-		lookup,
 		activeLabel,
 		inactiveLabel,
 		globalLabel,
@@ -43,8 +25,7 @@ const AccessRow = React.memo(
 	}: {
 		readonly name: string;
 		readonly email: string;
-		readonly row: AccessReviewRow;
-		readonly lookup: ScopeLookup;
+		readonly row: StaffAccessReviewRow;
 		readonly activeLabel: string;
 		readonly inactiveLabel: string;
 		readonly globalLabel: string;
@@ -57,7 +38,7 @@ const AccessRow = React.memo(
 			</td>
 			<td className="capitalize">{formatOption(row.role)}</td>
 			<td className="capitalize">{formatOption(row.scopeType)}</td>
-			<td>{scopeLabel(row, lookup, globalLabel, missingScopeLabel)}</td>
+			<td>{scopeLabel(row, globalLabel, missingScopeLabel)}</td>
 			<td>
 				<Badge variant={row.active ? "default" : "secondary"} className="text-[10px]">
 					{row.active ? activeLabel : inactiveLabel}
@@ -70,73 +51,7 @@ AccessRow.displayName = "AccessRow";
 
 const AccessReviewPage = React.memo(() => {
 	const { t } = useTranslation();
-	const { data: users, isLoading } = useStaffUsers();
-	const { data: stations } = useStations(true);
-	const { data: locations } = useLocations({ includeInactive: true });
-	const lookup = React.useMemo<ScopeLookup>(
-		() => ({
-			stationById: new Map((stations ?? []).map((station) => [station.id, station.name])),
-			locationById: new Map((locations ?? []).map((location) => [location.id, location.nameEn])),
-		}),
-		[locations, stations],
-	);
-	const rows = React.useMemo(
-		() =>
-			(users ?? []).flatMap((user): AccessReviewRow[] => {
-				const roleRows = user.roleAssignments.map((assignment) => ({
-					id: assignment.id,
-					name: user.name,
-					email: user.email,
-					role: assignment.role,
-					scopeType: assignment.scopeType,
-					scopeId: assignment.scopeId,
-					active: assignment.active,
-				}));
-				const stationRows = user.agentAssignments.map((assignment) => ({
-					id: assignment.id,
-					name: user.name,
-					email: user.email,
-					role: "agent",
-					scopeType: "station",
-					scopeId: assignment.stationId,
-					active: user.active,
-				}));
-				const supervisedStationRows = (stations ?? [])
-					.filter((station) => station.supervisorUserId === user.id)
-					.map((station) => ({
-						id: `${user.id}:${station.id}:supervisor`,
-						name: user.name,
-						email: user.email,
-						role: "station_supervisor",
-						scopeType: "station",
-						scopeId: station.id,
-						active: user.active && station.active,
-					}));
-				const fallbackRows =
-					roleRows.length === 0 && stationRows.length === 0 && supervisedStationRows.length === 0
-						? [
-								{
-									id: `${user.id}:primary`,
-									name: user.name,
-									email: user.email,
-									role: user.role,
-									scopeType: "global",
-									scopeId: null,
-									active: user.active,
-								},
-							]
-						: [];
-				return Array.from(
-					new Map(
-						[...roleRows, ...stationRows, ...supervisedStationRows, ...fallbackRows].map((row) => [
-							`${row.email}:${row.role}:${row.scopeType}:${row.scopeId ?? "global"}`,
-							row,
-						]),
-					).values(),
-				);
-			}),
-		[stations, users],
-	);
+	const { data: rows = [], isLoading } = useStaffAccessReview();
 
 	return (
 		<div className="max-w-5xl space-y-4">
@@ -173,7 +88,6 @@ const AccessReviewPage = React.memo(() => {
 											name={row.name}
 											email={row.email}
 											row={row}
-											lookup={lookup}
 											activeLabel={t("common.yes")}
 											inactiveLabel={t("common.no")}
 											globalLabel={t("accessReview.global")}

@@ -10,6 +10,27 @@ import type { AssignStaffRoleDto, CreateStaffUserDto, UpdateStaffUserDto } from 
 
 const HR_MANAGED_ROLES: readonly WezAdminRole[] = ["agent", "station_supervisor", "instructor", "support"];
 const OPS_BLOCKED_ROLES: readonly WezAdminRole[] = ["super_admin"];
+const ACCESS_SCOPE_TYPES = {
+	global: "global",
+	station: "station",
+} as const;
+const STAFF_REVIEW_ROLES = {
+	agent: "agent",
+	stationSupervisor: "station_supervisor",
+} as const;
+const SCOPED_PRIMARY_ROLES = [STAFF_REVIEW_ROLES.agent, STAFF_REVIEW_ROLES.stationSupervisor] as const;
+const MISSING_SCOPE_KEY = "missing";
+
+export type StaffAccessReviewRow = {
+	readonly id: string;
+	readonly name: string;
+	readonly email: string;
+	readonly role: string;
+	readonly scopeType: string;
+	readonly scopeId: string | null;
+	readonly scopeLabel: string | null;
+	readonly active: boolean;
+};
 
 @Injectable()
 export class StaffUsersService {
@@ -39,6 +60,93 @@ export class StaffUsersService {
 					select: { id: true, stationId: true, assignedAt: true, station: { select: { name: true } } },
 				},
 			},
+		});
+	}
+
+	async listAccessReview(): Promise<StaffAccessReviewRow[]> {
+		const [users, stations, locations] = await Promise.all([
+			this.list(),
+			this.prisma.station.findMany({
+				select: { id: true, name: true, supervisorUserId: true, active: true },
+				orderBy: { name: "asc" },
+			}),
+			this.prisma.location.findMany({
+				select: { id: true, nameEn: true },
+			}),
+		]);
+		const stationById = new Map(stations.map((station) => [station.id, station.name]));
+		const locationById = new Map(locations.map((location) => [location.id, location.nameEn]));
+		return users.flatMap((user) => {
+			const roleRows = user.roleAssignments.map((assignment) => ({
+				id: assignment.id,
+				name: user.name,
+				email: user.email,
+				role: assignment.role,
+				scopeType: assignment.scopeType,
+				scopeId: assignment.scopeId,
+				scopeLabel: this.scopeLabel(assignment.scopeType, assignment.scopeId, stationById, locationById),
+				active: user.active && assignment.active,
+			}));
+			const agentRows = user.agentAssignments.map((assignment) => ({
+				id: assignment.id,
+				name: user.name,
+				email: user.email,
+				role: STAFF_REVIEW_ROLES.agent,
+				scopeType: ACCESS_SCOPE_TYPES.station,
+				scopeId: assignment.stationId,
+				scopeLabel: stationById.get(assignment.stationId) ?? assignment.station.name,
+				active: user.active,
+			}));
+			const supervisedStationRows = stations
+				.filter((station) => station.supervisorUserId === user.id)
+				.map((station) => ({
+					id: `${user.id}:${station.id}:${STAFF_REVIEW_ROLES.stationSupervisor}`,
+					name: user.name,
+					email: user.email,
+					role: STAFF_REVIEW_ROLES.stationSupervisor,
+					scopeType: ACCESS_SCOPE_TYPES.station,
+					scopeId: station.id,
+					scopeLabel: station.name,
+					active: user.active && station.active,
+				}));
+			const scopedPrimaryRows = SCOPED_PRIMARY_ROLES.includes(user.role as (typeof SCOPED_PRIMARY_ROLES)[number])
+				? []
+				: [
+						{
+							id: `${user.id}:primary:${user.role}`,
+							name: user.name,
+							email: user.email,
+							role: user.role,
+							scopeType: ACCESS_SCOPE_TYPES.global,
+							scopeId: null,
+							scopeLabel: null,
+							active: user.active,
+						},
+					];
+			const missingScopedPrimaryRows =
+				SCOPED_PRIMARY_ROLES.includes(user.role as (typeof SCOPED_PRIMARY_ROLES)[number]) &&
+				agentRows.length === 0 &&
+				supervisedStationRows.length === 0
+					? [
+							{
+								id: `${user.id}:primary:${user.role}:missing-scope`,
+								name: user.name,
+								email: user.email,
+								role: user.role,
+								scopeType: ACCESS_SCOPE_TYPES.station,
+								scopeId: null,
+								scopeLabel: null,
+								active: false,
+							},
+						]
+					: [];
+			return this.uniqueAccessRows([
+				...scopedPrimaryRows,
+				...missingScopedPrimaryRows,
+				...roleRows,
+				...agentRows,
+				...supervisedStationRows,
+			]);
 		});
 	}
 
@@ -252,6 +360,27 @@ export class StaffUsersService {
 		const user = await this.prisma.adminUser.findUnique({ where: { id } });
 		if (!user) throw new NotFoundException({ code: "STAFF_USER_NOT_FOUND" });
 		return user;
+	}
+
+	private scopeLabel(
+		scopeType: string,
+		scopeId: string | null,
+		stationById: ReadonlyMap<string, string>,
+		locationById: ReadonlyMap<string, string>,
+	) {
+		if (scopeType === ACCESS_SCOPE_TYPES.global) return null;
+		if (!scopeId) return null;
+		return scopeType === ACCESS_SCOPE_TYPES.station
+			? (stationById.get(scopeId) ?? scopeId)
+			: (locationById.get(scopeId) ?? scopeId);
+	}
+
+	private uniqueAccessRows(rows: readonly StaffAccessReviewRow[]) {
+		return Array.from(
+			new Map(
+				rows.map((row) => [`${row.email}:${row.role}:${row.scopeType}:${row.scopeId ?? MISSING_SCOPE_KEY}`, row]),
+			).values(),
+		);
 	}
 
 	private assertScope(dto: AssignStaffRoleDto) {

@@ -22,7 +22,9 @@ export const STAFF_ACCESS_ROLES = {
 		STAFF_ROLES.stationSupervisor,
 		STAFF_ROLES.agent,
 	],
+	workerEmployerCreation: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
 	demandOperations: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
+	referralCreation: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
 	placementOperations: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,
@@ -30,6 +32,8 @@ export const STAFF_ACCESS_ROLES = {
 		STAFF_ROLES.stationSupervisor,
 		STAFF_ROLES.agent,
 	],
+	placementFinalization: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
+	placementEnding: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
 	hqOverview: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,
@@ -84,7 +88,9 @@ export const hasAnyStaffRole = (userRoles: readonly string[], allowedRoles: read
 
 const STAFF_ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles?: readonly StaffRole[]; exact?: boolean }> = [
 	{ prefix: "/staff/dashboard", exact: true },
+	{ prefix: "/staff/workers/new", roles: STAFF_ACCESS_ROLES.workerEmployerCreation },
 	{ prefix: "/staff/workers", roles: STAFF_ACCESS_ROLES.workerEmployerOperations },
+	{ prefix: "/staff/employers/new", roles: STAFF_ACCESS_ROLES.workerEmployerCreation },
 	{ prefix: "/staff/employers", roles: STAFF_ACCESS_ROLES.workerEmployerOperations },
 	{ prefix: "/staff/jobs", roles: STAFF_ACCESS_ROLES.demandOperations },
 	{ prefix: "/staff/hire-requests", roles: STAFF_ACCESS_ROLES.demandOperations },
