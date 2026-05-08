@@ -22,6 +22,10 @@ const seed = async () => {
 	const agentBolePassword = "AgentBolePass#1!";
 	const agentMegenagnaEmail = "agent.megenagna@wez.local";
 	const agentMegenagnaPassword = "AgentMegaPass#1!";
+	const hrFinanceEmail = "hr.finance@wez.local";
+	const hrFinancePassword = "HrFinancePass#1!";
+	const executiveViewerEmail = "executive@wez.local";
+	const executiveViewerPassword = "ExecutivePass#1!";
 
 	console.log("Seeding Wez baseline...");
 
@@ -109,6 +113,24 @@ const seed = async () => {
 		data: { role: "agent" },
 	});
 
+	console.log(`Creating stacked HR/finance manager: ${hrFinanceEmail}`);
+	const { user: hrFinanceManager } = await adminAuth.api.signUpEmail({
+		body: { name: "HR Finance Manager", email: hrFinanceEmail, password: hrFinancePassword },
+	});
+	await prisma.adminUser.update({
+		where: { id: hrFinanceManager.id },
+		data: { role: "hr_manager" },
+	});
+
+	console.log(`Creating executive viewer: ${executiveViewerEmail}`);
+	const { user: executiveViewer } = await adminAuth.api.signUpEmail({
+		body: { name: "Executive Viewer", email: executiveViewerEmail, password: executiveViewerPassword },
+	});
+	await prisma.adminUser.update({
+		where: { id: executiveViewer.id },
+		data: { role: "executive_viewer" },
+	});
+
 	console.log("Seeding location hierarchy...");
 	const addisAbaba = await prisma.location.create({
 		data: {
@@ -156,7 +178,7 @@ const seed = async () => {
 		data: {
 			code: "sidama-hawassa",
 			kind: "sub_area",
-			type: "city_administration",
+			type: "zone",
 			nameEn: "Hawassa City Administration",
 			nameAm: "ሀዋሳ ከተማ አስተዳደር",
 			parentId: sidama.id,
@@ -234,6 +256,9 @@ const seed = async () => {
 		data: [
 			{ adminUserId: superAdmin.id, role: "super_admin", scopeType: "global" },
 			{ adminUserId: opsManager.id, role: "ops_manager", scopeType: "global", assignedById: superAdmin.id },
+			{ adminUserId: hrFinanceManager.id, role: "hr_manager", scopeType: "global", assignedById: superAdmin.id },
+			{ adminUserId: hrFinanceManager.id, role: "finance_manager", scopeType: "global", assignedById: superAdmin.id },
+			{ adminUserId: executiveViewer.id, role: "executive_viewer", scopeType: "global", assignedById: superAdmin.id },
 			{
 				adminUserId: supervisor.id,
 				role: "station_supervisor",
@@ -911,6 +936,8 @@ const seed = async () => {
 	console.log(`  station_supervisor: ${supervisorEmail} / ${supervisorPassword}`);
 	console.log(`  agent (Bole):       ${agentBoleEmail} / ${agentBolePassword}`);
 	console.log(`  agent (Megenagna):  ${agentMegenagnaEmail} / ${agentMegenagnaPassword}`);
+	console.log(`  hr + finance:       ${hrFinanceEmail} / ${hrFinancePassword}`);
+	console.log(`  executive_viewer:   ${executiveViewerEmail} / ${executiveViewerPassword}`);
 	console.log("");
 	console.log("CUSTOMER APP — http://localhost:5180/login (workers via phone, employers via email)");
 	console.log("  No customers seeded — sign up or have an agent register one.");

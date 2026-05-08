@@ -8,11 +8,14 @@ import type { IStationsRepository } from "#modules/stations/domain/repositories/
 import { STATIONS_REPO } from "#modules/stations/domain/repositories/stations.repository";
 import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
+import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { PrismaService } from "#shared/database/prisma.service";
+import type { WorkerFilter } from "../../domain/entities/worker.entity";
 import { type IWorkersRepository, WORKERS_REPO } from "../../domain/repositories/workers.repository";
 import type { ListWorkersDto, RegisterWorkerDto, UpdateOwnWorkerProfileDto, UpdateWorkerDto } from "../dto/worker.dto";
 
 const WORKER_ROLE = "worker";
+const WORKER_GLOBAL_ACCESS_ROLES = ["super_admin", "ops_manager", "hr_manager"] as const;
 
 @Injectable()
 export class WorkersService {
@@ -22,9 +25,10 @@ export class WorkersService {
 		@Inject(STATIONS_REPO) private readonly stations: IStationsRepository,
 		private readonly prisma: PrismaService,
 		private readonly auditEvents: AuditEventsService,
+		private readonly staffAccess: StaffAccessService,
 	) {}
 
-	async list(filter: ListWorkersDto) {
+	async list(filter: ListWorkersDto | WorkerFilter) {
 		const { items, total } = await this.repo.listByFilter(filter);
 		const page = filter.page ?? 1;
 		const limit = filter.limit ?? 20;
@@ -34,10 +38,26 @@ export class WorkersService {
 		};
 	}
 
+	async listForSession(session: WezSession, filter: ListWorkersDto) {
+		if (session.kind !== "staff" || this.staffAccess.hasAnyRole(session, WORKER_GLOBAL_ACCESS_ROLES)) {
+			return this.list(filter);
+		}
+		const stationIds = await this.staffAccess.stationIdsForSession(session);
+		return this.list({ ...filter, registeredAtStationIds: stationIds });
+	}
+
 	async getById(id: string) {
 		const w = await this.repo.findById(id);
 		if (!w) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
 		return w;
+	}
+
+	async getByIdForSession(session: WezSession, id: string) {
+		const worker = await this.getById(id);
+		if (session.kind === "staff" && worker.registeredAtStationId) {
+			await this.staffAccess.assertStationAccess(session, worker.registeredAtStationId, WORKER_GLOBAL_ACCESS_ROLES);
+		}
+		return worker;
 	}
 
 	async getOwnProfile(userId: string) {
@@ -46,9 +66,12 @@ export class WorkersService {
 		return worker;
 	}
 
-	async register(currentAgentId: string, dto: RegisterWorkerDto) {
+	async register(session: WezSession, dto: RegisterWorkerDto) {
 		const station = await this.stations.findById(dto.stationId);
 		if (!station) throw new NotFoundException({ code: "STATION_NOT_FOUND" });
+		if (session.kind === "staff") {
+			await this.staffAccess.assertStationAccess(session, dto.stationId, WORKER_GLOBAL_ACCESS_ROLES);
+		}
 		const hasEmailLogin = !!dto.loginEmail || !!dto.loginPassword;
 		if (hasEmailLogin && (!dto.loginEmail || !dto.loginPassword)) {
 			throw new BadRequestException({ code: "WORKER_LOGIN_EMAIL_PASSWORD_REQUIRED" });
@@ -82,7 +105,7 @@ export class WorkersService {
 			hasHealthCard: dto.hasHealthCard,
 			hasPoliceClearance: dto.hasPoliceClearance,
 			tin: dto.tin ?? null,
-			registeredByAgentId: currentAgentId,
+			registeredByAgentId: session.user.id,
 			registeredAtStationId: dto.stationId,
 			roles: dto.roles,
 		});
@@ -146,6 +169,7 @@ export class WorkersService {
 		auditContext: AuditRequestContext | undefined,
 	) {
 		if (session.kind === "staff") {
+			await this.getByIdForSession(session, id);
 			return this.update(id, dto);
 		}
 		const worker = await this.getOwnProfile(session.user.id);

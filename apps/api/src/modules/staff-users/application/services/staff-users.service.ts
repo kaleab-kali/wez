@@ -1,7 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditEventsService } from "#modules/audit-log/audit-events.service";
 import { isStaffRole, type WezAdminRole } from "#modules/auth/permissions";
+import type { AuditRequestContext } from "#shared/audit/audit-context";
 import { PrismaService } from "#shared/database/prisma.service";
 import type { AssignStaffRoleDto, CreateStaffUserDto, UpdateStaffUserDto } from "../dto/staff-user.dto";
 
@@ -10,7 +13,10 @@ const OPS_BLOCKED_ROLES: readonly WezAdminRole[] = ["super_admin"];
 
 @Injectable()
 export class StaffUsersService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly auditEvents: AuditEventsService,
+	) {}
 
 	async list() {
 		return this.prisma.adminUser.findMany({
@@ -36,7 +42,12 @@ export class StaffUsersService {
 		});
 	}
 
-	async create(dto: CreateStaffUserDto, actorRoles: readonly WezAdminRole[]) {
+	async create(
+		dto: CreateStaffUserDto,
+		actorId: string | undefined,
+		actorRoles: readonly WezAdminRole[],
+		auditContext: AuditRequestContext | undefined,
+	) {
 		if (!isStaffRole(dto.primaryRole)) throw new BadRequestException({ code: "INVALID_STAFF_ROLE" });
 		this.assertCanManageRole(actorRoles, dto.primaryRole);
 		const existing = await this.prisma.adminUser.findUnique({ where: { email: dto.email } });
@@ -49,10 +60,25 @@ export class StaffUsersService {
 			where: { id: user.id },
 			data: { role: dto.primaryRole },
 		});
+		await this.auditEvents.recordEvent({
+			actorId,
+			actorRole: this.actorRole(actorRoles),
+			action: AUDIT_ACTIONS.staffUserCreated,
+			targetType: AUDIT_TARGET_TYPES.staffUser,
+			targetId: updated.id,
+			context: auditContext,
+			metadata: { primaryRole: dto.primaryRole },
+		});
 		return { user: updated, temporaryPassword };
 	}
 
-	async update(id: string, dto: UpdateStaffUserDto, actorRoles: readonly WezAdminRole[]) {
+	async update(
+		id: string,
+		dto: UpdateStaffUserDto,
+		actorId: string | undefined,
+		actorRoles: readonly WezAdminRole[],
+		auditContext: AuditRequestContext | undefined,
+	) {
 		const existing = await this.get(id);
 		if (dto.primaryRole) {
 			this.assertCanManageRole(actorRoles, dto.primaryRole);
@@ -92,11 +118,30 @@ export class StaffUsersService {
 					data: { active: false, revokedAt: new Date(), revokeReason: "Staff user deactivated" },
 				});
 			}
+			await this.auditEvents.record(tx, {
+				actorId,
+				actorRole: this.actorRole(actorRoles),
+				action: AUDIT_ACTIONS.staffUserUpdated,
+				targetType: AUDIT_TARGET_TYPES.staffUser,
+				targetId: id,
+				context: auditContext,
+				metadata: {
+					primaryRole: dto.primaryRole,
+					active: dto.active,
+					emailChanged: dto.email !== undefined && dto.email !== existing.email,
+				},
+			});
 			return updated;
 		});
 	}
 
-	async assignRole(adminUserId: string, dto: AssignStaffRoleDto, actorId: string, actorRoles: readonly WezAdminRole[]) {
+	async assignRole(
+		adminUserId: string,
+		dto: AssignStaffRoleDto,
+		actorId: string,
+		actorRoles: readonly WezAdminRole[],
+		auditContext: AuditRequestContext | undefined,
+	) {
 		await this.get(adminUserId);
 		if (!isStaffRole(dto.role)) throw new BadRequestException({ code: "INVALID_STAFF_ROLE" });
 		this.assertCanManageRole(actorRoles, dto.role);
@@ -136,11 +181,31 @@ export class StaffUsersService {
 					await tx.station.update({ where: { id: dto.scopeId }, data: { supervisorUserId: adminUserId } });
 				}
 			}
+			await this.auditEvents.record(tx, {
+				actorId,
+				actorRole: this.actorRole(actorRoles),
+				action: AUDIT_ACTIONS.staffRoleAssigned,
+				targetType: AUDIT_TARGET_TYPES.staffRoleAssignment,
+				targetId: assignment.id,
+				context: auditContext,
+				metadata: {
+					adminUserId,
+					role: dto.role,
+					scopeType: dto.scopeType,
+					scopeId: dto.scopeId,
+				},
+			});
 			return assignment;
 		});
 	}
 
-	async revokeRole(assignmentId: string, reason: string | undefined, actorRoles: readonly WezAdminRole[]) {
+	async revokeRole(
+		assignmentId: string,
+		reason: string | undefined,
+		actorId: string | undefined,
+		actorRoles: readonly WezAdminRole[],
+		auditContext: AuditRequestContext | undefined,
+	) {
 		const assignment = await this.prisma.staffRoleAssignment.findUnique({ where: { id: assignmentId } });
 		if (!assignment) throw new NotFoundException({ code: "STAFF_ROLE_ASSIGNMENT_NOT_FOUND" });
 		if (!isStaffRole(assignment.role)) throw new BadRequestException({ code: "INVALID_STAFF_ROLE" });
@@ -164,6 +229,21 @@ export class StaffUsersService {
 					});
 				}
 			}
+			await this.auditEvents.record(tx, {
+				actorId,
+				actorRole: this.actorRole(actorRoles),
+				action: AUDIT_ACTIONS.staffRoleRevoked,
+				targetType: AUDIT_TARGET_TYPES.staffRoleAssignment,
+				targetId: assignmentId,
+				context: auditContext,
+				metadata: {
+					adminUserId: assignment.adminUserId,
+					role: assignment.role,
+					scopeType: assignment.scopeType,
+					scopeId: assignment.scopeId,
+					reason,
+				},
+			});
 			return revoked;
 		});
 	}
@@ -201,5 +281,9 @@ export class StaffUsersService {
 
 	private generateTemporaryPassword(): string {
 		return `${randomBytes(12).toString("base64url")}A1!`;
+	}
+
+	private actorRole(actorRoles: readonly WezAdminRole[]): string {
+		return actorRoles[0] ?? "staff";
 	}
 }

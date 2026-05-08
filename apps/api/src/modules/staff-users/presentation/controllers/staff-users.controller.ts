@@ -34,7 +34,7 @@ export class StaffUsersController {
 		@Body() dto: CreateStaffUserDto,
 		@Req() req: WezRequest & { adminUser?: { id: string; roles?: WezAdminRole[] } },
 	) {
-		return { data: await this.service.create(dto, req.adminUser?.roles ?? []) };
+		return { data: await this.service.create(dto, req.adminUser?.id, req.adminUser?.roles ?? [], req.auditContext) };
 	}
 
 	@Patch(":id")
@@ -43,9 +43,11 @@ export class StaffUsersController {
 	async update(
 		@Param("id") id: string,
 		@Body() dto: UpdateStaffUserDto,
-		@Req() req: WezRequest & { adminUser?: { roles?: WezAdminRole[] } },
+		@Req() req: WezRequest & { adminUser?: { id: string; roles?: WezAdminRole[] } },
 	) {
-		return { data: await this.service.update(id, dto, req.adminUser?.roles ?? []) };
+		return {
+			data: await this.service.update(id, dto, req.adminUser?.id, req.adminUser?.roles ?? [], req.auditContext),
+		};
 	}
 
 	@Post(":id/role-assignments")
@@ -56,7 +58,15 @@ export class StaffUsersController {
 		@Body() dto: AssignStaffRoleDto,
 		@Req() req: WezRequest & { adminUser?: { id: string; roles?: WezAdminRole[] } },
 	) {
-		return { data: await this.service.assignRole(id, dto, req.adminUser?.id ?? "system", req.adminUser?.roles ?? []) };
+		return {
+			data: await this.service.assignRole(
+				id,
+				dto,
+				req.adminUser?.id ?? "system",
+				req.adminUser?.roles ?? [],
+				req.auditContext,
+			),
+		};
 	}
 
 	@Post("role-assignments/:assignmentId/revoke")
@@ -65,8 +75,16 @@ export class StaffUsersController {
 	async revokeRole(
 		@Param("assignmentId") assignmentId: string,
 		@Body() dto: RevokeStaffRoleDto,
-		@Req() req: WezRequest & { adminUser?: { roles?: WezAdminRole[] } },
+		@Req() req: WezRequest & { adminUser?: { id: string; roles?: WezAdminRole[] } },
 	) {
-		return { data: await this.service.revokeRole(assignmentId, dto.reason, req.adminUser?.roles ?? []) };
+		return {
+			data: await this.service.revokeRole(
+				assignmentId,
+				dto.reason,
+				req.adminUser?.id,
+				req.adminUser?.roles ?? [],
+				req.auditContext,
+			),
+		};
 	}
 }

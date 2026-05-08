@@ -1,4 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditEventsService } from "#modules/audit-log/audit-events.service";
+import type { AuditRequestContext } from "#shared/audit/audit-context";
 import { PrismaService } from "#shared/database/prisma.service";
 import { type IStationsRepository, STATIONS_REPO } from "../../domain/repositories/stations.repository";
 import type { CreateStationDto, UpdateStationDto } from "../dto/station.dto";
@@ -8,6 +11,7 @@ export class StationsService {
 	constructor(
 		@Inject(STATIONS_REPO) private readonly repo: IStationsRepository,
 		private readonly prisma: PrismaService,
+		private readonly auditEvents: AuditEventsService,
 	) {}
 
 	async list(includeInactive = false) {
@@ -20,9 +24,12 @@ export class StationsService {
 		return s;
 	}
 
-	async create(dto: CreateStationDto) {
+	async create(
+		dto: CreateStationDto,
+		auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext },
+	) {
 		const stationInput = await this.resolveCreateInput(dto);
-		return this.repo.create({
+		const created = await this.repo.create({
 			name: stationInput.name,
 			woreda: stationInput.woreda,
 			address: stationInput.address,
@@ -33,12 +40,31 @@ export class StationsService {
 			customReason: stationInput.customReason,
 			supervisorUserId: dto.supervisorUserId ?? null,
 		});
+		await this.auditEvents.recordEvent({
+			actorId: auditInput?.actorId,
+			actorRole: auditInput?.actorRole,
+			action: AUDIT_ACTIONS.stationCreated,
+			targetType: AUDIT_TARGET_TYPES.station,
+			targetId: created.id,
+			stationId: created.id,
+			context: auditInput?.context,
+			metadata: {
+				localityId: created.localityId,
+				custom: created.custom,
+				supervisorUserId: created.supervisorUserId,
+			},
+		});
+		return created;
 	}
 
-	async update(id: string, patch: UpdateStationDto) {
+	async update(
+		id: string,
+		patch: UpdateStationDto,
+		auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext },
+	) {
 		await this.getById(id);
 		const stationInput = patch.localityId ? await this.resolveLocationStationInput(patch.localityId) : null;
-		return this.repo.update(id, {
+		const updated = await this.repo.update(id, {
 			name: patch.name ?? stationInput?.name,
 			woreda: patch.woreda ?? stationInput?.woreda,
 			address: patch.address ?? stationInput?.address,
@@ -49,6 +75,22 @@ export class StationsService {
 			supervisorUserId: patch.supervisorUserId,
 			active: patch.active,
 		});
+		await this.auditEvents.recordEvent({
+			actorId: auditInput?.actorId,
+			actorRole: auditInput?.actorRole,
+			action: AUDIT_ACTIONS.stationUpdated,
+			targetType: AUDIT_TARGET_TYPES.station,
+			targetId: id,
+			stationId: id,
+			context: auditInput?.context,
+			metadata: {
+				localityId: updated.localityId,
+				active: updated.active,
+				custom: updated.custom,
+				supervisorUserId: updated.supervisorUserId,
+			},
+		});
+		return updated;
 	}
 
 	async listAssignments(stationId: string) {
@@ -56,17 +98,46 @@ export class StationsService {
 		return this.repo.listAssignments(stationId);
 	}
 
-	async assignAgent(stationId: string, userId: string) {
+	async assignAgent(
+		stationId: string,
+		userId: string,
+		auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext },
+	) {
 		await this.getById(stationId);
 		const existing = await this.repo.listAssignmentsForUser(userId, true);
 		if (existing.some((a) => a.stationId === stationId)) {
 			throw new ConflictException({ code: "ALREADY_ASSIGNED" });
 		}
-		return this.repo.assignAgent(userId, stationId);
+		const assignment = await this.repo.assignAgent(userId, stationId);
+		await this.auditEvents.recordEvent({
+			actorId: auditInput?.actorId,
+			actorRole: auditInput?.actorRole,
+			action: AUDIT_ACTIONS.stationAgentAssigned,
+			targetType: AUDIT_TARGET_TYPES.agentAssignment,
+			targetId: assignment.id,
+			stationId,
+			context: auditInput?.context,
+			metadata: { userId, stationId },
+		});
+		return assignment;
 	}
 
-	async removeAssignment(assignmentId: string) {
-		return this.repo.removeAgent(assignmentId);
+	async removeAssignment(
+		assignmentId: string,
+		auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext },
+	) {
+		const removed = await this.repo.removeAgent(assignmentId);
+		await this.auditEvents.recordEvent({
+			actorId: auditInput?.actorId,
+			actorRole: auditInput?.actorRole,
+			action: AUDIT_ACTIONS.stationAgentUnassigned,
+			targetType: AUDIT_TARGET_TYPES.agentAssignment,
+			targetId: assignmentId,
+			stationId: removed.stationId,
+			context: auditInput?.context,
+			metadata: { userId: removed.userId, stationId: removed.stationId },
+		});
+		return removed;
 	}
 
 	async stationsForAgent(userId: string) {

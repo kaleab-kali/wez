@@ -1,7 +1,6 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Public } from "#modules/auth/guards/wez-auth.guard";
-import { hasPermission } from "#modules/auth/permissions";
 import { requirePermission, requireSession, type WezRequest } from "#shared/auth/session";
 import {
 	CreateEmployerDto,
@@ -21,8 +20,8 @@ export class EmployersController {
 	@ApiOperation({ summary: "List employers (staff only)" })
 	@ApiResponse({ status: 200, description: "Employers returned" })
 	async list(@Query() filter: ListEmployersDto, @Req() req: WezRequest) {
-		await requirePermission(req, "employer:list");
-		return this.service.list(filter);
+		const session = await requirePermission(req, "employer:list");
+		return this.service.listForSession(session, filter);
 	}
 
 	@Get("me")
@@ -38,8 +37,8 @@ export class EmployersController {
 	@ApiOperation({ summary: "Get an employer by id" })
 	@ApiResponse({ status: 200, description: "Employer returned" })
 	async getById(@Param("id") id: string, @Req() req: WezRequest) {
-		await requirePermission(req, "employer:read");
-		return { data: await this.service.getById(id) };
+		const session = await requirePermission(req, "employer:read");
+		return { data: await this.service.getByIdForSession(session, id) };
 	}
 
 	@Post("signup")
@@ -60,9 +59,7 @@ export class EmployersController {
 		// Staff with employer:create permission OR a customer self-signing-up.
 		const isStaff = s.kind === "staff";
 		if (isStaff) {
-			if (!hasPermission(s.user.role, "employer:create")) {
-				throw new ForbiddenException({ code: "MISSING_PERMISSION" });
-			}
+			await requirePermission(req, "employer:create");
 		}
 		// Customer self-signup is always allowed (creates their own profile linked to their user).
 		return { data: await this.service.create(s.user.id, dto, isStaff) };
@@ -73,7 +70,8 @@ export class EmployersController {
 	@ApiBody({ type: UpdateEmployerDto })
 	@ApiResponse({ status: 200, description: "Employer updated" })
 	async update(@Param("id") id: string, @Body() dto: UpdateEmployerDto, @Req() req: WezRequest) {
-		await requirePermission(req, "employer:update");
+		const session = await requirePermission(req, "employer:update");
+		await this.service.getByIdForSession(session, id);
 		return { data: await this.service.update(id, dto) };
 	}
 }

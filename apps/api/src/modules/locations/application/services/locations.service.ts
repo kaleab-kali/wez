@@ -1,10 +1,16 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditEventsService } from "#modules/audit-log/audit-events.service";
+import type { AuditRequestContext } from "#shared/audit/audit-context";
 import { PrismaService } from "#shared/database/prisma.service";
 import type { CreateLocationDto, UpdateLocationDto } from "../dto/location.dto";
 
 @Injectable()
 export class LocationsService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly auditEvents: AuditEventsService,
+	) {}
 
 	async list(input: { kind?: string; parentId?: string; includeInactive?: boolean }) {
 		return this.prisma.location.findMany({
@@ -18,25 +24,44 @@ export class LocationsService {
 		});
 	}
 
-	async create(dto: CreateLocationDto) {
+	async create(
+		dto: CreateLocationDto,
+		auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext },
+	) {
 		await this.assertParent(dto.kind, dto.parentId);
 		this.assertType(dto.kind, dto.type);
 		const existing = await this.prisma.location.findUnique({ where: { code: dto.code } });
 		if (existing) throw new ConflictException({ code: "LOCATION_CODE_EXISTS" });
-		return this.prisma.location.create({
-			data: {
-				code: dto.code,
-				kind: dto.kind,
-				type: dto.type,
-				nameEn: dto.nameEn,
-				nameAm: dto.nameAm,
-				parentId: dto.parentId,
-				sortOrder: dto.sortOrder ?? 0,
-			},
+		return this.prisma.$transaction(async (tx) => {
+			const created = await tx.location.create({
+				data: {
+					code: dto.code,
+					kind: dto.kind,
+					type: dto.type,
+					nameEn: dto.nameEn,
+					nameAm: dto.nameAm,
+					parentId: dto.parentId,
+					sortOrder: dto.sortOrder ?? 0,
+				},
+			});
+			await this.auditEvents.record(tx, {
+				actorId: auditInput?.actorId,
+				actorRole: auditInput?.actorRole,
+				action: AUDIT_ACTIONS.locationCreated,
+				targetType: AUDIT_TARGET_TYPES.location,
+				targetId: created.id,
+				context: auditInput?.context,
+				metadata: { code: created.code, kind: created.kind, type: created.type, parentId: created.parentId },
+			});
+			return created;
 		});
 	}
 
-	async update(id: string, dto: UpdateLocationDto) {
+	async update(
+		id: string,
+		dto: UpdateLocationDto,
+		auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext },
+	) {
 		const current = await this.get(id);
 		const nextKind = dto.kind ?? current.kind;
 		const nextParentId = dto.parentId ?? current.parentId ?? undefined;
@@ -47,22 +72,34 @@ export class LocationsService {
 			const existing = await this.prisma.location.findUnique({ where: { code: dto.code }, select: { id: true } });
 			if (existing) throw new ConflictException({ code: "LOCATION_CODE_EXISTS" });
 		}
-		return this.prisma.location.update({
-			where: { id },
-			data: {
-				code: dto.code,
-				kind: dto.kind,
-				type: dto.type,
-				nameEn: dto.nameEn,
-				nameAm: dto.nameAm,
-				parentId: dto.parentId,
-				sortOrder: dto.sortOrder,
-				active: dto.active,
-			},
+		return this.prisma.$transaction(async (tx) => {
+			const updated = await tx.location.update({
+				where: { id },
+				data: {
+					code: dto.code,
+					kind: dto.kind,
+					type: dto.type,
+					nameEn: dto.nameEn,
+					nameAm: dto.nameAm,
+					parentId: dto.parentId,
+					sortOrder: dto.sortOrder,
+					active: dto.active,
+				},
+			});
+			await this.auditEvents.record(tx, {
+				actorId: auditInput?.actorId,
+				actorRole: auditInput?.actorRole,
+				action: AUDIT_ACTIONS.locationUpdated,
+				targetType: AUDIT_TARGET_TYPES.location,
+				targetId: id,
+				context: auditInput?.context,
+				metadata: { code: updated.code, kind: updated.kind, type: updated.type, active: updated.active },
+			});
+			return updated;
 		});
 	}
 
-	async deactivate(id: string) {
+	async deactivate(id: string, auditInput?: { actorId?: string; actorRole?: string; context?: AuditRequestContext }) {
 		await this.get(id);
 		const activeChild = await this.prisma.location.findFirst({
 			where: { parentId: id, active: true, deletedAt: null },
@@ -74,9 +111,21 @@ export class LocationsService {
 			select: { id: true },
 		});
 		if (station) throw new ConflictException({ code: "LOCATION_IN_USE_BY_STATION" });
-		return this.prisma.location.update({
-			where: { id },
-			data: { active: false, deletedAt: new Date() },
+		return this.prisma.$transaction(async (tx) => {
+			const deactivated = await tx.location.update({
+				where: { id },
+				data: { active: false, deletedAt: new Date() },
+			});
+			await this.auditEvents.record(tx, {
+				actorId: auditInput?.actorId,
+				actorRole: auditInput?.actorRole,
+				action: AUDIT_ACTIONS.locationDeactivated,
+				targetType: AUDIT_TARGET_TYPES.location,
+				targetId: id,
+				context: auditInput?.context,
+				metadata: { code: deactivated.code, kind: deactivated.kind, type: deactivated.type },
+			});
+			return deactivated;
 		});
 	}
 
