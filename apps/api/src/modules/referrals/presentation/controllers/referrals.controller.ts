@@ -30,7 +30,7 @@ export class ReferralsController {
 	@ApiResponse({ status: 201, description: "Referral created" })
 	async create(@Body() dto: CreateReferralDto, @Req() req: WezRequest) {
 		const session = await requirePermission(req, "referral:create");
-		return { data: await this.service.create(session.user.id, dto) };
+		return { data: await this.service.create(session, dto) };
 	}
 
 	@Post(":id/accept")

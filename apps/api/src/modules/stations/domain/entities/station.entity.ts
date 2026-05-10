@@ -5,6 +5,9 @@ export interface Station {
 	address: string;
 	phone: string | null;
 	active: boolean;
+	localityId: string | null;
+	custom: boolean;
+	customReason: string | null;
 	supervisorUserId: string | null;
 	createdAt: Date;
 	updatedAt: Date;
@@ -21,5 +24,8 @@ export interface AgentAssignment {
 
 export type NewStation = Omit<Station, "id" | "createdAt" | "updatedAt">;
 export type StationPatch = Partial<
-	Pick<Station, "name" | "woreda" | "address" | "phone" | "active" | "supervisorUserId">
+	Pick<
+		Station,
+		"name" | "woreda" | "address" | "phone" | "active" | "localityId" | "custom" | "customReason" | "supervisorUserId"
+	>
 >;

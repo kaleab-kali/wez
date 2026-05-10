@@ -13,12 +13,14 @@ import { ErrorReportingModule } from "#modules/error-reporting/error-reporting.m
 import { HealthModule } from "#modules/health/health.module";
 import { HireRequestsModule } from "#modules/hire-requests/hire-requests.module";
 import { JobsModule } from "#modules/jobs/jobs.module";
+import { LocationsModule } from "#modules/locations/locations.module";
 import { LookupsModule } from "#modules/lookups/lookups.module";
 import { NotificationModule } from "#modules/notification/notification.module";
 import { PlacementsModule } from "#modules/placements/placements.module";
 import { PlatformSettingsModule } from "#modules/platform-settings/platform-settings.module";
 import { ReferralsModule } from "#modules/referrals/referrals.module";
 import { RoleCatalogModule } from "#modules/role-catalog/role-catalog.module";
+import { StaffUsersModule } from "#modules/staff-users/staff-users.module";
 import { StationsModule } from "#modules/stations/stations.module";
 import { WorkersModule } from "#modules/workers/workers.module";
 import { AuditContextMiddleware } from "#shared/audit/audit-context.middleware";
@@ -51,6 +53,8 @@ import { StorageModule } from "#shared/storage/storage.module";
 		PlacementsModule,
 		StationsModule,
 		RoleCatalogModule,
+		StaffUsersModule,
+		LocationsModule,
 		LookupsModule,
 		WorkersModule,
 		EmployersModule,

@@ -1,10 +1,9 @@
 import {
 	Book02Icon,
 	Coins01Icon,
+	ContactBookIcon,
 	NoteEditIcon,
-	SecurityIcon,
 	StoreLocation02Icon,
-	UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -12,9 +11,19 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAdminDashboardMetrics } from "#features/admin-dashboard/api/admin-dashboard.queries";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES, type StaffRole } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+
+type AdminTile = {
+	readonly to: string;
+	readonly icon: typeof StoreLocation02Icon;
+	readonly title: string;
+	readonly description: string;
+	readonly roles?: readonly StaffRole[];
+	readonly badge?: { label: string; variant: "default" | "destructive" | "secondary" | "outline" };
+};
 
 const TileLink = React.memo(
 	({
@@ -112,9 +121,56 @@ const AdminDashboard = React.memo(() => {
 	const { t } = useTranslation();
 	const { data: session } = useAdminSession();
 	const { data: metrics, isPending: metricsPending, isError: metricsError } = useAdminDashboardMetrics();
-	const user = session?.user as { name?: string; role?: string; twoFactorEnabled?: boolean } | undefined;
+	const user = session?.user as { name?: string; role?: string; roles?: string[] } | undefined;
 	const role = user?.role ?? "support";
-	const twoFactorEnabled = user?.twoFactorEnabled ?? false;
+	const userRoles = React.useMemo(() => effectiveStaffRoles(role, user?.roles), [role, user?.roles]);
+	const adminTiles = React.useMemo<readonly AdminTile[]>(
+		() => [
+			{
+				to: "/staff-admin/staff-users",
+				icon: ContactBookIcon,
+				title: t("staffUsers.title"),
+				description: t("staffUsers.subtitle"),
+				roles: STAFF_ACCESS_ROLES.staffUsers,
+			},
+			{
+				to: "/staff-admin/stations",
+				icon: StoreLocation02Icon,
+				title: t("admin.stationsAndAgents"),
+				description: t("admin.nav.stations"),
+				roles: STAFF_ACCESS_ROLES.platformConfig,
+			},
+			{
+				to: "/staff-admin/locations",
+				icon: StoreLocation02Icon,
+				title: t("locations.title"),
+				description: t("locations.subtitle"),
+				roles: STAFF_ACCESS_ROLES.platformConfig,
+			},
+			{
+				to: "/staff-admin/role-catalog",
+				icon: Coins01Icon,
+				title: t("admin.roleCatalogLink"),
+				description: t("roleCatalog.subtitle"),
+				roles: STAFF_ACCESS_ROLES.platformConfig,
+			},
+			{
+				to: "/staff-admin/hiring-policy",
+				icon: NoteEditIcon,
+				title: t("platformSettings.hiringPolicy"),
+				description: t("platformSettings.hiringPolicyBody"),
+				roles: STAFF_ACCESS_ROLES.hiringPolicy,
+			},
+			{
+				to: "/staff-admin/lookups",
+				icon: Book02Icon,
+				title: t("admin.nav.lookups"),
+				description: t("locations.subtitle"),
+				roles: STAFF_ACCESS_ROLES.platformConfig,
+			},
+		],
+		[t],
+	);
 
 	return (
 		<div className="space-y-8 max-w-6xl">
@@ -200,47 +256,18 @@ const AdminDashboard = React.memo(() => {
 					{t("admin.operations")}
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-					<TileLink
-						to="/staff-admin/stations"
-						icon={StoreLocation02Icon}
-						title={t("admin.stationsAndAgents")}
-						description={t("admin.nav.stations")}
-					/>
-					<TileLink
-						to="/staff-admin/role-catalog"
-						icon={Coins01Icon}
-						title={t("admin.roleCatalogLink")}
-						description={t("roleCatalog.subtitle")}
-					/>
-					<TileLink
-						to="/staff-admin/hiring-policy"
-						icon={NoteEditIcon}
-						title={t("platformSettings.hiringPolicy")}
-						description={t("platformSettings.hiringPolicyBody")}
-					/>
-					<TileLink
-						to="/staff-admin/lookups"
-						icon={Book02Icon}
-						title={t("admin.nav.lookups")}
-						description="Languages, woredas, religions"
-					/>
-					<TileLink
-						to="/staff-admin/2fa"
-						icon={SecurityIcon}
-						title={t("admin.twoFactor")}
-						description={twoFactorEnabled ? t("admin.manage") : t("admin.enable2fa")}
-						badge={
-							twoFactorEnabled
-								? { label: t("admin.twoFactorEnabled"), variant: "default" }
-								: { label: t("admin.twoFactorDisabled"), variant: "destructive" }
-						}
-					/>
-					<TileLink
-						to="/staff-admin/sessions"
-						icon={UserMultipleIcon}
-						title={t("admin.sessions")}
-						description={t("admin.viewSessions")}
-					/>
+					{adminTiles
+						.filter((tile) => hasAnyStaffRole(userRoles, tile.roles))
+						.map((tile) => (
+							<TileLink
+								key={tile.to}
+								to={tile.to}
+								icon={tile.icon}
+								title={tile.title}
+								description={tile.description}
+								badge={tile.badge}
+							/>
+						))}
 				</div>
 			</section>
 		</div>

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
@@ -30,7 +31,7 @@ function CustomerWorkersPage() {
 	});
 	const { data, isLoading } = useWorkers(filter);
 	const { data: roles } = usePublicRoles();
-	const { data: woredas } = useLookupKind("woredas");
+	const { data: localities } = usePublicLocations({ kind: "locality" });
 	const { data: languages } = useLookupKind("languages");
 
 	const set = React.useCallback(
@@ -81,9 +82,9 @@ function CustomerWorkersPage() {
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						>
 							<option value="">{t("common.any")}</option>
-							{woredas?.map((woreda) => (
-								<option key={woreda.value} value={woreda.value}>
-									{woreda.labelEn}
+							{localities?.map((locality) => (
+								<option key={locality.id} value={locality.code}>
+									{locality.nameEn}
 								</option>
 							))}
 						</select>

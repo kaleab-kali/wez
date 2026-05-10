@@ -3,9 +3,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +30,7 @@ const FilterPanel = React.memo(
 	({ filter, onChange }: { readonly filter: WorkerFilter; readonly onChange: (next: WorkerFilter) => void }) => {
 		const { t } = useTranslation();
 		const { data: roles } = usePublicRoles();
-		const { data: woredas } = useLookupKind("woredas");
+		const { data: localities } = usePublicLocations({ kind: "locality" });
 		const { data: languages } = useLookupKind("languages");
 		const set = React.useCallback(
 			<K extends keyof WorkerFilter>(k: K, v: WorkerFilter[K]) => onChange({ ...filter, [k]: v, page: 1 }),
@@ -103,9 +106,9 @@ const FilterPanel = React.memo(
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						>
 							<option value="">{t("common.any")}</option>
-							{woredas?.map((w) => (
-								<option key={w.value} value={w.value}>
-									{w.labelEn}
+							{localities?.map((locality) => (
+								<option key={locality.id} value={locality.code}>
+									{locality.nameEn}
 								</option>
 							))}
 						</select>
@@ -217,6 +220,9 @@ const WorkerCard = React.memo(
 									{w.area} · {w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} ·{" "}
 									{t("workers.expYearsShort", { n: w.experienceYears })}
 								</CardDescription>
+								{w.registeredAtStationName && (
+									<div className="mt-1 text-[11px] text-muted-foreground">{w.registeredAtStationName}</div>
+								)}
 							</div>
 							<div className="flex flex-col items-end gap-1 shrink-0">
 								<Badge variant={TIER_VARIANT[w.tier]} className="capitalize">
@@ -270,6 +276,13 @@ function WorkerBrowsePage() {
 	const { t } = useTranslation();
 	const [filter, setFilter] = React.useState<WorkerFilter>({ page: 1, limit: 20 });
 	const { data, isLoading } = useWorkers(filter);
+	const { data: session } = useAdminSession();
+	const user = session?.user as { role?: string; roles?: string[] } | undefined;
+	const userRoles = React.useMemo(() => effectiveStaffRoles(user?.role, user?.roles), [user?.role, user?.roles]);
+	const canCreateWorker = React.useMemo(
+		() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.workerEmployerCreation),
+		[userRoles],
+	);
 
 	const total = data?.meta.total ?? 0;
 
@@ -280,12 +293,14 @@ function WorkerBrowsePage() {
 					<h1 className="text-2xl font-bold tracking-tight">{t("workers.title")}</h1>
 					<p className="text-sm text-muted-foreground mt-1">{t("workers.count", { count: total })}</p>
 				</div>
-				<Link to="/staff/workers/new">
-					<Button>
-						<HugeiconsIcon icon={UserAdd01Icon} className="size-4 mr-2" />
-						{t("workers.registerCta")}
-					</Button>
-				</Link>
+				{canCreateWorker && (
+					<Link to="/staff/workers/new">
+						<Button>
+							<HugeiconsIcon icon={UserAdd01Icon} className="size-4 mr-2" />
+							{t("workers.registerCta")}
+						</Button>
+					</Link>
+				)}
 			</header>
 			<div className="flex gap-6 items-start">
 				<FilterPanel filter={filter} onChange={setFilter} />

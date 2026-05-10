@@ -22,7 +22,10 @@ export class WorkersController {
 		const session = await requirePermission(req, "worker:list");
 		const scopedFilter =
 			session.kind === "staff" ? filter : { ...filter, availableOnly: filter.availableOnly ?? true, hideFlagged: true };
-		const result = await this.service.list(scopedFilter);
+		const result =
+			session.kind === "staff"
+				? await this.service.listForSession(session, scopedFilter)
+				: await this.service.list(scopedFilter);
 		if (session.kind === "staff") {
 			return result;
 		}
@@ -41,7 +44,7 @@ export class WorkersController {
 	@ApiOperation({ summary: "Get a worker profile" })
 	async getById(@Param("id") id: string, @Req() req: WezRequest) {
 		const session = await requirePermission(req, "worker:read");
-		const worker = await this.service.getById(id);
+		const worker = await this.service.getByIdForSession(session, id);
 		return { data: session.kind === "staff" ? worker : toCustomerWorker(worker) };
 	}
 
@@ -50,7 +53,7 @@ export class WorkersController {
 	@ApiBody({ type: RegisterWorkerDto })
 	async register(@Body() dto: RegisterWorkerDto, @Req() req: WezRequest) {
 		const s = await requirePermission(req, "worker:create");
-		return { data: await this.service.register(s.user.id, dto) };
+		return { data: await this.service.register(s, dto) };
 	}
 
 	@Patch("me")

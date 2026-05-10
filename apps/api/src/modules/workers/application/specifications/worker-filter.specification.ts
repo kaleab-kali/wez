@@ -65,6 +65,10 @@ export const buildWorkerWhere = (f: WorkerFilter): Prisma.WorkerWhereInput => {
 		where.available = true;
 	}
 
+	if (f.registeredAtStationIds) {
+		where.registeredAtStationId = { in: f.registeredAtStationIds };
+	}
+
 	return where;
 };
 

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { type Job, type JobFilter, useCloseJob, useJobs } from "#features/jobs/api/job.queries";
-import { useLookupKind } from "#features/lookups/api/lookup.queries";
+import { usePublicLocations } from "#features/locations/api/location.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { authClient } from "#shared/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ const CustomerJobsPage = React.memo(() => {
 	const [filter, setFilter] = React.useState<JobFilter>({ page: 1, limit: JOB_PAGE_LIMIT, sort: "newest" });
 	const { data, isLoading } = useJobs(filter, { enabled: !isWorker });
 	const { data: roles } = usePublicRoles();
-	const { data: woredas } = useLookupKind("woredas");
+	const { data: localities } = usePublicLocations({ kind: "locality" });
 	const closeJob = useCloseJob();
 	const roleCategories = React.useMemo(
 		() => Array.from(new Set((roles ?? []).map((role) => role.category).filter(Boolean))).sort(),
@@ -185,9 +185,9 @@ const CustomerJobsPage = React.memo(() => {
 							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						>
 							<option value="">{t("common.any")}</option>
-							{woredas?.map((woreda) => (
-								<option key={woreda.value} value={woreda.value}>
-									{woreda.labelEn}
+							{localities?.map((locality) => (
+								<option key={locality.id} value={locality.code}>
+									{locality.nameEn}
 								</option>
 							))}
 						</select>

@@ -53,7 +53,7 @@ export class PlacementsService {
 
 	async listForSession(session: WezSession, filter: ListPlacementsDto) {
 		if (session.kind === "staff") {
-			if (this.stationAccess.isStationScopedRole(session.user.role)) {
+			if (this.stationAccess.isStationScopedSession(session)) {
 				const stationIds = await this.stationAccess.stationIdsForSession(session);
 				if (filter.stationId && !stationIds.includes(filter.stationId)) {
 					throw new ForbiddenException({ code: "NOT_YOUR_STATION" });

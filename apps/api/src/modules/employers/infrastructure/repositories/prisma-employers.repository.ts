@@ -122,6 +122,7 @@ export class PrismaEmployersRepository implements IEmployersRepository {
 		if (filter.type) where.type = filter.type;
 		if (filter.rating) where.rating = filter.rating;
 		if (filter.area) where.area = filter.area;
+		if (filter.registeredByAgentIds) where.registeredByAgentId = { in: filter.registeredByAgentIds };
 
 		const page = Math.max(1, filter.page ?? 1);
 		const limit = Math.min(Math.max(1, filter.limit ?? 20), 100);

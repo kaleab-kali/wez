@@ -26,6 +26,7 @@ const ROLE_RANK: Record<WezAdminRole, number> = {
 	it_manager: 2,
 	compliance_officer: 3,
 	ops_manager: 3,
+	executive_viewer: 1,
 	super_admin: 4,
 };
 
@@ -49,7 +50,13 @@ export class AdminPermissionsGuard implements CanActivate {
 
 		const adminUser = await this.prisma.adminUser.findUnique({
 			where: { id: session.user.id },
-			select: { id: true, email: true, role: true, active: true },
+			select: {
+				id: true,
+				email: true,
+				role: true,
+				active: true,
+				roleAssignments: { where: { active: true, revokedAt: null }, select: { role: true } },
+			},
 		});
 		if (!adminUser) throw new UnauthorizedException("Admin user not found");
 		if (!adminUser.active) throw new ForbiddenException("Admin account inactive");
@@ -58,6 +65,10 @@ export class AdminPermissionsGuard implements CanActivate {
 		if (!WEZ_ADMIN_ROLES.includes(role)) {
 			throw new ForbiddenException(`Unknown HQ role: ${role}`);
 		}
+		const assignedRoles = adminUser.roleAssignments
+			.map((assignment) => assignment.role as WezAdminRole)
+			.filter((assignedRole) => WEZ_ADMIN_ROLES.includes(assignedRole));
+		const effectiveRoles = Array.from(new Set([role, ...assignedRoles]));
 
 		const requiredRoles = this.reflector.getAllAndOverride<WezAdminRole[] | undefined>(META_REQUIRE_ROLES, [
 			context.getHandler(),
@@ -68,14 +79,19 @@ export class AdminPermissionsGuard implements CanActivate {
 			context.getClass(),
 		]);
 
-		if (requiredRoles && requiredRoles.length > 0 && !requiredRoles.includes(role)) {
+		if (
+			requiredRoles &&
+			requiredRoles.length > 0 &&
+			!requiredRoles.some((requiredRole) => effectiveRoles.includes(requiredRole))
+		) {
 			throw new ForbiddenException(`Requires one of: ${requiredRoles.join(", ")}`);
 		}
-		if (requiredMin && ROLE_RANK[role] < ROLE_RANK[requiredMin]) {
+		const effectiveRank = Math.max(...effectiveRoles.map((effectiveRole) => ROLE_RANK[effectiveRole] ?? 0));
+		if (requiredMin && effectiveRank < ROLE_RANK[requiredMin]) {
 			throw new ForbiddenException(`Requires HQ role >= ${requiredMin}`);
 		}
 
-		request.adminUser = { ...session.user, role };
+		request.adminUser = { ...session.user, role, roles: effectiveRoles };
 		request.adminSession = session.session;
 		return true;
 	}

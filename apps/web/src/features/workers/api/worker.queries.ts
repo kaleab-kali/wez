@@ -40,6 +40,7 @@ export type Worker = {
 	hasHealthCard: boolean;
 	hasPoliceClearance: boolean;
 	available: boolean;
+	registeredAtStationName: string | null;
 	ratingAverage: number | null;
 	placementsCount: number;
 	roles: string[];

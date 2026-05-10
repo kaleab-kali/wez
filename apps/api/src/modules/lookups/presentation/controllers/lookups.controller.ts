@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
+import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
 import { CreateLookupDto, UpdateLookupDto } from "../../application/dto/lookup.dto";
 import { LookupsService } from "../../application/services/lookups.service";
 
@@ -9,7 +9,7 @@ import { LookupsService } from "../../application/services/lookups.service";
 @ApiBearerAuth()
 @Controller("admin/lookups")
 @UseGuards(AdminPermissionsGuard)
-@RequireAdminMin("ops_manager")
+@RequireAdminRole("super_admin", "ops_manager")
 export class LookupsAdminController {
 	constructor(private readonly service: LookupsService) {}
 

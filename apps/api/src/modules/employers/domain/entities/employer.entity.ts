@@ -64,6 +64,7 @@ export interface EmployerFilter {
 	type?: EmployerType;
 	rating?: EmployerRating;
 	area?: string;
+	registeredByAgentIds?: string[];
 	page?: number;
 	limit?: number;
 }

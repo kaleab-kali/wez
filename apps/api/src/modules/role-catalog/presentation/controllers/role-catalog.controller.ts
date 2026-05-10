@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { AdminPermissionsGuard, RequireAdminMin } from "#modules/admin/guards/admin-permissions.guard";
+import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
 import { requireSession, type WezRequest } from "#shared/auth/session";
 import { CreateRoleDto, UpdateRoleDto } from "../../application/dto/role.dto";
 import { RoleCatalogService } from "../../application/services/role-catalog.service";
@@ -9,7 +9,7 @@ import { RoleCatalogService } from "../../application/services/role-catalog.serv
 @ApiBearerAuth()
 @Controller("admin/role-catalog")
 @UseGuards(AdminPermissionsGuard)
-@RequireAdminMin("ops_manager")
+@RequireAdminRole("super_admin", "ops_manager")
 export class RoleCatalogAdminController {
 	constructor(private readonly service: RoleCatalogService) {}
 

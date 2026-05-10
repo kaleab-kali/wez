@@ -4,6 +4,9 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession, twoFactor } from "better-auth/plugins";
 import { prisma } from "#shared/database/prisma-instance";
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const ADMIN_SIGN_IN_RATE_LIMIT = IS_PRODUCTION ? { window: 15 * 60, max: 5 } : { window: 60, max: 50 };
+
 export const adminAuth = betterAuth({
 	basePath: "/api/admin-auth",
 	secret: process.env.ADMIN_AUTH_SECRET || process.env.BETTER_AUTH_SECRET,
@@ -35,7 +38,7 @@ export const adminAuth = betterAuth({
 	rateLimit: {
 		enabled: true,
 		customRules: {
-			"/sign-in/email": { window: 15 * 60, max: 5 },
+			"/sign-in/email": ADMIN_SIGN_IN_RATE_LIMIT,
 			"/two-factor/verify-totp": { window: 15 * 60, max: 5 },
 			"/forget-password": { window: 60 * 60, max: 3 },
 		},
@@ -60,12 +63,20 @@ export const adminAuth = betterAuth({
 		customSession(async ({ user, session }) => {
 			const fresh = await prisma.adminUser.findUnique({
 				where: { id: user.id },
-				select: { role: true, active: true, twoFactorEnabled: true },
+				select: {
+					role: true,
+					active: true,
+					twoFactorEnabled: true,
+					roleAssignments: { where: { active: true, revokedAt: null }, select: { role: true } },
+				},
 			});
+			const role = fresh?.role ?? "support";
+			const roles = Array.from(new Set([role, ...(fresh?.roleAssignments.map((assignment) => assignment.role) ?? [])]));
 			return {
 				user: {
 					...user,
-					role: fresh?.role ?? "support",
+					role,
+					roles,
 					active: fresh?.active ?? true,
 					twoFactorEnabled: fresh?.twoFactorEnabled ?? false,
 				},

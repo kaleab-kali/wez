@@ -23,6 +23,7 @@ export interface Worker {
 	available: boolean;
 	registeredByAgentId: string | null;
 	registeredAtStationId: string | null;
+	registeredAtStationName: string | null;
 	ratingAverage: number | null;
 	placementsCount: number;
 	photoAttachmentId: string | null;
@@ -80,6 +81,7 @@ export interface WorkerFilter {
 	hasPoliceClearance?: boolean;
 	hideFlagged?: boolean;
 	availableOnly?: boolean;
+	registeredAtStationIds?: string[];
 	page?: number;
 	limit?: number;
 	sortBy?: "createdAt" | "rating" | "tier" | "experienceYears" | "placementsCount";

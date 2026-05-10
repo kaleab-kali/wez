@@ -26,8 +26,8 @@ export class HireRequestsController {
 	@ApiOperation({ summary: "Get a hire request by id" })
 	@ApiResponse({ status: 200, description: "Hire request returned" })
 	async getById(@Param("id") id: string, @Req() req: WezRequest) {
-		await requirePermission(req, "hire_request:read");
-		return { data: await this.service.getById(id) };
+		const s = await requirePermission(req, "hire_request:read");
+		return { data: await this.service.getByIdForSession(s, id) };
 	}
 
 	@Post()
@@ -37,7 +37,7 @@ export class HireRequestsController {
 	async create(@Body() dto: CreateHireRequestDto, @Req() req: WezRequest) {
 		const s = await requirePermission(req, "hire_request:create");
 		const isStaff = s.kind === "staff";
-		return { data: await this.service.create(s.user.id, dto, isStaff) };
+		return { data: await this.service.create(s.user.id, dto, isStaff, s) };
 	}
 
 	@Post(":id/cancel")

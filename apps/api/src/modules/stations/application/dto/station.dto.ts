@@ -1,23 +1,42 @@
 import { ApiProperty, PartialType } from "@nestjs/swagger";
-import { IsBoolean, IsOptional, IsString, Length, Matches } from "class-validator";
+import { IsBoolean, IsOptional, IsString, IsUUID, Length, Matches } from "class-validator";
 
 const ETHIOPIAN_PHONE = /^\+2519\d{8}$/;
 
 export class CreateStationDto {
 	@ApiProperty({ example: "Bole Station" })
+	@IsOptional()
 	@IsString()
 	@Length(2, 100)
-	name!: string;
+	name?: string;
 
 	@ApiProperty({ example: "bole" })
+	@IsOptional()
 	@IsString()
 	@Length(2, 50)
-	woreda!: string;
+	woreda?: string;
 
 	@ApiProperty({ example: "Bole Subcity, Woreda 03, Addis Ababa" })
+	@IsOptional()
 	@IsString()
 	@Length(5, 500)
-	address!: string;
+	address?: string;
+
+	@ApiProperty({ required: false, description: "Required for normal stations created from the location hierarchy" })
+	@IsOptional()
+	@IsUUID()
+	localityId?: string;
+
+	@ApiProperty({ required: false, default: false })
+	@IsOptional()
+	@IsBoolean()
+	custom?: boolean;
+
+	@ApiProperty({ required: false, description: "Required when creating a rare custom station" })
+	@IsOptional()
+	@IsString()
+	@Length(10, 500)
+	customReason?: string;
 
 	@ApiProperty({ example: "+251115000001", required: false })
 	@IsOptional()

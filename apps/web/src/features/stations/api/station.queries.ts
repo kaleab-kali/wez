@@ -33,9 +33,21 @@ export type Station = {
 	address: string;
 	phone: string | null;
 	active: boolean;
+	localityId: string | null;
+	custom: boolean;
+	customReason: string | null;
 	supervisorUserId: string | null;
 	createdAt: string;
 	updatedAt: string;
+};
+
+export type AgentAssignment = {
+	id: string;
+	userId: string;
+	stationId: string;
+	active: boolean;
+	assignedAt: string;
+	removedAt: string | null;
 };
 
 export const stationKeys = {
@@ -61,8 +73,16 @@ export const usePublicStations = () =>
 export const useCreateStation = () => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (input: { name: string; woreda: string; address: string; phone?: string; supervisorUserId?: string }) =>
-			send<{ data: Station }>(ADMIN_BASE, "POST", input).then((b) => b.data),
+		mutationFn: (input: {
+			name?: string;
+			woreda?: string;
+			address?: string;
+			phone?: string;
+			localityId?: string;
+			custom?: boolean;
+			customReason?: string;
+			supervisorUserId?: string;
+		}) => send<{ data: Station }>(ADMIN_BASE, "POST", input).then((b) => b.data),
 		onSuccess: () => qc.invalidateQueries({ queryKey: stationKeys.lists() }),
 	});
 };
@@ -75,6 +95,37 @@ export const useUpdateStation = (id: string) => {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: stationKeys.lists() });
 			qc.invalidateQueries({ queryKey: stationKeys.detail(id) });
+		},
+	});
+};
+
+export const useStationAssignments = (stationId: string | null) =>
+	useQuery({
+		queryKey: stationId ? stationKeys.assignments(stationId) : [...stationKeys.all, "assignments", "none"],
+		queryFn: () => get<{ data: AgentAssignment[] }>(`${ADMIN_BASE}/${stationId}/assignments`).then((b) => b.data),
+		enabled: Boolean(stationId),
+	});
+
+export const useAssignStationAgent = (stationId: string) => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (userId: string) =>
+			send<{ data: AgentAssignment }>(`${ADMIN_BASE}/${stationId}/assignments`, "POST", { userId }).then((b) => b.data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: stationKeys.assignments(stationId) });
+			qc.invalidateQueries({ queryKey: stationKeys.lists() });
+		},
+	});
+};
+
+export const useRemoveStationAssignment = (stationId: string) => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (assignmentId: string) =>
+			send<{ data: AgentAssignment }>(`${ADMIN_BASE}/assignments/${assignmentId}`, "DELETE").then((b) => b.data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: stationKeys.assignments(stationId) });
+			qc.invalidateQueries({ queryKey: stationKeys.lists() });
 		},
 	});
 };

@@ -33,6 +33,7 @@ type Row = {
 	available: boolean;
 	registeredByAgentId: string | null;
 	registeredAtStationId: string | null;
+	registeringStation?: { name: string } | null;
 	ratingAverage: { toNumber(): number } | null;
 	placementsCount: number;
 	photoAttachmentId: string | null;
@@ -62,6 +63,7 @@ const toWorker = (row: Row): Worker => ({
 	available: row.available,
 	registeredByAgentId: row.registeredByAgentId,
 	registeredAtStationId: row.registeredAtStationId,
+	registeredAtStationName: row.registeringStation?.name ?? null,
 	ratingAverage: row.ratingAverage ? row.ratingAverage.toNumber() : null,
 	placementsCount: row.placementsCount,
 	photoAttachmentId: row.photoAttachmentId,
@@ -77,7 +79,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	async findById(id: string) {
 		const row = await this.prisma.worker.findFirst({
 			where: { id, deletedAt: null },
-			include: { workerRoles: true },
+			include: { workerRoles: true, registeringStation: { select: { name: true } } },
 		});
 		return row ? toWorker(row as unknown as Row) : null;
 	}
@@ -85,7 +87,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	async findByUserId(userId: string) {
 		const row = await this.prisma.worker.findFirst({
 			where: { userId, deletedAt: null },
-			include: { workerRoles: true },
+			include: { workerRoles: true, registeringStation: { select: { name: true } } },
 		});
 		return row ? toWorker(row as unknown as Row) : null;
 	}
@@ -93,7 +95,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	async findByFayda(fayda: string) {
 		const row = await this.prisma.worker.findFirst({
 			where: { fayda, deletedAt: null },
-			include: { workerRoles: true },
+			include: { workerRoles: true, registeringStation: { select: { name: true } } },
 		});
 		return row ? toWorker(row as unknown as Row) : null;
 	}
@@ -101,7 +103,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	async findByPhone(phone: string) {
 		const row = await this.prisma.worker.findFirst({
 			where: { phone, deletedAt: null },
-			include: { workerRoles: true },
+			include: { workerRoles: true, registeringStation: { select: { name: true } } },
 		});
 		return row ? toWorker(row as unknown as Row) : null;
 	}
@@ -127,7 +129,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 				registeredAtStationId: data.registeredAtStationId,
 				workerRoles: { create: data.roles.map((roleId) => ({ roleId })) },
 			},
-			include: { workerRoles: true },
+			include: { workerRoles: true, registeringStation: { select: { name: true } } },
 		});
 		return toWorker(row as unknown as Row);
 	}
@@ -146,7 +148,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 			}
 			return tx.worker.findUniqueOrThrow({
 				where: { id },
-				include: { workerRoles: true },
+				include: { workerRoles: true, registeringStation: { select: { name: true } } },
 			});
 		});
 		return toWorker(updated as unknown as Row);
@@ -164,7 +166,7 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 				orderBy,
 				skip: (page - 1) * limit,
 				take: limit,
-				include: { workerRoles: true },
+				include: { workerRoles: true, registeringStation: { select: { name: true } } },
 			}),
 			this.prisma.worker.count({ where }),
 		]);
