@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useEmployers } from "#features/employers/api/employer.queries";
 import { type Job, type JobInput, useCreateJob, useJobs } from "#features/jobs/api/job.queries";
 import { JobForm } from "#features/jobs/components/job-form";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -25,6 +27,10 @@ const StaffJobsPage = React.memo(() => {
 	const [employerId, setEmployerId] = React.useState("");
 	const [error, setError] = React.useState("");
 	const [formVersion, setFormVersion] = React.useState(0);
+	const { data: session } = useAdminSession();
+	const user = session?.user as { role?: string; roles?: string[] } | undefined;
+	const userRoles = React.useMemo(() => effectiveStaffRoles(user?.role, user?.roles), [user?.role, user?.roles]);
+	const canCreateJob = React.useMemo(() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.jobCreation), [userRoles]);
 	const { data: employers } = useEmployers({ page: DEFAULT_PAGE, limit: EMPLOYER_LOOKUP_LIMIT });
 	const { data: jobs, isLoading } = useJobs({ page: DEFAULT_PAGE, limit: DEFAULT_LIMIT });
 	const createJob = useCreateJob();
@@ -54,36 +60,42 @@ const StaffJobsPage = React.memo(() => {
 				<p className="text-sm text-muted-foreground">{t("jobs.staffSubtitle")}</p>
 			</header>
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-base">{t("jobs.createOnBehalf")}</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-					<div className="max-w-lg space-y-2">
-						<Label htmlFor="employer">{t("employers.title")}</Label>
-						<select
-							id="employer"
-							value={employerId}
-							onChange={onEmployerChange}
-							className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-						>
-							<option value="">-</option>
-							{employers?.data.map((employer) => (
-								<option key={employer.id} value={employer.id}>
-									{employer.name}
-								</option>
-							))}
-						</select>
-					</div>
-					<JobForm
-						key={formVersion}
-						submitLabel={t("jobs.postJob")}
-						pending={createJob.isPending}
-						onSubmit={onSubmit}
-					/>
-				</CardContent>
-			</Card>
+			{canCreateJob ? (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base">{t("jobs.createOnBehalf")}</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+						<div className="max-w-lg space-y-2">
+							<Label htmlFor="employer">{t("employers.title")}</Label>
+							<select
+								id="employer"
+								value={employerId}
+								onChange={onEmployerChange}
+								className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+							>
+								<option value="">-</option>
+								{employers?.data.map((employer) => (
+									<option key={employer.id} value={employer.id}>
+										{employer.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<JobForm
+							key={formVersion}
+							submitLabel={t("jobs.postJob")}
+							pending={createJob.isPending}
+							onSubmit={onSubmit}
+						/>
+					</CardContent>
+				</Card>
+			) : (
+				<Card className="border-dashed">
+					<CardContent className="py-6 text-sm text-muted-foreground">{t("jobs.readOnlyNotice")}</CardContent>
+				</Card>
+			)}
 
 			<div className="grid gap-3">
 				{isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}

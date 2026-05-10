@@ -15,6 +15,28 @@ export const STAFF_ROLES = {
 
 export type StaffRole = (typeof STAFF_ROLES)[keyof typeof STAFF_ROLES];
 
+export const ALL_STAFF_ROLES = [
+	STAFF_ROLES.superAdmin,
+	STAFF_ROLES.opsManager,
+	STAFF_ROLES.complianceOfficer,
+	STAFF_ROLES.hrManager,
+	STAFF_ROLES.financeManager,
+	STAFF_ROLES.itManager,
+	STAFF_ROLES.trainingManager,
+	STAFF_ROLES.support,
+	STAFF_ROLES.executiveViewer,
+	STAFF_ROLES.agent,
+	STAFF_ROLES.stationSupervisor,
+	STAFF_ROLES.instructor,
+] as const satisfies readonly StaffRole[];
+
+const HR_MANAGED_STAFF_ROLES = [
+	STAFF_ROLES.agent,
+	STAFF_ROLES.stationSupervisor,
+	STAFF_ROLES.instructor,
+	STAFF_ROLES.support,
+] as const satisfies readonly StaffRole[];
+
 export const STAFF_ACCESS_ROLES = {
 	workerEmployerOperations: [
 		STAFF_ROLES.superAdmin,
@@ -25,6 +47,7 @@ export const STAFF_ACCESS_ROLES = {
 	workerEmployerCreation: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
 	demandOperations: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
 	referralCreation: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
+	jobCreation: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
 	placementOperations: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,
@@ -35,6 +58,15 @@ export const STAFF_ACCESS_ROLES = {
 	placementFinalization: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
 	placementEnding: [STAFF_ROLES.superAdmin, STAFF_ROLES.stationSupervisor, STAFF_ROLES.agent],
 	hqOverview: [
+		STAFF_ROLES.superAdmin,
+		STAFF_ROLES.opsManager,
+		STAFF_ROLES.complianceOfficer,
+		STAFF_ROLES.hrManager,
+		STAFF_ROLES.financeManager,
+		STAFF_ROLES.itManager,
+		STAFF_ROLES.executiveViewer,
+	],
+	accountSecurity: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,
 		STAFF_ROLES.complianceOfficer,
@@ -86,6 +118,15 @@ export const effectiveStaffRoles = (primaryRole?: string | null, roles?: readonl
 export const hasAnyStaffRole = (userRoles: readonly string[], allowedRoles: readonly StaffRole[] | undefined) =>
 	!allowedRoles || allowedRoles.some((allowedRole) => userRoles.includes(allowedRole));
 
+export const manageableStaffRoles = (userRoles: readonly string[]): readonly StaffRole[] => {
+	if (userRoles.includes(STAFF_ROLES.superAdmin)) return ALL_STAFF_ROLES;
+	if (userRoles.includes(STAFF_ROLES.opsManager)) {
+		return ALL_STAFF_ROLES.filter((role) => role !== STAFF_ROLES.superAdmin);
+	}
+	if (userRoles.includes(STAFF_ROLES.hrManager)) return HR_MANAGED_STAFF_ROLES;
+	return [];
+};
+
 const STAFF_ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles?: readonly StaffRole[]; exact?: boolean }> = [
 	{ prefix: "/staff/dashboard", exact: true },
 	{ prefix: "/staff/workers/new", roles: STAFF_ACCESS_ROLES.workerEmployerCreation },
@@ -105,8 +146,8 @@ const STAFF_ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles?: readonly Staff
 	{ prefix: "/staff-admin/hiring-policy", roles: STAFF_ACCESS_ROLES.hiringPolicy },
 	{ prefix: "/staff-admin/lookups", roles: STAFF_ACCESS_ROLES.platformConfig },
 	{ prefix: "/staff-admin/audit-log", roles: STAFF_ACCESS_ROLES.auditLog },
-	{ prefix: "/staff-admin/2fa", roles: STAFF_ACCESS_ROLES.hqOverview },
-	{ prefix: "/staff-admin/sessions", roles: STAFF_ACCESS_ROLES.hqOverview },
+	{ prefix: "/staff-admin/2fa", roles: STAFF_ACCESS_ROLES.accountSecurity },
+	{ prefix: "/staff-admin/sessions", roles: STAFF_ACCESS_ROLES.accountSecurity },
 ];
 
 export const hasStaffRouteAccess = (
@@ -118,5 +159,5 @@ export const hasStaffRouteAccess = (
 	const route = STAFF_ROUTE_ACCESS.find((item) =>
 		item.exact ? pathname === item.prefix || pathname === `${item.prefix}/` : pathname.startsWith(item.prefix),
 	);
-	return route ? hasAnyStaffRole(userRoles, route.roles) : true;
+	return route ? hasAnyStaffRole(userRoles, route.roles) : false;
 };

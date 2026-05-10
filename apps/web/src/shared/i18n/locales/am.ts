@@ -93,6 +93,9 @@ export const am = {
 		placementsDesc: "Finalize approved hire requests",
 		gettingStarted: "መጀመር",
 		gettingStartedBody: "የጣቢያ ኮንሶሉ ተጨማሪ የWez ባህሪያት ሲጨመሩ ያድጋል። ሰራተኞችን በመመልከት ወይም አዲስ ሰራተኛ በመመዝገብ ይጀምሩ።",
+		gettingStartedOperationsBody: "በሚናዎ የተፈቀዱ የስራ እርምጃዎችን ይጠቀሙ። አስተዳደር መሳሪያዎች ከጣቢያ ስራዎች ተለይተዋል።",
+		gettingStartedAdminBody: "ለሚናዎ የተፈቀዱ የአስተዳደር መቆጣጠሪያዎችን ይጠቀሙ። የንባብ ብቻ ሚናዎች የስራ እርምጃዎችን አያዩም።",
+		gettingStartedLimitedBody: "የአሁኑ ሚናዎ የስራ እርምጃዎች የለውም። የመለያ ደህንነት ቅንብሮችን ይጠቀሙ ወይም ኃላፊነትዎ ከተቀየረ አስተዳዳሪን ያነጋግሩ።",
 	},
 	workers: {
 		title: "ሰራተኞች",
@@ -229,6 +232,7 @@ export const am = {
 		revoke: "Revoke",
 		roleAssignments: "Assigned access",
 		noAssignments: "No scoped assignments yet.",
+		noManageableRoles: "የእርስዎ ሚና ተጨማሪ የሰራተኛ ሚናዎችን መፍጠር ወይም መመደብ አይችልም።",
 		empty: "No staff users yet.",
 	},
 	roleCatalog: {
@@ -465,6 +469,7 @@ export const am = {
 		create: "ስራ ይለጥፉ",
 		staffSubtitle: "ለቀጣሪዎች ስራ ይለጥፉ እና ክፍት ፍላጎትን ይከታተሉ።",
 		createOnBehalf: "ለቀጣሪ ስራ ይለጥፉ",
+		readOnlyNotice: "ክፍት ስራዎችን መከታተል ይችላሉ፣ ግን ይህ ሚና ስራ መለጠፍ ወይም ማስተካከል አይችልም።",
 		selectEmployer: "ቀጣሪ ይምረጡ",
 		editJob: "ስራ ያስተካክሉ",
 		saveJob: "ስራ ያስቀምጡ",

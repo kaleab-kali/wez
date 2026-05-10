@@ -36,6 +36,14 @@ const StationCreateForm = React.memo(() => {
 	const { data: adminAreas } = useLocations({ kind: "admin_area" });
 	const { data: subAreas } = useLocations({ kind: "sub_area", parentId: adminAreaId || undefined });
 	const { data: localities } = useLocations({ kind: "locality", parentId: subAreaId || undefined });
+	const availableSubAreas = React.useMemo(
+		() => (subAreas ?? []).filter((area) => area.parentId === adminAreaId),
+		[adminAreaId, subAreas],
+	);
+	const availableLocalities = React.useMemo(
+		() => (localities ?? []).filter((locality) => locality.parentId === subAreaId),
+		[localities, subAreaId],
+	);
 
 	const onAdminAreaChange = React.useCallback((value: string) => {
 		setAdminAreaId(value);
@@ -47,6 +55,17 @@ const StationCreateForm = React.memo(() => {
 		setSubAreaId(value);
 		setLocalityId("");
 	}, []);
+
+	React.useEffect(() => {
+		if (!subAreaId || availableSubAreas.some((area) => area.id === subAreaId)) return;
+		setSubAreaId("");
+		setLocalityId("");
+	}, [availableSubAreas, subAreaId]);
+
+	React.useEffect(() => {
+		if (!localityId || availableLocalities.some((locality) => locality.id === localityId)) return;
+		setLocalityId("");
+	}, [availableLocalities, localityId]);
 
 	const onSubmit = React.useCallback(
 		async (e: React.FormEvent) => {
@@ -157,10 +176,11 @@ const StationCreateForm = React.memo(() => {
 									value={subAreaId}
 									onChange={(e) => onSubAreaChange(e.target.value)}
 									className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+									disabled={!adminAreaId}
 									required
 								>
 									<option value="">{t("common.select")}</option>
-									{subAreas?.map((area) => (
+									{availableSubAreas.map((area) => (
 										<option key={area.id} value={area.id}>
 											{area.nameEn}
 										</option>
@@ -174,10 +194,11 @@ const StationCreateForm = React.memo(() => {
 									value={localityId}
 									onChange={(e) => setLocalityId(e.target.value)}
 									className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+									disabled={!subAreaId}
 									required
 								>
 									<option value="">{t("common.select")}</option>
-									{localities?.map((locality) => (
+									{availableLocalities.map((locality) => (
 										<option key={locality.id} value={locality.id}>
 											{locality.nameEn}
 										</option>

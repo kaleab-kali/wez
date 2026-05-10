@@ -57,7 +57,23 @@ const DashboardPage = React.memo(() => {
 		() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.placementOperations),
 		[userRoles],
 	);
+	const canUseAdministration = React.useMemo(
+		() =>
+			hasAnyStaffRole(userRoles, [
+				...STAFF_ACCESS_ROLES.staffUsers,
+				...STAFF_ACCESS_ROLES.platformConfig,
+				...STAFF_ACCESS_ROLES.accessReview,
+				...STAFF_ACCESS_ROLES.hiringPolicy,
+				...STAFF_ACCESS_ROLES.auditLog,
+			]),
+		[userRoles],
+	);
 	const hasQuickActions = canBrowseWorkers || canCreateWorker || canViewPlacements;
+	const gettingStartedBodyKey = hasQuickActions
+		? "dashboard.gettingStartedOperationsBody"
+		: canUseAdministration
+			? "dashboard.gettingStartedAdminBody"
+			: "dashboard.gettingStartedLimitedBody";
 
 	return (
 		<div className="space-y-8 max-w-6xl">
@@ -108,7 +124,7 @@ const DashboardPage = React.memo(() => {
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-base">{t("dashboard.gettingStarted")}</CardTitle>
-					<CardDescription>{t("dashboard.gettingStartedBody")}</CardDescription>
+					<CardDescription>{t(gettingStartedBodyKey)}</CardDescription>
 				</CardHeader>
 			</Card>
 		</div>

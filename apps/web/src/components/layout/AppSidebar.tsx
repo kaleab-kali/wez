@@ -140,11 +140,21 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 		icon: SecurityIcon,
 		roles: STAFF_ACCESS_ROLES.auditLog,
 	},
-	{ labelKey: "admin.nav.twoFactor", to: "/staff-admin/2fa", icon: SecurityIcon },
 ];
 
 const ACCOUNT: ReadonlyArray<NavItem> = [
-	{ labelKey: "admin.nav.sessions", to: "/staff-admin/sessions", icon: UserMultipleIcon },
+	{
+		labelKey: "admin.nav.twoFactor",
+		to: "/staff-admin/2fa",
+		icon: SecurityIcon,
+		roles: STAFF_ACCESS_ROLES.accountSecurity,
+	},
+	{
+		labelKey: "admin.nav.sessions",
+		to: "/staff-admin/sessions",
+		icon: UserMultipleIcon,
+		roles: STAFF_ACCESS_ROLES.accountSecurity,
+	},
 ];
 
 export const AppSidebar = React.memo(
@@ -156,6 +166,19 @@ export const AppSidebar = React.memo(
 		const userRoles = React.useMemo(() => effectiveStaffRoles(role, user?.roles), [role, user?.roles]);
 		const showHQ = hasHqAdminRole(userRoles, role);
 		const location = useLocation();
+		const operationItems = React.useMemo(
+			() => OPERATIONS.filter((item) => hasAnyStaffRole(userRoles, item.roles)),
+			[userRoles],
+		);
+		const administrationItems = React.useMemo(
+			() => ADMINISTRATION.filter((item) => hasAnyStaffRole(userRoles, item.roles)),
+			[userRoles],
+		);
+		const accountItems = React.useMemo(
+			() => ACCOUNT.filter((item) => hasAnyStaffRole(userRoles, item.roles)),
+			[userRoles],
+		);
+		const showAdministration = showHQ && administrationItems.length > 0;
 
 		const onSignOut = React.useCallback(async () => {
 			await adminAuthApi.logout();
@@ -163,22 +186,20 @@ export const AppSidebar = React.memo(
 		}, []);
 
 		const renderItems = (items: ReadonlyArray<NavItem>) =>
-			items
-				.filter((item) => hasAnyStaffRole(userRoles, item.roles))
-				.map((item) => {
-					const active =
-						location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));
-					return (
-						<SidebarMenuItem key={item.to}>
-							<SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)}>
-								<Link to={item.to}>
-									<HugeiconsIcon icon={item.icon} className="size-4" />
-									<span>{t(item.labelKey)}</span>
-								</Link>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					);
-				});
+			items.map((item) => {
+				const active =
+					location.pathname === item.to || (item.to !== "/staff/dashboard" && location.pathname.startsWith(item.to));
+				return (
+					<SidebarMenuItem key={item.to}>
+						<SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)}>
+							<Link to={item.to}>
+								<HugeiconsIcon icon={item.icon} className="size-4" />
+								<span>{t(item.labelKey)}</span>
+							</Link>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				);
+			});
 
 		return (
 			<Sidebar collapsible="icon" className="border-r">
@@ -192,7 +213,7 @@ export const AppSidebar = React.memo(
 								<div className="flex flex-col gap-0 text-left leading-tight">
 									<span className="font-bold text-base tracking-tight">Wez</span>
 									<span className="text-[11px] text-muted-foreground">
-										{showHQ ? t("admin.platformAdmin") : t("brand.tagline")}
+										{showAdministration ? t("admin.platformAdmin") : t("brand.tagline")}
 									</span>
 								</div>
 							</SidebarMenuButton>
@@ -204,24 +225,24 @@ export const AppSidebar = React.memo(
 					<SidebarGroup>
 						<SidebarGroupLabel>{t("nav.workspace")}</SidebarGroupLabel>
 						<SidebarGroupContent>
-							<SidebarMenu>{renderItems(OPERATIONS)}</SidebarMenu>
+							<SidebarMenu>{renderItems(operationItems)}</SidebarMenu>
 						</SidebarGroupContent>
 					</SidebarGroup>
 
-					{showHQ && (
+					{showAdministration && (
 						<SidebarGroup>
 							<SidebarGroupLabel>{t("admin.nav.administration")}</SidebarGroupLabel>
 							<SidebarGroupContent>
-								<SidebarMenu>{renderItems(ADMINISTRATION)}</SidebarMenu>
+								<SidebarMenu>{renderItems(administrationItems)}</SidebarMenu>
 							</SidebarGroupContent>
 						</SidebarGroup>
 					)}
 
-					{showHQ && (
+					{accountItems.length > 0 && (
 						<SidebarGroup>
 							<SidebarGroupLabel>{t("admin.nav.account")}</SidebarGroupLabel>
 							<SidebarGroupContent>
-								<SidebarMenu>{renderItems(ACCOUNT)}</SidebarMenu>
+								<SidebarMenu>{renderItems(accountItems)}</SidebarMenu>
 							</SidebarGroupContent>
 						</SidebarGroup>
 					)}

@@ -83,6 +83,12 @@ export const en = {
 		gettingStarted: "Getting started",
 		gettingStartedBody:
 			"Your station console grows as more Wez modules ship. Start by browsing workers or registering a new candidate.",
+		gettingStartedOperationsBody:
+			"Use your workspace actions for the operational work assigned to your role. Administrative tools stay separate from station workflows.",
+		gettingStartedAdminBody:
+			"Use the administration section for the controls available to your role. Operational actions stay hidden when your role is read-only.",
+		gettingStartedLimitedBody:
+			"Your current role does not have operational workspace actions yet. Use account security settings or contact an administrator if your responsibilities changed.",
 	},
 	workers: {
 		title: "Workers",
@@ -225,6 +231,7 @@ export const en = {
 		revoke: "Revoke",
 		roleAssignments: "Assigned access",
 		noAssignments: "No scoped assignments yet.",
+		noManageableRoles: "Your role cannot create or assign additional staff roles.",
 		empty: "No staff users yet.",
 	},
 	roleCatalog: {
@@ -482,6 +489,7 @@ export const en = {
 		subtitle: "Create and manage job posts for your employer account.",
 		staffSubtitle: "Create job posts on behalf of employers and monitor open demand.",
 		createOnBehalf: "Post job for employer",
+		readOnlyNotice: "You can monitor open jobs, but your role cannot post or edit job demand.",
 		selectEmployer: "Select employer",
 		browseJobs: "Browse jobs",
 		workerCatalogBody: "Browse open jobs that Wez employers have posted.",

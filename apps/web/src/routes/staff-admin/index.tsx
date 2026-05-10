@@ -3,9 +3,7 @@ import {
 	Coins01Icon,
 	ContactBookIcon,
 	NoteEditIcon,
-	SecurityIcon,
 	StoreLocation02Icon,
-	UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -123,12 +121,9 @@ const AdminDashboard = React.memo(() => {
 	const { t } = useTranslation();
 	const { data: session } = useAdminSession();
 	const { data: metrics, isPending: metricsPending, isError: metricsError } = useAdminDashboardMetrics();
-	const user = session?.user as
-		| { name?: string; role?: string; roles?: string[]; twoFactorEnabled?: boolean }
-		| undefined;
+	const user = session?.user as { name?: string; role?: string; roles?: string[] } | undefined;
 	const role = user?.role ?? "support";
 	const userRoles = React.useMemo(() => effectiveStaffRoles(role, user?.roles), [role, user?.roles]);
-	const twoFactorEnabled = user?.twoFactorEnabled ?? false;
 	const adminTiles = React.useMemo<readonly AdminTile[]>(
 		() => [
 			{
@@ -173,23 +168,8 @@ const AdminDashboard = React.memo(() => {
 				description: t("locations.subtitle"),
 				roles: STAFF_ACCESS_ROLES.platformConfig,
 			},
-			{
-				to: "/staff-admin/2fa",
-				icon: SecurityIcon,
-				title: t("admin.twoFactor"),
-				description: twoFactorEnabled ? t("admin.manage") : t("admin.enable2fa"),
-				badge: twoFactorEnabled
-					? { label: t("admin.twoFactorEnabled"), variant: "default" }
-					: { label: t("admin.twoFactorDisabled"), variant: "destructive" },
-			},
-			{
-				to: "/staff-admin/sessions",
-				icon: UserMultipleIcon,
-				title: t("admin.sessions"),
-				description: t("admin.viewSessions"),
-			},
 		],
-		[t, twoFactorEnabled],
+		[t],
 	);
 
 	return (
