@@ -3,10 +3,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { usePublicLocations } from "#features/locations/api/location.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
+import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
@@ -30,10 +30,30 @@ const FilterPanel = React.memo(
 	({ filter, onChange }: { readonly filter: WorkerFilter; readonly onChange: (next: WorkerFilter) => void }) => {
 		const { t } = useTranslation();
 		const { data: roles } = usePublicRoles();
-		const { data: localities } = usePublicLocations({ kind: "locality" });
 		const { data: languages } = useLookupKind("languages");
+		const locationValue = React.useMemo<LocationHierarchySelection>(
+			() => ({
+				adminAreaId: filter.adminAreaId,
+				subAreaId: filter.subAreaId,
+				localityId: filter.localityId,
+			}),
+			[filter.adminAreaId, filter.localityId, filter.subAreaId],
+		);
 		const set = React.useCallback(
 			<K extends keyof WorkerFilter>(k: K, v: WorkerFilter[K]) => onChange({ ...filter, [k]: v, page: 1 }),
+			[filter, onChange],
+		);
+		const onLocationChange = React.useCallback(
+			(next: LocationHierarchySelection) => {
+				onChange({
+					...filter,
+					adminAreaId: next.adminAreaId,
+					subAreaId: next.subAreaId,
+					localityId: next.localityId,
+					woreda: undefined,
+					page: 1,
+				});
+			},
 			[filter, onChange],
 		);
 		return (
@@ -97,24 +117,15 @@ const FilterPanel = React.memo(
 							</select>
 						</div>
 					</div>
+					<LocationHierarchySelect
+						idPrefix="staff-worker-location-filter"
+						value={locationValue}
+						onChange={onLocationChange}
+						includeAny
+						className="space-y-3"
+					/>
 					<div className="space-y-2">
-						<Label htmlFor="woreda">{t("workers.filterWoreda")}</Label>
-						<select
-							id="woreda"
-							value={filter.woreda ?? ""}
-							onChange={(e) => set("woreda", e.target.value || undefined)}
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-						>
-							<option value="">{t("common.any")}</option>
-							{localities?.map((locality) => (
-								<option key={locality.id} value={locality.code}>
-									{locality.nameEn}
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="lang">Language</Label>
+						<Label htmlFor="lang">{t("workers.register.languages")}</Label>
 						<select
 							id="lang"
 							value={filter.language ?? ""}

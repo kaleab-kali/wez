@@ -139,6 +139,7 @@ const WorkerProfilePage = React.memo(() => {
 						<ProfileRow label={t("workers.profile.fayda")} value={worker.fayda} />
 						<ProfileRow label={t("workers.profile.phone")} value={worker.phone} />
 						<ProfileRow label={t("workers.filterWoreda")} value={worker.area} />
+						<ProfileRow label={t("workers.profile.registeredStation")} value={worker.registeredAtStationName ?? "-"} />
 						<ProfileRow label={t("workers.filterGender")} value={t(`workers.gender${worker.gender}`)} />
 						<ProfileRow label={t("workers.register.experience")} value={String(worker.experienceYears)} />
 					</CardContent>

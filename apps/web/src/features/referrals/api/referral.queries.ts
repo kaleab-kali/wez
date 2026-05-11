@@ -88,7 +88,7 @@ export const useAcceptReferral = () => {
 	return useMutation({
 		mutationFn: (input: {
 			id: string;
-			stationId: string;
+			stationId?: string;
 			roleId?: string;
 			proposedSalaryCents: number;
 			note?: string;

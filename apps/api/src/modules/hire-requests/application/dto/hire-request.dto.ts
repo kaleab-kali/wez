@@ -22,9 +22,13 @@ export class CreateHireRequestDto {
 	@Type(() => Number)
 	proposedSalaryCents!: number;
 
-	@ApiProperty()
+	@ApiProperty({
+		required: false,
+		description: "Required for staff in-station requests. Online employer requests derive this from the worker.",
+	})
+	@IsOptional()
 	@IsString()
-	stationId!: string;
+	stationId?: string;
 
 	@ApiProperty({ enum: ["online", "in_person"] })
 	@IsEnum(["online", "in_person"] as const)

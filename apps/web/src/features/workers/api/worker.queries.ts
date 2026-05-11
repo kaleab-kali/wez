@@ -40,6 +40,7 @@ export type Worker = {
 	hasHealthCard: boolean;
 	hasPoliceClearance: boolean;
 	available: boolean;
+	registeredAtStationId: string | null;
 	registeredAtStationName: string | null;
 	ratingAverage: number | null;
 	placementsCount: number;
@@ -52,6 +53,9 @@ export type WorkerFilter = {
 	q?: string;
 	roleId?: string;
 	woreda?: string;
+	adminAreaId?: string;
+	subAreaId?: string;
+	localityId?: string;
 	minTier?: Worker["tier"];
 	gender?: Worker["gender"];
 	language?: string;

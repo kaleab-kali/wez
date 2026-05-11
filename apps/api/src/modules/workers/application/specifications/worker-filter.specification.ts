@@ -11,6 +11,7 @@ const NON_FLAGGED: HopFlag[] = ["none", "notice"];
 
 export const buildWorkerWhere = (f: WorkerFilter): Prisma.WorkerWhereInput => {
 	const where: Prisma.WorkerWhereInput = { deletedAt: null };
+	const andFilters: Prisma.WorkerWhereInput[] = [];
 
 	if (f.q && f.q.trim().length > 0) {
 		const term = f.q.trim();
@@ -27,6 +28,26 @@ export const buildWorkerWhere = (f: WorkerFilter): Prisma.WorkerWhereInput => {
 
 	if (f.woreda) {
 		where.area = { equals: f.woreda, mode: "insensitive" };
+	}
+
+	if (f.localityId) {
+		andFilters.push({ registeringStation: { is: { localityId: f.localityId } } });
+	} else if (f.subAreaId) {
+		andFilters.push({ registeringStation: { is: { locality: { is: { parentId: f.subAreaId } } } } });
+	} else if (f.adminAreaId) {
+		andFilters.push({
+			registeringStation: {
+				is: {
+					locality: {
+						is: {
+							parent: {
+								is: { parentId: f.adminAreaId },
+							},
+						},
+					},
+				},
+			},
+		});
 	}
 
 	if (f.minTier) {
@@ -67,6 +88,10 @@ export const buildWorkerWhere = (f: WorkerFilter): Prisma.WorkerWhereInput => {
 
 	if (f.registeredAtStationIds) {
 		where.registeredAtStationId = { in: f.registeredAtStationIds };
+	}
+
+	if (andFilters.length > 0) {
+		where.AND = andFilters;
 	}
 
 	return where;

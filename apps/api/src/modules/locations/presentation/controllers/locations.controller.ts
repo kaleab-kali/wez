@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
+import { Public } from "#modules/auth/guards/wez-auth.guard";
 import type { WezRequest } from "#shared/auth/session";
 import { CreateLocationDto, UpdateLocationDto } from "../../application/dto/location.dto";
 import { LocationsService } from "../../application/services/locations.service";
@@ -70,6 +71,7 @@ export class LocationsAdminController {
 }
 
 @ApiTags("Locations (read-only)")
+@Public()
 @Controller("locations")
 export class LocationsPublicController {
 	constructor(private readonly service: LocationsService) {}

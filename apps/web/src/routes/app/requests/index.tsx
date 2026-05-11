@@ -83,6 +83,9 @@ const RequestCard = memo(({ request, isWorker }: { readonly request: HireRequest
 					<p className="mt-1 text-sm text-muted-foreground">
 						{request.roleName ?? request.roleId} - {(Number(request.proposedSalaryCents) / 100).toLocaleString()} ETB
 					</p>
+					<p className="mt-1 text-xs text-muted-foreground">
+						{t("hireRequests.station")}: {request.stationName ?? request.stationId.slice(0, 8)}
+					</p>
 				</div>
 				<Badge variant="outline">{request.status.replace("_", " ")}</Badge>
 			</CardHeader>

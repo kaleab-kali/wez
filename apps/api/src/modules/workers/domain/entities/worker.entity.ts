@@ -72,6 +72,9 @@ export interface WorkerFilter {
 	roleId?: string;
 	category?: string;
 	woreda?: string;
+	adminAreaId?: string;
+	subAreaId?: string;
+	localityId?: string;
 	minTier?: WorkerTier;
 	gender?: Gender;
 	language?: string;
