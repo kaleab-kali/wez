@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
 import type { WezAdminRole } from "#modules/auth/permissions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import type { WezRequest } from "#shared/auth/session";
 import {
 	AssignStaffRoleDto,
@@ -28,6 +30,7 @@ export class StaffUsersController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.staffUserCreated)
 	@ApiOperation({ summary: "Create a staff user with a primary role" })
 	@ApiBody({ type: CreateStaffUserDto })
 	async create(
@@ -38,6 +41,7 @@ export class StaffUsersController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.staffUserUpdated)
 	@ApiOperation({ summary: "Update staff user profile, primary role, or active status" })
 	@ApiBody({ type: UpdateStaffUserDto })
 	async update(
@@ -51,6 +55,7 @@ export class StaffUsersController {
 	}
 
 	@Post(":id/role-assignments")
+	@AuditLog(AUDIT_ACTIONS.staffRoleAssigned)
 	@ApiOperation({ summary: "Assign an additional role and scope to a staff user" })
 	@ApiBody({ type: AssignStaffRoleDto })
 	async assignRole(
@@ -70,6 +75,7 @@ export class StaffUsersController {
 	}
 
 	@Post("role-assignments/:assignmentId/revoke")
+	@AuditLog(AUDIT_ACTIONS.staffRoleRevoked)
 	@ApiOperation({ summary: "Revoke a staff role assignment" })
 	@ApiBody({ type: RevokeStaffRoleDto })
 	async revokeRole(

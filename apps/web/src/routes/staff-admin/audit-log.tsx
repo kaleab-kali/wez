@@ -17,7 +17,22 @@ const AUDIT_ACTIONS = [
 	"job.created",
 	"job.updated",
 	"job.closed",
+	"worker.created",
 	"worker.profile_updated",
+	"employer.signed_up",
+	"employer.created",
+	"employer.updated",
+	"hire_request.created",
+	"hire_request.cancelled",
+	"referral.created",
+	"referral.accepted",
+	"referral.declined",
+	"referral.deferred",
+	"role_catalog.created",
+	"role_catalog.updated",
+	"lookup.created",
+	"lookup.updated",
+	"hiring_policy.updated",
 	"staff_user.created",
 	"staff_user.updated",
 	"staff_role.assigned",
@@ -51,10 +66,17 @@ const ACTOR_ROLES = [
 	"agent",
 	"support",
 	"system",
+	"anonymous",
 ] as const;
 const TARGET_TYPES = [
 	"job",
 	"worker",
+	"employer",
+	"hire_request",
+	"referral",
+	"role_catalog",
+	"lookup",
+	"hiring_policy",
 	"placement",
 	"staff_user",
 	"staff_role_assignment",
@@ -93,7 +115,7 @@ const actionTitle = (action: string) => {
 	if (action === "ticket.created") return "Ticket created";
 	if (action === "ticket.assigned") return "Ticket assigned";
 	if (action === "ticket.resolved") return "Ticket resolved";
-	return action;
+	return action.replaceAll("_", " ").replaceAll(".", " ");
 };
 const actionSentence = (event: AuditEvent) => {
 	if (event.targetType === "job") {
@@ -327,6 +349,28 @@ const EventFacts = React.memo(({ event }: { readonly event: AuditEvent }) => {
 		);
 	}
 	const summary = event.targetSummary;
+	if (!summary) {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Changed fields</p>
+					<p className="mt-1 truncate font-medium">{formatChangedFields(event)}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Target type</p>
+					<p className="mt-1 font-medium">{event.targetType ?? "-"}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route params</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "routeParams")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Request body</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "requestBody")}</p>
+				</div>
+			</div>
+		);
+	}
 	const salary = centsToBirr(summary?.salaryCents ?? metadataValue(event, "salaryCents"));
 	const commission = centsToBirr(summary?.commissionCents ?? metadataValue(event, "commissionCents"));
 	const paymentMethod = summary?.paymentMethod ?? metadataValue(event, "paymentMethod");

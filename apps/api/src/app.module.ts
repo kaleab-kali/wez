@@ -26,6 +26,7 @@ import { StationsModule } from "#modules/stations/stations.module";
 import { TicketsModule } from "#modules/tickets/tickets.module";
 import { WorkersModule } from "#modules/workers/workers.module";
 import { AuditContextMiddleware } from "#shared/audit/audit-context.middleware";
+import { AuditLogInterceptor } from "#shared/audit/audit-log.interceptor";
 import { PrismaModule } from "#shared/database/prisma.module";
 import { EmailModule } from "#shared/email/email.module";
 import { DomainEventBusModule } from "#shared/events/domain-event.bus";
@@ -70,6 +71,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 	providers: [
 		{ provide: APP_FILTER, useClass: GlobalExceptionFilter },
 		{ provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+		{ provide: APP_INTERCEPTOR, useClass: AuditLogInterceptor },
 		{ provide: APP_GUARD, useClass: WezAuthGuard },
 		{ provide: APP_GUARD, useClass: ThrottlerGuard },
 	],

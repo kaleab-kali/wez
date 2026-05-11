@@ -1,5 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import {
 	CloseComplaintDto,
@@ -32,6 +34,7 @@ export class ComplaintsController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.complaintCreated)
 	@ApiOperation({ summary: "Create a complaint" })
 	@ApiBody({ type: CreateComplaintDto })
 	@ApiResponse({ status: 201, description: "Complaint created" })
@@ -42,6 +45,7 @@ export class ComplaintsController {
 
 	@Post(":id/mediate")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.complaintMediating)
 	@ApiOperation({ summary: "Move an open complaint into mediation" })
 	@ApiResponse({ status: 200, description: "Complaint marked as mediating" })
 	async mediate(@Param("id") id: string, @Req() req: WezRequest) {
@@ -51,6 +55,7 @@ export class ComplaintsController {
 
 	@Post(":id/refer-external")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.complaintReferredExternal)
 	@ApiOperation({ summary: "Refer a complaint to an external authority" })
 	@ApiBody({ type: ReferComplaintExternalDto })
 	@ApiResponse({ status: 200, description: "Complaint referred externally" })
@@ -61,6 +66,7 @@ export class ComplaintsController {
 
 	@Post(":id/close")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.complaintClosed)
 	@ApiOperation({ summary: "Close a complaint with resolution and side effects" })
 	@ApiBody({ type: CloseComplaintDto })
 	@ApiResponse({ status: 200, description: "Complaint closed" })

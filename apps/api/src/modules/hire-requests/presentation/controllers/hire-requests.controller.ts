@@ -1,5 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import {
 	CancelHireRequestDto,
@@ -31,6 +33,7 @@ export class HireRequestsController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.hireRequestCreated, { mode: "auto", targetType: AUDIT_TARGET_TYPES.hireRequest })
 	@ApiOperation({ summary: "Create a hire request" })
 	@ApiBody({ type: CreateHireRequestDto })
 	@ApiResponse({ status: 201, description: "Hire request created" })
@@ -42,6 +45,11 @@ export class HireRequestsController {
 
 	@Post(":id/cancel")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.hireRequestCancelled, {
+		mode: "auto",
+		targetIdParam: "id",
+		targetType: AUDIT_TARGET_TYPES.hireRequest,
+	})
 	@ApiOperation({ summary: "Cancel a hire request" })
 	@ApiBody({ type: CancelHireRequestDto })
 	@ApiResponse({ status: 200, description: "Hire request cancelled" })

@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@ne
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { CreateLookupDto, UpdateLookupDto } from "../../application/dto/lookup.dto";
 import { LookupsService } from "../../application/services/lookups.service";
 
@@ -22,6 +24,7 @@ export class LookupsAdminController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.lookupCreated, { mode: "auto", targetType: AUDIT_TARGET_TYPES.lookup })
 	@ApiOperation({ summary: "Create a lookup" })
 	@ApiBody({ type: CreateLookupDto })
 	async create(@Body() dto: CreateLookupDto) {
@@ -29,6 +32,7 @@ export class LookupsAdminController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.lookupUpdated, { mode: "auto", targetIdParam: "id", targetType: AUDIT_TARGET_TYPES.lookup })
 	@ApiOperation({ summary: "Update a lookup" })
 	@ApiBody({ type: UpdateLookupDto })
 	async update(@Param("id") id: string, @Body() dto: UpdateLookupDto) {

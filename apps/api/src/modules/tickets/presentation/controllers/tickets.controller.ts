@@ -1,5 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import { AssignTicketDto, CreateTicketDto, ListTicketsDto, ResolveTicketDto } from "../../application/dto/ticket.dto";
 import { TicketsService } from "../../application/services/tickets.service";
@@ -35,6 +37,7 @@ export class TicketsController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.ticketCreated)
 	@ApiOperation({ summary: "Create an internal escalation ticket" })
 	@ApiBody({ type: CreateTicketDto })
 	@ApiResponse({ status: 201, description: "Ticket created" })
@@ -45,6 +48,7 @@ export class TicketsController {
 
 	@Post(":id/assign")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.ticketAssigned)
 	@ApiOperation({ summary: "Assign or reassign a ticket" })
 	@ApiBody({ type: AssignTicketDto })
 	@ApiResponse({ status: 200, description: "Ticket assigned" })
@@ -55,6 +59,7 @@ export class TicketsController {
 
 	@Post(":id/resolve")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.ticketResolved)
 	@ApiOperation({ summary: "Resolve a ticket" })
 	@ApiBody({ type: ResolveTicketDto })
 	@ApiResponse({ status: 200, description: "Ticket resolved" })

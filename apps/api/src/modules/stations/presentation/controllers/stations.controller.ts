@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requireSession, type WezRequest } from "#shared/auth/session";
 import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { AssignAgentDto, CreateStationDto, UpdateStationDto } from "../../application/dto/station.dto";
@@ -31,6 +33,7 @@ export class StationsController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.stationCreated)
 	@ApiOperation({ summary: "Create a station" })
 	@ApiBody({ type: CreateStationDto })
 	@ApiResponse({ status: 201, description: "Created" })
@@ -45,6 +48,7 @@ export class StationsController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.stationUpdated)
 	@ApiOperation({ summary: "Update a station" })
 	@ApiBody({ type: UpdateStationDto })
 	async update(
@@ -69,6 +73,7 @@ export class StationsController {
 	}
 
 	@Post(":id/assignments")
+	@AuditLog(AUDIT_ACTIONS.stationAgentAssigned)
 	@ApiOperation({ summary: "Assign an agent to a station" })
 	@ApiBody({ type: AssignAgentDto })
 	async assign(
@@ -86,6 +91,7 @@ export class StationsController {
 	}
 
 	@Delete("assignments/:assignmentId")
+	@AuditLog(AUDIT_ACTIONS.stationAgentUnassigned)
 	@ApiOperation({ summary: "Remove an agent assignment" })
 	async unassign(
 		@Param("assignmentId") assignmentId: string,

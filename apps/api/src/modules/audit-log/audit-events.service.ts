@@ -31,8 +31,8 @@ type EnrichedAuditEvent = AuditEventRow & { targetSummary: PlacementSummary | nu
 export type RecordAuditEventInput = {
 	actorId?: string | null;
 	actorRole?: string | null;
-	action: AuditAction;
-	targetType?: AuditTargetType;
+	action: AuditAction | string;
+	targetType?: AuditTargetType | string;
 	targetId?: string;
 	stationId?: string | null;
 	context?: AuditRequestContext;

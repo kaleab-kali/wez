@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import {
 	ListWorkersDto,
@@ -49,6 +51,7 @@ export class WorkersController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.workerCreated, { mode: "auto", targetType: AUDIT_TARGET_TYPES.worker })
 	@ApiOperation({ summary: "Register a worker (agent / staff only, in-station)" })
 	@ApiBody({ type: RegisterWorkerDto })
 	async register(@Body() dto: RegisterWorkerDto, @Req() req: WezRequest) {
@@ -57,6 +60,7 @@ export class WorkersController {
 	}
 
 	@Patch("me")
+	@AuditLog(AUDIT_ACTIONS.workerProfileUpdated)
 	@ApiOperation({ summary: "Update the current worker's own editable profile fields" })
 	@ApiBody({ type: UpdateOwnWorkerProfileDto })
 	async updateMe(@Body() dto: UpdateOwnWorkerProfileDto, @Req() req: WezRequest) {
@@ -65,6 +69,7 @@ export class WorkersController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.workerProfileUpdated)
 	@ApiOperation({ summary: "Update a worker" })
 	@ApiBody({ type: UpdateWorkerDto })
 	async update(@Param("id") id: string, @Body() dto: UpdateWorkerDto, @Req() req: WezRequest) {

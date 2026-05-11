@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AdminPermissionsGuard, RequireAdminRole } from "#modules/admin/guards/admin-permissions.guard";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
 import { Public } from "#modules/auth/guards/wez-auth.guard";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import type { WezRequest } from "#shared/auth/session";
 import { CreateLocationDto, UpdateLocationDto } from "../../application/dto/location.dto";
 import { LocationsService } from "../../application/services/locations.service";
@@ -28,6 +30,7 @@ export class LocationsAdminController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.locationCreated)
 	@ApiOperation({ summary: "Create a lookup-managed location" })
 	@ApiBody({ type: CreateLocationDto })
 	async create(@Body() dto: CreateLocationDto, @Req() req: WezRequest & { adminUser?: { id: string; role?: string } }) {
@@ -41,6 +44,7 @@ export class LocationsAdminController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.locationUpdated)
 	@ApiOperation({ summary: "Update a lookup-managed location" })
 	@ApiBody({ type: UpdateLocationDto })
 	async update(
@@ -58,6 +62,7 @@ export class LocationsAdminController {
 	}
 
 	@Delete(":id")
+	@AuditLog(AUDIT_ACTIONS.locationDeactivated)
 	@ApiOperation({ summary: "Deactivate a lookup-managed location" })
 	async deactivate(@Param("id") id: string, @Req() req: WezRequest & { adminUser?: { id: string; role?: string } }) {
 		return {
