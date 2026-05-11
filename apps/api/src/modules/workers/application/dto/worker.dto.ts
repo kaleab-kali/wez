@@ -163,6 +163,21 @@ export class ListWorkersDto {
 	@IsString()
 	woreda?: string;
 
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
+	adminAreaId?: string;
+
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
+	subAreaId?: string;
+
+	@ApiProperty({ required: false })
+	@IsOptional()
+	@IsString()
+	localityId?: string;
+
 	@ApiProperty({ required: false, enum: ["basic", "verified", "trained", "trusted"] })
 	@IsOptional()
 	@IsEnum(["basic", "verified", "trained", "trusted"] as const)

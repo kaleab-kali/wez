@@ -24,9 +24,13 @@ export class CreateReferralDto {
 }
 
 export class AcceptReferralDto {
-	@ApiProperty()
+	@ApiProperty({
+		required: false,
+		description: "Deprecated for employer responses. Hire request station is derived from the referred worker.",
+	})
+	@IsOptional()
 	@IsString()
-	stationId!: string;
+	stationId?: string;
 
 	@ApiProperty({ required: false, description: "Required when referral is not tied to a job" })
 	@IsOptional()

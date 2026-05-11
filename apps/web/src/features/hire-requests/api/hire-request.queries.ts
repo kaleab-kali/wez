@@ -95,7 +95,7 @@ export const useCreateHireRequest = () => {
 			employerId?: string;
 			jobId?: string;
 			proposedSalaryCents: number;
-			stationId: string;
+			stationId?: string;
 			channel: "online" | "in_person";
 			note?: string;
 		}) => send<{ data: HireRequest }>(BASE, "POST", input).then((b) => b.data),

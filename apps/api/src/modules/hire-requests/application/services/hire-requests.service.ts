@@ -113,6 +113,7 @@ export class HireRequestsService {
 
 	async create(currentUserId: string, dto: CreateHireRequestDto, asAgent: boolean, session?: WezSession) {
 		if (asAgent && session) {
+			if (!dto.stationId) throw new BadRequestException({ code: "STATION_ID_REQUIRED_FOR_STAFF_REQUEST" });
 			await this.staffAccess.assertStationAccess(session, dto.stationId, HIRE_REQUEST_GLOBAL_ACCESS_ROLES);
 		}
 		return this.createWithSourceReferral(currentUserId, dto, asAgent, null);
@@ -128,6 +129,10 @@ export class HireRequestsService {
 		asAgent: boolean,
 		sourceReferralId: string | null,
 	) {
+		if (!asAgent && dto.channel !== "online") {
+			throw new BadRequestException({ code: "ONLINE_CHANNEL_REQUIRED_FOR_CUSTOMER_REQUEST" });
+		}
+
 		const employerId = await this.resolveEmployerId(currentUserId, dto.employerId, asAgent);
 		const employer = await this.employers.findById(employerId);
 		if (!employer) throw new NotFoundException({ code: "EMPLOYER_NOT_FOUND" });
@@ -139,6 +144,7 @@ export class HireRequestsService {
 		if (!worker.roles.includes(dto.roleId)) {
 			throw new ConflictException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
 		}
+		const stationId = this.resolveRequestStationId(dto.stationId, asAgent, worker.registeredAtStationId);
 
 		const role = await this.roles.findById(dto.roleId);
 		if (!role?.active) throw new BadRequestException({ code: "INVALID_ROLE" });
@@ -155,7 +161,7 @@ export class HireRequestsService {
 			});
 		}
 
-		const station = await this.stations.findById(dto.stationId);
+		const station = await this.stations.findById(stationId);
 		if (!station) throw new NotFoundException({ code: "STATION_NOT_FOUND" });
 
 		const { hireRequestExpiryDays } = await this.platformSettings.getHiringPolicy();
@@ -167,7 +173,7 @@ export class HireRequestsService {
 			roleId: dto.roleId,
 			jobId: dto.jobId ?? null,
 			proposedSalaryCents: BigInt(dto.proposedSalaryCents),
-			stationId: dto.stationId,
+			stationId,
 			status: "awaiting_visit",
 			channel: dto.channel,
 			note: dto.note ?? null,
@@ -183,18 +189,33 @@ export class HireRequestsService {
 			employerEmail: employer.email,
 			employerName: employer.name,
 			roleName: role.name,
-			stationId: dto.stationId,
+			stationId,
 			proposedSalaryCents: dto.proposedSalaryCents.toString(),
 			channel: dto.channel,
 		});
 		return request;
 	}
 
+	private resolveRequestStationId(dtoStationId: string | undefined, asAgent: boolean, workerStationId: string | null) {
+		if (asAgent) {
+			if (!dtoStationId) throw new BadRequestException({ code: "STATION_ID_REQUIRED_FOR_STAFF_REQUEST" });
+			return dtoStationId;
+		}
+		if (!workerStationId) throw new ConflictException({ code: "WORKER_REGISTERING_STATION_REQUIRED" });
+		if (dtoStationId && dtoStationId !== workerStationId) {
+			throw new BadRequestException({ code: "HIRE_REQUEST_STATION_DERIVED_FROM_WORKER" });
+		}
+		return workerStationId;
+	}
+
 	private async resolveEmployerId(currentUserId: string, employerId: string | undefined, asAgent: boolean) {
-		if (employerId) return employerId;
-		if (asAgent) throw new BadRequestException({ code: "EMPLOYER_ID_REQUIRED" });
+		if (asAgent) {
+			if (!employerId) throw new BadRequestException({ code: "EMPLOYER_ID_REQUIRED" });
+			return employerId;
+		}
 		const own = await this.employers.findByUserId(currentUserId);
 		if (!own) throw new ForbiddenException({ code: "NO_EMPLOYER_PROFILE" });
+		if (employerId && employerId !== own.id) throw new ForbiddenException({ code: "EMPLOYER_PROFILE_MISMATCH" });
 		return own.id;
 	}
 

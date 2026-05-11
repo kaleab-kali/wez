@@ -11,7 +11,6 @@ import {
 	useReferrals,
 } from "#features/referrals/api/referral.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
-import { usePublicStations } from "#features/stations/api/station.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +27,6 @@ const STATUS_VARIANT: Record<ReferralStatus, "default" | "secondary" | "outline"
 const EmployerReferralsPage = React.memo(() => {
 	const { t } = useTranslation();
 	const { data } = useReferrals({ page: 1, limit: 30 });
-	const { data: stations } = usePublicStations();
 	const { data: roles } = usePublicRoles();
 	const { data: jobs } = useJobs({ page: 1, limit: 100 });
 	const accept = useAcceptReferral();
@@ -47,7 +45,6 @@ const EmployerReferralsPage = React.memo(() => {
 					<ReferralCard
 						key={referral.id}
 						referral={referral}
-						stations={stations ?? []}
 						roles={roles ?? []}
 						jobRoleId={jobs?.data.find((job) => job.id === referral.jobId)?.roleId}
 						onAccept={accept.mutateAsync}
@@ -72,7 +69,6 @@ EmployerReferralsPage.displayName = "EmployerReferralsPage";
 const ReferralCard = React.memo(
 	({
 		referral,
-		stations,
 		roles,
 		jobRoleId,
 		onAccept,
@@ -81,12 +77,10 @@ const ReferralCard = React.memo(
 		busy,
 	}: {
 		readonly referral: Referral;
-		readonly stations: ReadonlyArray<{ id: string; name: string }>;
 		readonly roles: ReadonlyArray<{ id: string; name: string }>;
 		readonly jobRoleId?: string;
 		readonly onAccept: (input: {
 			id: string;
-			stationId: string;
 			roleId?: string;
 			proposedSalaryCents: number;
 			note?: string;
@@ -96,7 +90,6 @@ const ReferralCard = React.memo(
 		readonly busy: boolean;
 	}) => {
 		const { t } = useTranslation();
-		const [stationId, setStationId] = React.useState("");
 		const [roleId, setRoleId] = React.useState(jobRoleId ?? "");
 		const [salary, setSalary] = React.useState<number | "">("");
 		const [note, setNote] = React.useState("");
@@ -111,14 +104,13 @@ const ReferralCard = React.memo(
 
 		const handleAccept = React.useCallback(async () => {
 			setError("");
-			if (!stationId || salary === "" || (!roleId && !jobRoleId)) {
+			if (salary === "" || (!roleId && !jobRoleId)) {
 				setError(t("referrals.acceptRequired"));
 				return;
 			}
 			try {
 				await onAccept({
 					id: referral.id,
-					stationId,
 					roleId: jobRoleId ? undefined : roleId,
 					proposedSalaryCents: Math.round(salary * 100),
 					note: note || undefined,
@@ -126,7 +118,7 @@ const ReferralCard = React.memo(
 			} catch (err) {
 				setError(err instanceof Error ? err.message : t("common.error"));
 			}
-		}, [jobRoleId, note, onAccept, referral.id, roleId, salary, stationId, t]);
+		}, [jobRoleId, note, onAccept, referral.id, roleId, salary, t]);
 
 		const handleDecline = React.useCallback(async () => {
 			setError("");
@@ -168,23 +160,7 @@ const ReferralCard = React.memo(
 					{referral.note && <p className="text-sm text-muted-foreground">{referral.note}</p>}
 					{error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 					{pending && (
-						<div className="grid gap-3 lg:grid-cols-5">
-							<div className="space-y-2">
-								<Label htmlFor={`${fieldId}-station`}>{t("hireRequests.station")}</Label>
-								<select
-									id={`${fieldId}-station`}
-									value={stationId}
-									onChange={(event) => setStationId(event.target.value)}
-									className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-								>
-									<option value="">-</option>
-									{stations.map((station) => (
-										<option key={station.id} value={station.id}>
-											{station.name}
-										</option>
-									))}
-								</select>
-							</div>
+						<div className="grid gap-3 lg:grid-cols-4">
 							<div className="space-y-2">
 								<Label htmlFor={`${fieldId}-role`}>{t("workers.filterRole")}</Label>
 								<select
@@ -215,6 +191,10 @@ const ReferralCard = React.memo(
 								<Label htmlFor={`${fieldId}-note`}>{t("hireRequests.note")}</Label>
 								<Input id={`${fieldId}-note`} value={note} onChange={(event) => setNote(event.target.value)} />
 							</div>
+							<div className="rounded-md border bg-muted/40 p-3 text-sm lg:col-span-4">
+								<p className="font-medium">{t("hireRequests.stationDerivedTitle")}</p>
+								<p className="mt-1 text-xs text-muted-foreground">{t("hireRequests.stationDerivedFromWorker")}</p>
+							</div>
 							<div className="flex items-end gap-2">
 								<Button type="button" onClick={handleAccept} disabled={busy}>
 									{t("referrals.accept")}
@@ -223,7 +203,7 @@ const ReferralCard = React.memo(
 									{t("referrals.defer")}
 								</Button>
 							</div>
-							<div className="space-y-2 lg:col-span-4">
+							<div className="space-y-2 lg:col-span-3">
 								<Label htmlFor={`${fieldId}-decline-reason`}>{t("referrals.declineReason")}</Label>
 								<Input
 									id={`${fieldId}-decline-reason`}

@@ -226,7 +226,10 @@ const HireRequestsPanel = React.memo(
 										? (request.workerName ?? request.workerId.slice(0, 8))
 										: (request.employerName ?? request.employerId.slice(0, 8))}
 								</p>
-								<p className="text-xs text-muted-foreground">{request.roleName ?? request.roleId}</p>
+								<p className="text-xs text-muted-foreground">
+									{request.roleName ?? request.roleId}
+									{request.stationName ? ` - ${request.stationName}` : ""}
+								</p>
 							</div>
 							<Badge variant="outline">{request.status.replace("_", " ")}</Badge>
 						</div>

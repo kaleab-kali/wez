@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { usePublicLocations } from "#features/locations/api/location.queries";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { usePublicStations } from "#features/stations/api/station.queries";
 import { useRegisterWorker } from "#features/workers/api/worker.queries";
+import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,9 @@ type FormState = {
 	dateOfBirth: string;
 	gender: "M" | "F";
 	area: string;
+	adminAreaId: string;
+	subAreaId: string;
+	localityId: string;
 	bio: string;
 	religion: string;
 	languages: string[];
@@ -48,6 +51,9 @@ const initialState: FormState = {
 	dateOfBirth: "",
 	gender: "F",
 	area: "",
+	adminAreaId: "",
+	subAreaId: "",
+	localityId: "",
 	bio: "",
 	religion: "",
 	languages: [],
@@ -62,7 +68,26 @@ const initialState: FormState = {
 const StepIdentity = React.memo(
 	({ state, set, onNext }: { readonly state: FormState; readonly set: SetState; readonly onNext: () => void }) => {
 		const { t } = useTranslation();
-		const { data: localities } = usePublicLocations({ kind: "locality" });
+		const locationValue = React.useMemo<LocationHierarchySelection>(
+			() => ({
+				adminAreaId: state.adminAreaId,
+				subAreaId: state.subAreaId,
+				localityId: state.localityId,
+				localityCode: state.area,
+			}),
+			[state.adminAreaId, state.area, state.localityId, state.subAreaId],
+		);
+		const onLocationChange = React.useCallback(
+			(next: LocationHierarchySelection) => {
+				set({
+					adminAreaId: next.adminAreaId ?? "",
+					subAreaId: next.subAreaId ?? "",
+					localityId: next.localityId ?? "",
+					area: next.localityCode ?? "",
+				});
+			},
+			[set],
+		);
 		return (
 			<form
 				className="grid grid-cols-1 md:grid-cols-2 gap-3"
@@ -116,22 +141,14 @@ const StepIdentity = React.memo(
 						<option value="M">{t("workers.genderM")}</option>
 					</select>
 				</div>
-				<div className="space-y-2">
-					<Label htmlFor="area">{t("workers.register.woreda")}</Label>
-					<select
-						id="area"
-						value={state.area}
-						onChange={(e) => set({ area: e.target.value })}
+				<div className="space-y-2 md:col-span-2">
+					<Label>{t("workers.register.location")}</Label>
+					<LocationHierarchySelect
+						idPrefix="new-worker-location"
+						value={locationValue}
+						onChange={onLocationChange}
 						required
-						className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-					>
-						<option value="">—</option>
-						{localities?.map((locality) => (
-							<option key={locality.id} value={locality.code}>
-								{locality.nameEn}
-							</option>
-						))}
-					</select>
+					/>
 				</div>
 				<div className="md:col-span-2 flex justify-end">
 					<Button type="submit">{t("common.next")}</Button>

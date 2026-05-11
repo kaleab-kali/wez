@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateEmployer } from "#features/employers/api/employer.queries";
-import { usePublicLocations } from "#features/locations/api/location.queries";
+import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,6 @@ function RegisterEmployerPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const createE = useCreateEmployer();
-	const { data: localities } = usePublicLocations({ kind: "locality" });
 
 	const [type, setType] = React.useState<"business" | "household">("business");
 	const [name, setName] = React.useState("");
@@ -80,6 +79,12 @@ function RegisterEmployerPage() {
 	const [fayda, setFayda] = React.useState("");
 	const [secondaryContact, setSecondaryContact] = React.useState("");
 	const [error, setError] = React.useState("");
+	const [location, setLocation] = React.useState<LocationHierarchySelection>({});
+
+	const onLocationChange = React.useCallback((next: LocationHierarchySelection) => {
+		setLocation(next);
+		setArea(next.localityCode ?? "");
+	}, []);
 
 	const onSubmit = React.useCallback(
 		async (e: React.FormEvent) => {
@@ -188,21 +193,14 @@ function RegisterEmployerPage() {
 							</div>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="area">{t("workers.register.woreda")}</Label>
-							<select
-								id="area"
-								value={area}
-								onChange={(e) => setArea(e.target.value)}
+							<Label>{t("workers.register.location")}</Label>
+							<LocationHierarchySelect
+								idPrefix="staff-employer-location"
+								value={location}
+								onChange={onLocationChange}
 								required
-								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-							>
-								<option value="">—</option>
-								{localities?.map((locality) => (
-									<option key={locality.id} value={locality.code}>
-										{locality.nameEn}
-									</option>
-								))}
-							</select>
+								className="grid gap-3 md:grid-cols-3"
+							/>
 						</div>
 						{type === "business" ? (
 							<>

@@ -11,7 +11,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useCreateHireRequest } from "#features/hire-requests/api/hire-request.queries";
 import { type Role, usePublicRoles } from "#features/role-catalog/api/role.queries";
-import { usePublicStations } from "#features/stations/api/station.queries";
 import { useWorker, type Worker } from "#features/workers/api/worker.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,7 @@ function CustomerWorkerDetailPage() {
 				</div>
 				<aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
 					<CandidateSummary worker={worker} />
-					<HireRequestPanel workerId={worker.id} roles={worker.roles} available={worker.available} />
+					<HireRequestPanel worker={worker} />
 				</aside>
 			</div>
 		</div>
@@ -168,6 +167,10 @@ const OverviewSection = React.memo(({ worker }: { readonly worker: Worker }) => 
 					<InfoBlock
 						label={t("workers.filterMinExperience")}
 						value={t("workers.expYearsShort", { n: worker.experienceYears })}
+					/>
+					<InfoBlock
+						label={t("workers.profile.registeredStation")}
+						value={worker.registeredAtStationName ?? t("hireRequests.workerStationPending")}
 					/>
 				</div>
 			</CardContent>
@@ -340,7 +343,10 @@ const CandidateSummary = React.memo(({ worker }: { readonly worker: Worker }) =>
 			<CardContent className="space-y-3">
 				<InfoBlock label={t("app.bestFor")} value={worker.roles.join(", ")} />
 				<InfoBlock label={t("app.availability")} value={worker.available ? t("app.available") : t("workers.busy")} />
-				<InfoBlock label={t("app.stationVisit")} value={t("app.stationVisitBody")} />
+				<InfoBlock
+					label={t("app.stationVisit")}
+					value={worker.registeredAtStationName ?? t("hireRequests.workerStationPending")}
+				/>
 			</CardContent>
 		</Card>
 	);
@@ -357,155 +363,132 @@ InfoBlock.displayName = "InfoBlock";
 
 const formatBirr = (cents: string) => `${(Number(cents) / 100).toLocaleString()} ETB`;
 
-const HireRequestPanel = React.memo(
-	({
-		workerId,
-		roles,
-		available,
-	}: {
-		readonly workerId: string;
-		readonly roles: string[];
-		readonly available: boolean;
-	}) => {
-		const { t } = useTranslation();
-		const create = useCreateHireRequest();
-		const { data: stations } = usePublicStations();
-		const { data: catalog } = usePublicRoles();
-		const [roleId, setRoleId] = React.useState(roles[0] ?? "");
-		const [salary, setSalary] = React.useState<number | "">("");
-		const [stationId, setStationId] = React.useState("");
-		const [note, setNote] = React.useState("");
-		const [success, setSuccess] = React.useState(false);
-		const [error, setError] = React.useState("");
-		const selectedRole = React.useMemo(() => catalog?.find((role) => role.id === roleId), [catalog, roleId]);
-		const salaryMin = React.useMemo(
-			() => (selectedRole ? Number(selectedRole.salaryMinCents) / 100 : 0),
-			[selectedRole],
-		);
-		const salaryMax = React.useMemo(
-			() => (selectedRole ? Number(selectedRole.salaryMaxCents) / 100 : 0),
-			[selectedRole],
-		);
-		const salaryInvalid = React.useMemo(
-			() => salary === "" || (selectedRole ? salary < salaryMin || salary > salaryMax : false),
-			[salary, salaryMax, salaryMin, selectedRole],
-		);
+const HireRequestPanel = React.memo(({ worker }: { readonly worker: Worker }) => {
+	const { t } = useTranslation();
+	const create = useCreateHireRequest();
+	const { data: catalog } = usePublicRoles();
+	const [roleId, setRoleId] = React.useState(worker.roles[0] ?? "");
+	const [salary, setSalary] = React.useState<number | "">("");
+	const [note, setNote] = React.useState("");
+	const [success, setSuccess] = React.useState(false);
+	const [error, setError] = React.useState("");
+	const selectedRole = React.useMemo(() => catalog?.find((role) => role.id === roleId), [catalog, roleId]);
+	const salaryMin = React.useMemo(() => (selectedRole ? Number(selectedRole.salaryMinCents) / 100 : 0), [selectedRole]);
+	const salaryMax = React.useMemo(() => (selectedRole ? Number(selectedRole.salaryMaxCents) / 100 : 0), [selectedRole]);
+	const salaryInvalid = React.useMemo(
+		() => salary === "" || (selectedRole ? salary < salaryMin || salary > salaryMax : false),
+		[salary, salaryMax, salaryMin, selectedRole],
+	);
 
-		React.useEffect(() => {
-			if (selectedRole) setSalary(Number(selectedRole.salaryMinCents) / 100);
-		}, [selectedRole]);
+	React.useEffect(() => {
+		if (selectedRole) setSalary(Number(selectedRole.salaryMinCents) / 100);
+	}, [selectedRole]);
 
-		const onSubmit = React.useCallback(
-			async (e: React.FormEvent) => {
-				e.preventDefault();
-				setError("");
-				setSuccess(false);
-				if (salaryInvalid || salary === "") {
-					setError(t("hireRequests.salaryRangeRequired", { min: salaryMin, max: salaryMax }));
-					return;
-				}
-				try {
-					await create.mutateAsync({
-						workerId,
-						roleId,
-						proposedSalaryCents: Math.round(salary * 100),
-						stationId,
-						channel: "online",
-						note: note || undefined,
-					});
-					setSuccess(true);
-					setNote("");
-				} catch (err) {
-					setError(err instanceof Error ? err.message : t("common.error"));
-				}
-			},
-			[create, note, roleId, salary, salaryInvalid, salaryMax, salaryMin, stationId, t, workerId],
-		);
+	const onSubmit = React.useCallback(
+		async (e: React.FormEvent) => {
+			e.preventDefault();
+			setError("");
+			setSuccess(false);
+			if (salaryInvalid || salary === "") {
+				setError(t("hireRequests.salaryRangeRequired", { min: salaryMin, max: salaryMax }));
+				return;
+			}
+			if (!worker.registeredAtStationId) {
+				setError(t("hireRequests.workerStationMissing"));
+				return;
+			}
+			try {
+				await create.mutateAsync({
+					workerId: worker.id,
+					roleId,
+					proposedSalaryCents: Math.round(salary * 100),
+					channel: "online",
+					note: note || undefined,
+				});
+				setSuccess(true);
+				setNote("");
+			} catch (err) {
+				setError(err instanceof Error ? err.message : t("common.error"));
+			}
+		},
+		[create, note, roleId, salary, salaryInvalid, salaryMax, salaryMin, t, worker.id, worker.registeredAtStationId],
+	);
 
-		return (
-			<Card>
-				<CardHeader>
-					<div className="flex items-center gap-2">
-						<HugeiconsIcon icon={NoteEditIcon} className="size-5 text-primary" />
-						<CardTitle className="text-base">{t("hireRequests.create")}</CardTitle>
-					</div>
-				</CardHeader>
-				<CardContent>
-					{!available ? (
-						<p className="text-sm text-muted-foreground">{t("app.workerUnavailableBody")}</p>
-					) : (
-						<form onSubmit={onSubmit} className="space-y-3">
-							{error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
-							{success && (
-								<div className="rounded-md bg-primary/10 p-3 text-sm text-primary">{t("hireRequests.created")}</div>
+	return (
+		<Card>
+			<CardHeader>
+				<div className="flex items-center gap-2">
+					<HugeiconsIcon icon={NoteEditIcon} className="size-5 text-primary" />
+					<CardTitle className="text-base">{t("hireRequests.create")}</CardTitle>
+				</div>
+			</CardHeader>
+			<CardContent>
+				{!worker.available ? (
+					<p className="text-sm text-muted-foreground">{t("app.workerUnavailableBody")}</p>
+				) : (
+					<form onSubmit={onSubmit} className="space-y-3">
+						{error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+						{success && (
+							<div className="rounded-md bg-primary/10 p-3 text-sm text-primary">{t("hireRequests.created")}</div>
+						)}
+						<div className="space-y-2">
+							<Label htmlFor="role">{t("workers.register.roles")}</Label>
+							<select
+								id="role"
+								value={roleId}
+								onChange={(e) => setRoleId(e.target.value)}
+								required
+								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							>
+								{worker.roles.map((role) => (
+									<option key={role} value={role}>
+										{role}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="salary">{t("hireRequests.proposedSalary")}</Label>
+							<Input
+								id="salary"
+								type="number"
+								min={salaryMin}
+								max={salaryMax || undefined}
+								value={salary}
+								onChange={(e) => setSalary(e.target.value === "" ? "" : Number(e.target.value))}
+								required
+							/>
+							{selectedRole && (
+								<p className="text-xs text-muted-foreground">
+									{t("jobs.roleRange", { min: salaryMin.toLocaleString(), max: salaryMax.toLocaleString() })}
+								</p>
 							)}
-							<div className="space-y-2">
-								<Label htmlFor="role">{t("workers.register.roles")}</Label>
-								<select
-									id="role"
-									value={roleId}
-									onChange={(e) => setRoleId(e.target.value)}
-									required
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								>
-									{roles.map((role) => (
-										<option key={role} value={role}>
-											{role}
-										</option>
-									))}
-								</select>
+						</div>
+						<div className="space-y-2">
+							<Label>{t("hireRequests.station")}</Label>
+							<div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+								<p className="font-medium">
+									{worker.registeredAtStationName ?? t("hireRequests.workerStationPending")}
+								</p>
+								<p className="mt-1 text-xs text-muted-foreground">{t("hireRequests.stationDerivedFromWorker")}</p>
 							</div>
-							<div className="space-y-2">
-								<Label htmlFor="salary">{t("hireRequests.proposedSalary")}</Label>
-								<Input
-									id="salary"
-									type="number"
-									min={salaryMin}
-									max={salaryMax || undefined}
-									value={salary}
-									onChange={(e) => setSalary(e.target.value === "" ? "" : Number(e.target.value))}
-									required
-								/>
-								{selectedRole && (
-									<p className="text-xs text-muted-foreground">
-										{t("jobs.roleRange", { min: salaryMin.toLocaleString(), max: salaryMax.toLocaleString() })}
-									</p>
-								)}
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="station">{t("hireRequests.station")}</Label>
-								<select
-									id="station"
-									value={stationId}
-									onChange={(e) => setStationId(e.target.value)}
-									required
-									className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								>
-									<option value="">-</option>
-									{stations?.map((station) => (
-										<option key={station.id} value={station.id}>
-											{station.name}
-										</option>
-									))}
-								</select>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="note">{t("hireRequests.note")}</Label>
-								<textarea
-									id="note"
-									value={note}
-									onChange={(e) => setNote(e.target.value)}
-									className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-								/>
-							</div>
-							<Button type="submit" className="w-full" disabled={create.isPending || salaryInvalid}>
-								{create.isPending ? t("common.saving") : t("hireRequests.submit")}
-							</Button>
-						</form>
-					)}
-				</CardContent>
-			</Card>
-		);
-	},
-);
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="note">{t("hireRequests.note")}</Label>
+							<textarea
+								id="note"
+								value={note}
+								onChange={(e) => setNote(e.target.value)}
+								className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							/>
+						</div>
+						<Button type="submit" className="w-full" disabled={create.isPending || salaryInvalid}>
+							{create.isPending ? t("common.saving") : t("hireRequests.submit")}
+						</Button>
+					</form>
+				)}
+			</CardContent>
+		</Card>
+	);
+});
 HireRequestPanel.displayName = "HireRequestPanel";
