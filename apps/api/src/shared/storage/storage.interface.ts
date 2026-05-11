@@ -17,6 +17,8 @@ export interface StorageDriver {
 
 	delete(key: string): Promise<void>;
 
+	exists(key: string): Promise<boolean>;
+
 	getUrl(key: string): string;
 }
 

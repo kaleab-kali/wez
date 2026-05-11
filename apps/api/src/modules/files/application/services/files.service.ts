@@ -116,6 +116,7 @@ export class FilesService {
 		await this.assertReadAccess(session, attachment);
 		if (attachment.status === "clean") return { data: attachment };
 		if (attachment.status !== "scanning") throw new ConflictException({ code: "ATTACHMENT_UPLOAD_REQUIRED" });
+		await this.assertStoredObjectExists(attachment.key);
 
 		const scan = await this.virusScan.scan({ filename: attachment.filename, mimeType: attachment.mimeType });
 		return {
@@ -133,6 +134,7 @@ export class FilesService {
 		const attachment = await this.getAttachment(id);
 		await this.assertReadAccess(session, attachment);
 		if (attachment.status !== "clean") throw new ConflictException({ code: "ATTACHMENT_NOT_AVAILABLE" });
+		await this.assertStoredObjectExists(attachment.key);
 		return {
 			data: {
 				url: this.storage.getUrl(attachment.key),
@@ -207,5 +209,10 @@ export class FilesService {
 			if (employer?.userId === session.user.id) return;
 		}
 		throw new ForbiddenException({ code: "ATTACHMENT_NOT_IN_SCOPE" });
+	}
+
+	private async assertStoredObjectExists(key: string) {
+		if (await this.storage.exists(key)) return;
+		throw new ConflictException({ code: "ATTACHMENT_FILE_MISSING" });
 	}
 }

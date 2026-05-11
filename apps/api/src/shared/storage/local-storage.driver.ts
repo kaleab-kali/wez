@@ -48,6 +48,17 @@ export class LocalStorageDriver implements StorageDriver {
 		}
 	}
 
+	async exists(key: string): Promise<boolean> {
+		const fullPath = path.join(UPLOADS_DIR, key);
+		try {
+			await fs.access(fullPath);
+			return true;
+		} catch (err) {
+			if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+			throw err;
+		}
+	}
+
 	getUrl(key: string): string {
 		return `/uploads/${key}`;
 	}

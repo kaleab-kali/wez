@@ -9,11 +9,6 @@ import {
 	type NotificationChannel,
 } from "../../domain/entities/notification.entity";
 
-type PreferencePrincipal = {
-	readonly userId?: string;
-	readonly adminUserId?: string;
-};
-
 export type NotificationPreferenceRow = {
 	readonly category: string;
 	readonly channel: NotificationChannel;
@@ -21,24 +16,16 @@ export type NotificationPreferenceRow = {
 	readonly locked: boolean;
 };
 
-const principalForSession = (session: WezSession): PreferencePrincipal =>
+const principalWhereForSession = (session: WezSession) =>
 	session.kind === "staff" ? { adminUserId: session.user.id } : { userId: session.user.id };
-
-const preferenceWhere = (principal: PreferencePrincipal, category: string, channel: NotificationChannel) => ({
-	userId: principal.userId,
-	adminUserId: principal.adminUserId,
-	category,
-	channel,
-});
 
 @Injectable()
 export class NotificationPreferencesService {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async listForSession(session: WezSession): Promise<{ data: NotificationPreferenceRow[] }> {
-		const principal = principalForSession(session);
 		const rows = await this.prisma.notificationPreference.findMany({
-			where: principal,
+			where: principalWhereForSession(session),
 			select: { category: true, channel: true, enabled: true },
 		});
 		const current = new Map(rows.map((row) => [`${row.category}:${row.channel}`, row.enabled]));
@@ -62,21 +49,42 @@ export class NotificationPreferencesService {
 		if (isTransactionalCategory(input.category)) {
 			throw new BadRequestException({ code: "TRANSACTIONAL_NOTIFICATION_REQUIRED" });
 		}
-		const principal = principalForSession(session);
-		const existing = await this.prisma.notificationPreference.findFirst({
-			where: preferenceWhere(principal, input.category, input.channel),
-			select: { id: true },
-		});
-		const row = existing
-			? await this.prisma.notificationPreference.update({
-					where: { id: existing.id },
-					data: { enabled: input.enabled },
-					select: { category: true, channel: true, enabled: true },
-				})
-			: await this.prisma.notificationPreference.create({
-					data: { ...principal, category: input.category, channel: input.channel, enabled: input.enabled },
-					select: { category: true, channel: true, enabled: true },
-				});
+		const row =
+			session.kind === "staff"
+				? await this.prisma.notificationPreference.upsert({
+						where: {
+							adminUserId_category_channel: {
+								adminUserId: session.user.id,
+								category: input.category,
+								channel: input.channel,
+							},
+						},
+						update: { enabled: input.enabled },
+						create: {
+							adminUserId: session.user.id,
+							category: input.category,
+							channel: input.channel,
+							enabled: input.enabled,
+						},
+						select: { category: true, channel: true, enabled: true },
+					})
+				: await this.prisma.notificationPreference.upsert({
+						where: {
+							userId_category_channel: {
+								userId: session.user.id,
+								category: input.category,
+								channel: input.channel,
+							},
+						},
+						update: { enabled: input.enabled },
+						create: {
+							userId: session.user.id,
+							category: input.category,
+							channel: input.channel,
+							enabled: input.enabled,
+						},
+						select: { category: true, channel: true, enabled: true },
+					});
 		return { ...row, channel: row.channel as NotificationChannel, locked: false };
 	}
 

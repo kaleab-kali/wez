@@ -897,6 +897,7 @@ model NotificationPreference {
   enabled   Boolean @default(true)
 
   @@unique([userId, category, channel])
+  @@unique([adminUserId, category, channel])
   @@index([userId])
   @@index([adminUserId])
   @@map("notification_preference")
