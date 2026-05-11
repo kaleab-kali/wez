@@ -13,9 +13,57 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const AUDIT_ACTIONS = ["job.created", "job.updated", "job.closed", "placement.finalized", "placement.ended"] as const;
-const ACTOR_ROLES = ["super_admin", "ops_manager", "compliance_officer", "finance_manager", "agent"] as const;
-const TARGET_TYPES = ["job", "placement"] as const;
+const AUDIT_ACTIONS = [
+	"job.created",
+	"job.updated",
+	"job.closed",
+	"worker.profile_updated",
+	"staff_user.created",
+	"staff_user.updated",
+	"staff_role.assigned",
+	"staff_role.revoked",
+	"location.created",
+	"location.updated",
+	"location.deactivated",
+	"station.created",
+	"station.updated",
+	"station.agent_assigned",
+	"station.agent_unassigned",
+	"placement.finalized",
+	"placement.ended",
+	"complaint.created",
+	"complaint.mediating",
+	"complaint.closed",
+	"complaint.referred_external",
+	"ticket.created",
+	"ticket.assigned",
+	"ticket.resolved",
+] as const;
+const ACTOR_ROLES = [
+	"super_admin",
+	"ops_manager",
+	"compliance_officer",
+	"finance_manager",
+	"hr_manager",
+	"it_manager",
+	"training_manager",
+	"station_supervisor",
+	"agent",
+	"support",
+	"system",
+] as const;
+const TARGET_TYPES = [
+	"job",
+	"worker",
+	"placement",
+	"staff_user",
+	"staff_role_assignment",
+	"location",
+	"station",
+	"agent_assignment",
+	"complaint",
+	"ticket",
+] as const;
 const DEFAULT_LIMIT = 25;
 const FIRST_PAGE = 1;
 const CSV_FILENAME = "wez-audit-events.csv";
@@ -38,6 +86,13 @@ const actionTitle = (action: string) => {
 	if (action === "job.closed") return "Job closed";
 	if (action === "placement.finalized") return "Placement finalized";
 	if (action === "placement.ended") return "Placement ended";
+	if (action === "complaint.created") return "Complaint created";
+	if (action === "complaint.mediating") return "Complaint moved to mediation";
+	if (action === "complaint.closed") return "Complaint closed";
+	if (action === "complaint.referred_external") return "Complaint referred externally";
+	if (action === "ticket.created") return "Ticket created";
+	if (action === "ticket.assigned") return "Ticket assigned";
+	if (action === "ticket.resolved") return "Ticket resolved";
 	return action;
 };
 const actionSentence = (event: AuditEvent) => {
@@ -47,6 +102,12 @@ const actionSentence = (event: AuditEvent) => {
 		if (event.action === "job.created") return `${event.actorRole} created job "${title}".`;
 		if (event.action === "job.closed") return `${event.actorRole} closed job "${title}".`;
 		return `${event.actorRole} updated job "${title}".`;
+	}
+	if (event.targetType === "complaint") {
+		return `${event.actorRole} updated a ${metadataValue(event, "severity")} ${metadataValue(event, "type")} complaint.`;
+	}
+	if (event.targetType === "ticket") {
+		return `${event.actorRole} updated a ${metadataValue(event, "priority")} ${metadataValue(event, "category")} ticket.`;
 	}
 	const summary = event.targetSummary;
 	if (!summary) return `${event.actorRole} updated a ${event.targetType ?? "record"}.`;
@@ -217,6 +278,50 @@ const EventFacts = React.memo(({ event }: { readonly event: AuditEvent }) => {
 							? metadataValue(event, "afterStatus")
 							: metadataValue(event, "status")}
 					</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "complaint") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Complaint category</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "type")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Severity</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "severity")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "status")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Outcome</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "resolutionTag")}</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "ticket") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Ticket category</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "category")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Priority</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "priority")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "status")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Assignee</p>
+					<p className="mt-1 font-medium">{compactId(metadataValue(event, "assignedToId"))}</p>
 				</div>
 			</div>
 		);

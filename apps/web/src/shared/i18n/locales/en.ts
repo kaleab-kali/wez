@@ -43,6 +43,7 @@ export const en = {
 		referrals: "Referrals",
 		placements: "Placements",
 		complaints: "Complaints",
+		tickets: "Tickets",
 		training: "Training",
 	},
 	auth: {

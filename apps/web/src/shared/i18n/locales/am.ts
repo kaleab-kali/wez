@@ -51,6 +51,7 @@ export const am = {
 		referrals: "ሪፈራሎች",
 		placements: "ምደባዎች",
 		complaints: "ቅሬታዎች",
+		tickets: "Tickets",
 		training: "ስልጠና",
 	},
 	auth: {

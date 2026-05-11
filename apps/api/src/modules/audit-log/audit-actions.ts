@@ -16,6 +16,13 @@ export const AUDIT_ACTIONS = {
 	stationAgentUnassigned: "station.agent_unassigned",
 	placementFinalized: "placement.finalized",
 	placementEnded: "placement.ended",
+	complaintCreated: "complaint.created",
+	complaintMediating: "complaint.mediating",
+	complaintClosed: "complaint.closed",
+	complaintReferredExternal: "complaint.referred_external",
+	ticketCreated: "ticket.created",
+	ticketAssigned: "ticket.assigned",
+	ticketResolved: "ticket.resolved",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -29,6 +36,8 @@ export const AUDIT_TARGET_TYPES = {
 	location: "location",
 	station: "station",
 	agentAssignment: "agent_assignment",
+	complaint: "complaint",
+	ticket: "ticket",
 } as const;
 
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[keyof typeof AUDIT_TARGET_TYPES];
