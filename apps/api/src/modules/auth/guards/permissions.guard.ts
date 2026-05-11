@@ -6,10 +6,16 @@ import {
 	UnauthorizedException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { getSession } from "#shared/auth/session";
-import { hasPermission, type Permission } from "../permissions";
+import { recordPermissionDenial } from "#shared/audit/permission-denial-audit";
+import { getSession, type WezRequest, type WezSession } from "#shared/auth/session";
+import { hasPermission, type Permission, permissionsForRole } from "../permissions";
 
 export const PERMISSIONS_KEY = "permissions";
+
+type PermissionsGuardRequest = WezRequest & {
+	user?: WezSession["user"];
+	session?: WezSession["session"];
+};
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -23,13 +29,17 @@ export class PermissionsGuard implements CanActivate {
 
 		if (!required || required.length === 0) return true;
 
-		const request = context.switchToHttp().getRequest();
+		const request = context.switchToHttp().getRequest<PermissionsGuardRequest>();
 		const session = request.wezSession ?? (await getSession(request));
 		if (!session?.user) throw new UnauthorizedException("Authentication required");
 
 		const role = session.user.role;
+		const roles = session.user.roles ?? [];
 		for (const perm of required) {
-			if (!hasPermission(role, perm)) {
+			const hasRolePermission =
+				roles.some((item) => permissionsForRole(item).includes(perm)) || hasPermission(role, perm);
+			if (!hasRolePermission) {
+				await recordPermissionDenial({ req: request, session, permission: perm });
 				throw new ForbiddenException({ code: "MISSING_PERMISSION", message: `Missing permission: ${perm}` });
 			}
 		}

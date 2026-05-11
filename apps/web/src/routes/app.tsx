@@ -81,6 +81,11 @@ const CustomerAppLayout = React.memo(() => {
 								{t("app.requests")}
 							</CustomerNavLink>
 						)}
+						{(isEmployer || isWorker) && (
+							<CustomerNavLink to="/app/complaints" active={location.pathname.startsWith("/app/complaints")}>
+								{t("app.complaints")}
+							</CustomerNavLink>
+						)}
 						{isWorker && (
 							<CustomerNavLink to="/app/profile" active={location.pathname.startsWith("/app/profile")}>
 								{t("app.profile")}

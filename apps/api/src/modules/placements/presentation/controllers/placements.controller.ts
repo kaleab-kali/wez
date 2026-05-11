@@ -1,5 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import {
 	EndPlacementDto,
@@ -24,6 +26,7 @@ export class PlacementsController {
 	}
 
 	@Post("from-hire-request/:hireRequestId/finalize")
+	@AuditLog(AUDIT_ACTIONS.placementFinalized)
 	@ApiOperation({ summary: "Finalize a placement from an awaiting hire request" })
 	@ApiBody({ type: FinalizePlacementDto })
 	@ApiResponse({ status: 201, description: "Placement finalized and agreement PDF generated" })
@@ -39,6 +42,7 @@ export class PlacementsController {
 	}
 
 	@Post("fresh/finalize")
+	@AuditLog(AUDIT_ACTIONS.placementFinalized)
 	@ApiOperation({ summary: "Finalize a fresh placement created at the station desk" })
 	@ApiBody({ type: FinalizeFreshPlacementDto })
 	@ApiResponse({ status: 201, description: "Fresh desk placement finalized and agreement PDF generated" })
@@ -51,6 +55,7 @@ export class PlacementsController {
 
 	@Post(":id/end")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.placementEnded)
 	@ApiOperation({ summary: "End an active placement and restore worker availability" })
 	@ApiBody({ type: EndPlacementDto })
 	@ApiResponse({ status: 200, description: "Placement ended" })

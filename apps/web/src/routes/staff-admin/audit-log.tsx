@@ -13,9 +13,91 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const AUDIT_ACTIONS = ["job.created", "job.updated", "job.closed", "placement.finalized", "placement.ended"] as const;
-const ACTOR_ROLES = ["super_admin", "ops_manager", "compliance_officer", "finance_manager", "agent"] as const;
-const TARGET_TYPES = ["job", "placement"] as const;
+const AUDIT_ACTIONS = [
+	"auth.login",
+	"auth.logout",
+	"auth.failed_login",
+	"job.created",
+	"job.updated",
+	"job.closed",
+	"worker.created",
+	"worker.profile_updated",
+	"employer.signed_up",
+	"employer.created",
+	"employer.updated",
+	"hire_request.created",
+	"hire_request.cancelled",
+	"referral.created",
+	"referral.accepted",
+	"referral.declined",
+	"referral.deferred",
+	"role_catalog.created",
+	"role_catalog.updated",
+	"lookup.created",
+	"lookup.updated",
+	"hiring_policy.updated",
+	"staff_user.created",
+	"staff_user.updated",
+	"staff_role.assigned",
+	"staff_role.revoked",
+	"location.created",
+	"location.updated",
+	"location.deactivated",
+	"station.created",
+	"station.updated",
+	"station.agent_assigned",
+	"station.agent_unassigned",
+	"placement.finalized",
+	"placement.ended",
+	"complaint.created",
+	"complaint.mediating",
+	"complaint.closed",
+	"complaint.referred_external",
+	"ticket.created",
+	"ticket.assigned",
+	"ticket.resolved",
+	"ticket.closed",
+	"permission.denied",
+] as const;
+const ACTOR_ROLES = [
+	"super_admin",
+	"ops_manager",
+	"compliance_officer",
+	"finance_manager",
+	"hr_manager",
+	"it_manager",
+	"training_manager",
+	"station_supervisor",
+	"agent",
+	"support",
+	"customer_auth",
+	"staff_auth",
+	"worker",
+	"employer_business",
+	"employer_household",
+	"system",
+	"anonymous",
+] as const;
+const TARGET_TYPES = [
+	"job",
+	"worker",
+	"employer",
+	"hire_request",
+	"referral",
+	"role_catalog",
+	"lookup",
+	"hiring_policy",
+	"placement",
+	"staff_user",
+	"staff_role_assignment",
+	"location",
+	"station",
+	"agent_assignment",
+	"complaint",
+	"ticket",
+	"permission",
+	"auth",
+] as const;
 const DEFAULT_LIMIT = 25;
 const FIRST_PAGE = 1;
 const CSV_FILENAME = "wez-audit-events.csv";
@@ -38,15 +120,41 @@ const actionTitle = (action: string) => {
 	if (action === "job.closed") return "Job closed";
 	if (action === "placement.finalized") return "Placement finalized";
 	if (action === "placement.ended") return "Placement ended";
-	return action;
+	if (action === "complaint.created") return "Complaint created";
+	if (action === "complaint.mediating") return "Complaint moved to mediation";
+	if (action === "complaint.closed") return "Complaint closed";
+	if (action === "complaint.referred_external") return "Complaint referred externally";
+	if (action === "ticket.created") return "Ticket created";
+	if (action === "ticket.assigned") return "Ticket assigned";
+	if (action === "ticket.resolved") return "Ticket resolved";
+	if (action === "ticket.closed") return "Ticket closed";
+	if (action === "permission.denied") return "Permission denied";
+	if (action === "auth.login") return "Signed in";
+	if (action === "auth.logout") return "Signed out";
+	if (action === "auth.failed_login") return "Failed sign-in";
+	return action.replaceAll("_", " ").replaceAll(".", " ");
 };
 const actionSentence = (event: AuditEvent) => {
+	if (event.targetType === "auth") {
+		const realm = metadataValue(event, "realm");
+		const status = metadataValue(event, "statusCode");
+		return `${event.actorRole} triggered ${event.action} in ${realm}${status !== "-" ? ` with status ${status}` : ""}.`;
+	}
 	if (event.targetType === "job") {
 		const title =
 			metadataValue(event, "afterTitle") !== "-" ? metadataValue(event, "afterTitle") : metadataValue(event, "title");
 		if (event.action === "job.created") return `${event.actorRole} created job "${title}".`;
 		if (event.action === "job.closed") return `${event.actorRole} closed job "${title}".`;
 		return `${event.actorRole} updated job "${title}".`;
+	}
+	if (event.targetType === "complaint") {
+		return `${event.actorRole} updated a ${metadataValue(event, "severity")} ${metadataValue(event, "type")} complaint.`;
+	}
+	if (event.targetType === "ticket") {
+		return `${event.actorRole} updated a ${metadataValue(event, "priority")} ${metadataValue(event, "category")} ticket.`;
+	}
+	if (event.targetType === "permission") {
+		return `${event.actorRole} was denied ${metadataValue(event, "permission")}.`;
 	}
 	const summary = event.targetSummary;
 	if (!summary) return `${event.actorRole} updated a ${event.targetType ?? "record"}.`;
@@ -221,7 +329,117 @@ const EventFacts = React.memo(({ event }: { readonly event: AuditEvent }) => {
 			</div>
 		);
 	}
+	if (event.targetType === "complaint") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Complaint category</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "type")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Severity</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "severity")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "status")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Outcome</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "resolutionTag")}</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "ticket") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Ticket category</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "category")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Priority</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "priority")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "status")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Assignee</p>
+					<p className="mt-1 font-medium">{compactId(metadataValue(event, "assignedToId"))}</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "permission") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Permission</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "permission")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Method</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "method")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "routePath")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route params</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "routeParams")}</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "auth") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Auth realm</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "realm")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "path")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Method</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "method")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "statusCode")}</p>
+				</div>
+			</div>
+		);
+	}
 	const summary = event.targetSummary;
+	if (!summary) {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Changed fields</p>
+					<p className="mt-1 truncate font-medium">{formatChangedFields(event)}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Target type</p>
+					<p className="mt-1 font-medium">{event.targetType ?? "-"}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route params</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "routeParams")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Request body</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "requestBody")}</p>
+				</div>
+			</div>
+		);
+	}
 	const salary = centsToBirr(summary?.salaryCents ?? metadataValue(event, "salaryCents"));
 	const commission = centsToBirr(summary?.commissionCents ?? metadataValue(event, "commissionCents"));
 	const paymentMethod = summary?.paymentMethod ?? metadataValue(event, "paymentMethod");

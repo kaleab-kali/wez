@@ -5,6 +5,7 @@ import { adminAuth } from "#modules/admin/auth/admin-auth.config";
 import { auth } from "#modules/auth/auth.config";
 import { hasPermission, isStaffRole, type Permission, permissionsForRole } from "#modules/auth/permissions";
 import type { AuditRequestContext } from "#shared/audit/audit-context";
+import { recordPermissionDenial } from "#shared/audit/permission-denial-audit";
 import { prisma } from "#shared/database/prisma-instance";
 
 type AuthUser = {
@@ -94,6 +95,7 @@ export const requirePermission = async (req: WezRequest, permission: Permission)
 		userWithRoles.roles?.some((role) => permissionsForRole(role).includes(permission)) ??
 		hasPermission(s.user.role, permission);
 	if (!hasRolePermission) {
+		await recordPermissionDenial({ req, session: s, permission });
 		throw new ForbiddenException({ code: "MISSING_PERMISSION", message: permission });
 	}
 	return s;

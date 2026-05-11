@@ -82,6 +82,18 @@ const OPERATIONS: ReadonlyArray<NavItem> = [
 		icon: Briefcase02Icon,
 		roles: STAFF_ACCESS_ROLES.placementOperations,
 	},
+	{
+		labelKey: "nav.complaints",
+		to: "/staff/complaints",
+		icon: SecurityIcon,
+		roles: STAFF_ACCESS_ROLES.complaintOperations,
+	},
+	{
+		labelKey: "nav.tickets",
+		to: "/staff/tickets",
+		icon: NoteEditIcon,
+		roles: STAFF_ACCESS_ROLES.ticketOperations,
+	},
 ];
 
 // HQ admin sidebar — only visible to roles that manage platform-wide config.
@@ -90,6 +102,12 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 		labelKey: "admin.nav.overview",
 		to: "/staff-admin",
 		icon: DashboardSquare01Icon,
+		roles: STAFF_ACCESS_ROLES.hqOverview,
+	},
+	{
+		labelKey: "admin.nav.orgChart",
+		to: "/staff-admin/org-chart",
+		icon: UserMultipleIcon,
 		roles: STAFF_ACCESS_ROLES.hqOverview,
 	},
 	{

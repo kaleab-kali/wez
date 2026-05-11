@@ -131,6 +131,7 @@ model AdminUser {
   registeredEmployers Employer[]   @relation("EmployerRegisteringAgent")
   finalizedPlacements Placement[]  @relation("PlacementFinalizer")
   takenComplaints     Complaint[]  @relation("ComplaintTaker")
+  assignedComplaints  Complaint[]  @relation("ComplaintAssignee")
   closedComplaints    Complaint[]  @relation("ComplaintCloser")
   raisedTickets       Ticket[]     @relation("TicketRaiser")
   assignedTickets     Ticket[]     @relation("TicketAssignee")
@@ -704,6 +705,8 @@ model Complaint {
   station           Station?  @relation(fields: [stationId], references: [id])
   takenByAgentId    String?
   takenByAgent      AdminUser? @relation("ComplaintTaker", fields: [takenByAgentId], references: [id])
+  assignedToAgentId String?
+  assignedToAgent   AdminUser? @relation("ComplaintAssignee", fields: [assignedToAgentId], references: [id])
   type              String
   // low | medium | high
   severity          String
@@ -723,6 +726,7 @@ model Complaint {
   @@index([againstType, againstId])
   @@index([status])
   @@index([severity])
+  @@index([assignedToAgentId, status])
   @@index([filedByType, filedById])
   @@map("complaint")
 }

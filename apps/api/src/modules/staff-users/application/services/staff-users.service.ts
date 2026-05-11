@@ -32,6 +32,28 @@ export type StaffAccessReviewRow = {
 	readonly active: boolean;
 };
 
+export type StaffOrgChartUser = {
+	readonly id: string;
+	readonly name: string;
+	readonly email: string;
+	readonly role: string;
+	readonly active: boolean;
+};
+
+export type StaffOrgChartStation = {
+	readonly id: string;
+	readonly name: string;
+	readonly supervisor: StaffOrgChartUser | null;
+	readonly agents: readonly StaffOrgChartUser[];
+};
+
+export type StaffOrgChart = {
+	readonly executives: readonly StaffOrgChartUser[];
+	readonly functionalManagers: readonly { readonly role: string; readonly users: readonly StaffOrgChartUser[] }[];
+	readonly stations: readonly StaffOrgChartStation[];
+	readonly unassignedAgents: readonly StaffOrgChartUser[];
+};
+
 @Injectable()
 export class StaffUsersService {
 	constructor(
@@ -148,6 +170,59 @@ export class StaffUsersService {
 				...supervisedStationRows,
 			]);
 		});
+	}
+
+	async orgChart(): Promise<StaffOrgChart> {
+		const [users, stations] = await Promise.all([
+			this.prisma.adminUser.findMany({
+				where: { active: true },
+				select: { id: true, name: true, email: true, role: true, active: true },
+				orderBy: [{ role: "asc" }, { name: "asc" }],
+			}),
+			this.prisma.station.findMany({
+				where: { active: true },
+				select: {
+					id: true,
+					name: true,
+					supervisor: { select: { id: true, name: true, email: true, role: true, active: true } },
+					agentAssignments: {
+						where: { active: true, removedAt: null, user: { active: true } },
+						select: { user: { select: { id: true, name: true, email: true, role: true, active: true } } },
+						orderBy: { assignedAt: "asc" },
+					},
+				},
+				orderBy: { name: "asc" },
+			}),
+		]);
+		const usersByRole = new Map<string, StaffOrgChartUser[]>();
+		for (const user of users) {
+			usersByRole.set(user.role, [...(usersByRole.get(user.role) ?? []), user]);
+		}
+		const assignedAgentIds = new Set<string>();
+		const stationRows = stations.map((station) => {
+			const agents = station.agentAssignments.map((assignment) => assignment.user);
+			for (const agent of agents) assignedAgentIds.add(agent.id);
+			return {
+				id: station.id,
+				name: station.name,
+				supervisor: station.supervisor,
+				agents,
+			};
+		});
+		const unassignedAgents = (usersByRole.get("agent") ?? []).filter((agent) => !assignedAgentIds.has(agent.id));
+		return {
+			executives: [...(usersByRole.get("super_admin") ?? []), ...(usersByRole.get("executive_viewer") ?? [])],
+			functionalManagers: [
+				{ role: "ops_manager", users: usersByRole.get("ops_manager") ?? [] },
+				{ role: "compliance_officer", users: usersByRole.get("compliance_officer") ?? [] },
+				{ role: "hr_manager", users: usersByRole.get("hr_manager") ?? [] },
+				{ role: "finance_manager", users: usersByRole.get("finance_manager") ?? [] },
+				{ role: "it_manager", users: usersByRole.get("it_manager") ?? [] },
+				{ role: "training_manager", users: usersByRole.get("training_manager") ?? [] },
+			],
+			stations: stationRows,
+			unassignedAgents,
+		};
 	}
 
 	async create(

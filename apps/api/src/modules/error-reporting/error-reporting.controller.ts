@@ -2,6 +2,7 @@ import { Body, Controller, Post } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { PinoLogger } from "nestjs-pino";
+import { SkipAuditLog } from "#shared/audit/audit-log.decorator";
 import { CreateErrorReportDto } from "./dto/create-error-report.dto";
 
 @ApiTags("Error Reporting")
@@ -13,6 +14,7 @@ export class ErrorReportingController {
 	}
 
 	@Post()
+	@SkipAuditLog()
 	@ApiOperation({ summary: "Report a frontend error" })
 	@ApiBody({ type: CreateErrorReportDto })
 	@ApiResponse({ status: 201, description: "Error report received" })

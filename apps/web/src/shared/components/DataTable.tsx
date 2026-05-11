@@ -43,8 +43,8 @@ export function DataTable<TData, TValue>({
 	enablePagination = true,
 }: DataTableProps<TData, TValue>) {
 	const { t } = useTranslation();
-	const resolvedSearchPlaceholder = searchPlaceholder ?? t("common.searchDots");
-	const resolvedEmptyMessage = emptyMessage ?? t("common.noResults");
+	const resolvedSearchPlaceholder = searchPlaceholder ?? t("common.searchDots", { defaultValue: "Search..." });
+	const resolvedEmptyMessage = emptyMessage ?? t("common.noResults", { defaultValue: "No results." });
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [globalFilter, setGlobalFilter] = React.useState("");
 	const [pagination, setPagination] = React.useState<PaginationState>({
@@ -102,7 +102,7 @@ export function DataTable<TData, TValue>({
 					/>
 					{globalFilter && (
 						<Button variant="ghost" size="sm" onClick={() => setGlobalFilter("")}>
-							{t("common.clear")}
+							{t("common.clear", { defaultValue: "Clear" })}
 						</Button>
 					)}
 				</div>
@@ -164,11 +164,18 @@ export function DataTable<TData, TValue>({
 			{enablePagination && totalRows > 0 && (
 				<div className="flex items-center justify-between flex-wrap gap-3">
 					<div className="text-sm text-muted-foreground">
-						{t("common.showingRange", { from: firstRow, to: lastRow, total: totalRows })}
+						{t("common.showingRange", {
+							from: firstRow,
+							to: lastRow,
+							total: totalRows,
+							defaultValue: "Showing {{from}}-{{to}} of {{total}}",
+						})}
 					</div>
 					<div className="flex items-center gap-4 flex-wrap">
 						<div className="flex items-center gap-2">
-							<span className="text-sm text-muted-foreground">{t("common.rowsPerPage")}</span>
+							<span className="text-sm text-muted-foreground">
+								{t("common.rowsPerPage", { defaultValue: "Rows per page" })}
+							</span>
 							<Select value={String(currentPageSize)} onValueChange={handlePageSizeChange}>
 								<SelectTrigger className="w-20 h-8">
 									<SelectValue />
@@ -188,7 +195,7 @@ export function DataTable<TData, TValue>({
 								size="sm"
 								onClick={() => table.setPageIndex(0)}
 								disabled={!table.getCanPreviousPage()}
-								title={t("common.firstPage")}
+								title={t("common.firstPage", { defaultValue: "First page" })}
 							>
 								{"<<"}
 							</Button>
@@ -197,19 +204,23 @@ export function DataTable<TData, TValue>({
 								size="sm"
 								onClick={() => table.previousPage()}
 								disabled={!table.getCanPreviousPage()}
-								title={t("common.previousPage")}
+								title={t("common.previousPage", { defaultValue: "Previous page" })}
 							>
 								{"<"}
 							</Button>
 							<span className="text-sm mx-2 whitespace-nowrap">
-								{t("common.pageOfN", { current: pageIndex + 1, total: Math.max(1, pageCount) })}
+								{t("common.pageOfN", {
+									current: pageIndex + 1,
+									total: Math.max(1, pageCount),
+									defaultValue: "Page {{current}} of {{total}}",
+								})}
 							</span>
 							<Button
 								variant="outline"
 								size="sm"
 								onClick={() => table.nextPage()}
 								disabled={!table.getCanNextPage()}
-								title={t("common.nextPage")}
+								title={t("common.nextPage", { defaultValue: "Next page" })}
 							>
 								{">"}
 							</Button>
@@ -218,7 +229,7 @@ export function DataTable<TData, TValue>({
 								size="sm"
 								onClick={() => table.setPageIndex(pageCount - 1)}
 								disabled={!table.getCanNextPage()}
-								title={t("common.lastPage")}
+								title={t("common.lastPage", { defaultValue: "Last page" })}
 							>
 								{">>"}
 							</Button>

@@ -31,8 +31,8 @@ type EnrichedAuditEvent = AuditEventRow & { targetSummary: PlacementSummary | nu
 export type RecordAuditEventInput = {
 	actorId?: string | null;
 	actorRole?: string | null;
-	action: AuditAction;
-	targetType?: AuditTargetType;
+	action: AuditAction | string;
+	targetType?: AuditTargetType | string;
 	targetId?: string;
 	stationId?: string | null;
 	context?: AuditRequestContext;
@@ -98,7 +98,14 @@ export class AuditEventsService {
 			[
 				"created_at",
 				"action",
+				"actor_id",
 				"actor_role",
+				"target_type",
+				"target_id",
+				"station_id",
+				"ip_address",
+				"user_agent",
+				"metadata_json",
 				"worker",
 				"employer",
 				"role",
@@ -108,14 +115,19 @@ export class AuditEventsService {
 				"payment_method",
 				"payment_reference_last4",
 				"end_reason",
-				"target_type",
-				"target_id",
 				"event_id",
 			],
 			...data.map((event) => [
 				event.createdAt.toISOString(),
 				event.action,
+				event.actorId ?? "",
 				event.actorRole,
+				event.targetType ?? "",
+				event.targetId ?? "",
+				event.stationId ?? "",
+				event.ipAddress ?? "",
+				event.userAgent ?? "",
+				this.stringifyMetadata(event.metadata),
 				event.targetSummary?.workerName ?? "",
 				event.targetSummary?.employerName ?? "",
 				event.targetSummary?.roleName ?? "",
@@ -125,8 +137,6 @@ export class AuditEventsService {
 				event.targetSummary?.paymentMethod ?? "",
 				event.targetSummary?.paymentReferenceLast4 ?? "",
 				event.action === "placement.ended" ? (event.targetSummary?.endedReason ?? "") : "",
-				event.targetType ?? "",
-				event.targetId ?? "",
 				event.id,
 			]),
 		];
@@ -220,5 +230,10 @@ export class AuditEventsService {
 
 	private escapeCsvCell(value: string): string {
 		return `"${value.replaceAll('"', '""')}"`;
+	}
+
+	private stringifyMetadata(value: unknown): string {
+		if (value === null || value === undefined) return "";
+		return JSON.stringify(value);
 	}
 }

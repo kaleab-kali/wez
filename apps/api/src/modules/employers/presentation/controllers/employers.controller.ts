@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
 import { Public } from "#modules/auth/guards/wez-auth.guard";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, requireSession, type WezRequest } from "#shared/auth/session";
 import {
 	CreateEmployerDto,
@@ -43,6 +45,7 @@ export class EmployersController {
 
 	@Post("signup")
 	@Public()
+	@AuditLog(AUDIT_ACTIONS.employerSignedUp, { mode: "auto", targetType: AUDIT_TARGET_TYPES.employer })
 	@ApiOperation({ summary: "Create customer login and employer profile" })
 	@ApiBody({ type: SignupEmployerDto })
 	@ApiResponse({ status: 201, description: "Employer login and profile created" })
@@ -51,6 +54,7 @@ export class EmployersController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.employerCreated, { mode: "auto", targetType: AUDIT_TARGET_TYPES.employer })
 	@ApiOperation({ summary: "Create an employer (staff agent-led or customer self-signup)" })
 	@ApiBody({ type: CreateEmployerDto })
 	@ApiResponse({ status: 201, description: "Employer created" })
@@ -66,6 +70,11 @@ export class EmployersController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.employerUpdated, {
+		mode: "auto",
+		targetIdParam: "id",
+		targetType: AUDIT_TARGET_TYPES.employer,
+	})
 	@ApiOperation({ summary: "Update an employer (staff only)" })
 	@ApiBody({ type: UpdateEmployerDto })
 	@ApiResponse({ status: 200, description: "Employer updated" })

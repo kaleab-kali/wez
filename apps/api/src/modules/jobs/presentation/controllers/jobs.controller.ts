@@ -1,5 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
+import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import { CreateJobDto, ListJobsDto, UpdateJobDto } from "../../application/dto/job.dto";
 import { JobsService } from "../../application/services/jobs.service";
@@ -27,6 +29,7 @@ export class JobsController {
 	}
 
 	@Post()
+	@AuditLog(AUDIT_ACTIONS.jobCreated)
 	@ApiOperation({ summary: "Create a job" })
 	@ApiBody({ type: CreateJobDto })
 	@ApiResponse({ status: 201, description: "Job created" })
@@ -36,6 +39,7 @@ export class JobsController {
 	}
 
 	@Patch(":id")
+	@AuditLog(AUDIT_ACTIONS.jobUpdated)
 	@ApiOperation({ summary: "Update a job" })
 	@ApiBody({ type: UpdateJobDto })
 	@ApiResponse({ status: 200, description: "Job updated" })
@@ -46,6 +50,7 @@ export class JobsController {
 
 	@Post(":id/close")
 	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.jobClosed)
 	@ApiOperation({ summary: "Close a job" })
 	@ApiResponse({ status: 200, description: "Job closed" })
 	async close(@Param("id") id: string, @Req() req: WezRequest) {

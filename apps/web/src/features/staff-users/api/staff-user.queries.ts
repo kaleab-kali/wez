@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE = "/api/v1/admin/staff-users";
 const ACCESS_REVIEW_BASE = "/api/v1/admin/access-review";
+const ORG_CHART_BASE = "/api/v1/admin/staff-org-chart";
 
 const get = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url, { credentials: "include" });
@@ -80,10 +81,33 @@ export type StaffAccessReviewRow = {
 	active: boolean;
 };
 
+export type StaffOrgChartUser = {
+	id: string;
+	name: string;
+	email: string;
+	role: string;
+	active: boolean;
+};
+
+export type StaffOrgChartStation = {
+	id: string;
+	name: string;
+	supervisor: StaffOrgChartUser | null;
+	agents: StaffOrgChartUser[];
+};
+
+export type StaffOrgChart = {
+	executives: StaffOrgChartUser[];
+	functionalManagers: Array<{ role: string; users: StaffOrgChartUser[] }>;
+	stations: StaffOrgChartStation[];
+	unassignedAgents: StaffOrgChartUser[];
+};
+
 export const staffUserKeys = {
 	all: ["staff-users"] as const,
 	list: () => [...staffUserKeys.all, "list"] as const,
 	accessReview: () => [...staffUserKeys.all, "access-review"] as const,
+	orgChart: () => [...staffUserKeys.all, "org-chart"] as const,
 };
 
 export const useStaffUsers = () =>
@@ -96,6 +120,12 @@ export const useStaffAccessReview = () =>
 	useQuery({
 		queryKey: staffUserKeys.accessReview(),
 		queryFn: () => get<{ data: StaffAccessReviewRow[] }>(ACCESS_REVIEW_BASE).then((b) => b.data),
+	});
+
+export const useStaffOrgChart = () =>
+	useQuery({
+		queryKey: staffUserKeys.orgChart(),
+		queryFn: () => get<{ data: StaffOrgChart }>(ORG_CHART_BASE).then((b) => b.data),
 	});
 
 export const useCreateStaffUser = () => {
