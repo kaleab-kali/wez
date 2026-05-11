@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
+import { categoryFromTemplateKey, type NotificationChannel } from "../../domain/entities/notification.entity";
 import { NotificationGateway } from "../../infrastructure/gateways/notification.gateway";
-
-export type NotificationChannel = "sms" | "email" | "in_app";
+import { NotificationPreferencesService } from "./notification-preferences.service";
+import { NotificationTemplateService } from "./notification-template.service";
 
 type EnqueueCustomerNotificationInput = {
 	readonly userId: string;
@@ -48,60 +49,72 @@ export class NotificationOutboxService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly gateway: NotificationGateway,
+		private readonly templates: NotificationTemplateService,
+		private readonly preferences: NotificationPreferencesService,
 	) {}
 
 	async enqueueCustomer(input: EnqueueCustomerNotificationInput) {
-		const row = await this.prisma.notification.create({
-			data: {
-				userId: input.userId,
-				channel: input.channel,
-				templateKey: input.templateKey,
-				payload: input.payload,
-				status: "pending",
-			},
+		const category = categoryFromTemplateKey(input.templateKey);
+		const enabled = await this.preferences.isEnabled({
+			userId: input.userId,
+			category,
+			channel: input.channel,
+		});
+		if (!enabled) return null;
+		const locale = await this.customerLocale(input.userId);
+		const row = await this.createNotification({
+			userId: input.userId,
+			channel: input.channel,
+			category,
+			templateKey: input.templateKey,
+			payload: input.payload,
+			locale,
 		});
 		if (input.channel === "in_app") {
 			this.gateway.emitToUser(input.userId, row);
+			await this.emitBadge(input.userId);
 		}
 		return row;
 	}
 
 	async enqueueSms(input: EnqueueSmsInput) {
-		return this.prisma.notification.create({
-			data: {
-				recipientPhone: input.phone,
-				channel: "sms",
-				templateKey: input.templateKey,
-				payload: input.payload,
-				status: "pending",
-			},
+		return this.createNotification({
+			recipientPhone: input.phone,
+			channel: "sms",
+			category: categoryFromTemplateKey(input.templateKey),
+			templateKey: input.templateKey,
+			payload: input.payload,
 		});
 	}
 
 	async enqueueEmail(input: EnqueueEmailInput) {
-		return this.prisma.notification.create({
-			data: {
-				recipientEmail: input.email,
-				channel: "email",
-				templateKey: input.templateKey,
-				payload: input.payload,
-				status: "pending",
-			},
+		return this.createNotification({
+			recipientEmail: input.email,
+			channel: "email",
+			category: categoryFromTemplateKey(input.templateKey),
+			templateKey: input.templateKey,
+			payload: input.payload,
 		});
 	}
 
 	async enqueueStaff(input: EnqueueStaffNotificationInput) {
-		const row = await this.prisma.notification.create({
-			data: {
-				adminUserId: input.adminUserId,
-				channel: input.channel,
-				templateKey: input.templateKey,
-				payload: input.payload,
-				status: "pending",
-			},
+		const category = categoryFromTemplateKey(input.templateKey);
+		const enabled = await this.preferences.isEnabled({
+			adminUserId: input.adminUserId,
+			category,
+			channel: input.channel,
+		});
+		if (!enabled) return null;
+		const row = await this.createNotification({
+			adminUserId: input.adminUserId,
+			channel: input.channel,
+			category,
+			templateKey: input.templateKey,
+			payload: input.payload,
 		});
 		if (input.channel === "in_app") {
 			this.gateway.emitToUser(input.adminUserId, row);
+			await this.emitBadge(input.adminUserId);
 		}
 		return row;
 	}
@@ -122,18 +135,22 @@ export class NotificationOutboxService {
 					templateKey: input.templateKey,
 					payload: input.payload,
 				});
-				enqueuedIds.push(row.id);
+				if (row) enqueuedIds.push(row.id);
 			}
 			if (channel === "email" && staff.email) {
-				const row = await this.prisma.notification.create({
-					data: {
-						adminUserId: input.adminUserId,
-						recipientEmail: staff.email,
-						channel,
-						templateKey: input.templateKey,
-						payload: input.payload,
-						status: "pending",
-					},
+				const enabled = await this.preferences.isEnabled({
+					adminUserId: input.adminUserId,
+					category: categoryFromTemplateKey(input.templateKey),
+					channel,
+				});
+				if (!enabled) continue;
+				const row = await this.createNotification({
+					adminUserId: input.adminUserId,
+					recipientEmail: staff.email,
+					channel,
+					category: categoryFromTemplateKey(input.templateKey),
+					templateKey: input.templateKey,
+					payload: input.payload,
 				});
 				enqueuedIds.push(row.id);
 			}
@@ -146,14 +163,67 @@ export class NotificationOutboxService {
 			where: { stationId: input.stationId, active: true, removedAt: null },
 			select: { userId: true },
 		});
+		const enqueuedIds: string[] = [];
 		for (const assignment of assignments) {
-			await this.enqueueStaff({
+			const row = await this.enqueueStaff({
 				adminUserId: assignment.userId,
 				channel: "in_app",
 				templateKey: input.templateKey,
 				payload: input.payload,
 			});
+			if (row) enqueuedIds.push(row.id);
 		}
-		return { enqueued: assignments.length };
+		return { enqueued: enqueuedIds.length };
+	}
+
+	private async createNotification(input: {
+		readonly userId?: string;
+		readonly adminUserId?: string;
+		readonly recipientPhone?: string;
+		readonly recipientEmail?: string;
+		readonly channel: NotificationChannel;
+		readonly category: string;
+		readonly templateKey: string;
+		readonly payload: Record<string, string>;
+		readonly locale?: string | null;
+	}) {
+		const rendered = await this.templates.render({
+			templateKey: input.templateKey,
+			channel: input.channel,
+			payload: input.payload,
+			locale: input.locale,
+		});
+		return this.prisma.notification.create({
+			data: {
+				userId: input.userId,
+				adminUserId: input.adminUserId,
+				recipientPhone: input.recipientPhone,
+				recipientEmail: input.recipientEmail,
+				channel: input.channel,
+				category: input.category,
+				templateKey: input.templateKey,
+				payload: input.payload,
+				subject: rendered.subject,
+				body: rendered.body,
+				status: input.channel === "in_app" ? "sent" : "pending",
+				sentAt: input.channel === "in_app" ? new Date() : null,
+			},
+		});
+	}
+
+	private async customerLocale(userId: string) {
+		const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { localePref: true } });
+		return user?.localePref ?? "en";
+	}
+
+	private async emitBadge(userId: string) {
+		const unread = await this.prisma.notification.count({
+			where: {
+				OR: [{ userId }, { adminUserId: userId }],
+				channel: "in_app",
+				readAt: null,
+			},
+		});
+		this.gateway.emitBadgeCount(userId, unread);
 	}
 }

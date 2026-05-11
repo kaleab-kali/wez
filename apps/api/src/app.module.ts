@@ -11,6 +11,7 @@ import { WezAuthGuard } from "#modules/auth/guards/wez-auth.guard";
 import { ComplaintsModule } from "#modules/complaints/complaints.module";
 import { EmployersModule } from "#modules/employers/employers.module";
 import { ErrorReportingModule } from "#modules/error-reporting/error-reporting.module";
+import { FilesModule } from "#modules/files/files.module";
 import { HealthModule } from "#modules/health/health.module";
 import { HireRequestsModule } from "#modules/hire-requests/hire-requests.module";
 import { JobsModule } from "#modules/jobs/jobs.module";
@@ -67,6 +68,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 		ComplaintsModule,
 		TicketsModule,
 		ErrorReportingModule,
+		FilesModule,
 	],
 	providers: [
 		{ provide: APP_FILTER, useClass: GlobalExceptionFilter },

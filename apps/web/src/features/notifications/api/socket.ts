@@ -8,7 +8,7 @@ export const connectNotificationSocket = (userId: string): Socket => {
 	if (socket?.connected) return socket;
 	socket = io(`${API_URL}/notifications`, {
 		path: "/socket.io",
-		transports: ["websocket", "polling"],
+		transports: ["polling", "websocket"],
 		auth: { userId },
 		withCredentials: true,
 	});

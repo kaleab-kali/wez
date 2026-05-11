@@ -42,6 +42,11 @@ export const AUDIT_ACTIONS = {
 	ticketAssigned: "ticket.assigned",
 	ticketResolved: "ticket.resolved",
 	ticketClosed: "ticket.closed",
+	notificationRead: "notification.read",
+	notificationPreferencesUpdated: "notification.preferences_updated",
+	fileUploadSigned: "file.upload_signed",
+	fileUploaded: "file.uploaded",
+	fileFinalized: "file.finalized",
 	permissionDenied: "permission.denied",
 } as const;
 
@@ -65,6 +70,9 @@ export const AUDIT_TARGET_TYPES = {
 	auth: "auth",
 	complaint: "complaint",
 	ticket: "ticket",
+	notification: "notification",
+	notificationPreference: "notification_preference",
+	attachment: "attachment",
 	permission: "permission",
 } as const;
 

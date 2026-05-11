@@ -185,6 +185,7 @@ export const manageableStaffRoles = (userRoles: readonly string[]): readonly Sta
 
 const STAFF_ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles?: readonly StaffRole[]; exact?: boolean }> = [
 	{ prefix: "/staff/dashboard", exact: true },
+	{ prefix: "/staff/notification-preferences", exact: true },
 	{ prefix: "/staff/workers/new", roles: STAFF_ACCESS_ROLES.workerEmployerCreation },
 	{ prefix: "/staff/workers", roles: STAFF_ACCESS_ROLES.workerEmployerOperations },
 	{ prefix: "/staff/employers/new", roles: STAFF_ACCESS_ROLES.workerEmployerCreation },

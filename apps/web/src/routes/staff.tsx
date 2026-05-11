@@ -61,7 +61,7 @@ function StaffLayout() {
 		<SidebarProvider>
 			<AppSidebar />
 			<SidebarInset className="min-w-0 overflow-x-hidden">
-				<TopBar />
+				<TopBar notificationUserId={session.user.id} />
 				<main className="flex-1 p-6 min-w-0">
 					<Outlet />
 				</main>

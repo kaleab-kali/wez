@@ -138,6 +138,7 @@ model AdminUser {
   resolvedTickets     Ticket[]     @relation("TicketResolver")
   instructorProfile   Instructor?  @relation("InstructorUser")
   notifications       Notification[] @relation("AdminUserNotifications")
+  notificationPreferences NotificationPreference[] @relation("AdminUserNotificationPreferences")
 
   @@map("admin_user")
 }
@@ -863,11 +864,16 @@ model Notification {
   recipientEmail String?
   // sms | email | in_app | push
   channel       String
+  category      String    @default("general")
   templateKey   String
   payload       Json
+  subject       String?
+  body          String?
   // pending | sent | failed | retry
   status        String    @default("pending")
   attempts      Int       @default(0)
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime?
   sentAt        DateTime?
   failedReason  String?
   readAt        DateTime?
@@ -881,14 +887,18 @@ model Notification {
 
 model NotificationPreference {
   id        String  @id @default(cuid())
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminUserId String?
+  adminUser AdminUser? @relation("AdminUserNotificationPreferences", fields: [adminUserId], references: [id], onDelete: Cascade)
   category  String
   // sms | email | in_app | push
   channel   String
   enabled   Boolean @default(true)
 
   @@unique([userId, category, channel])
+  @@index([userId])
+  @@index([adminUserId])
   @@map("notification_preference")
 }
 
@@ -915,6 +925,7 @@ model NotificationTemplate {
 
 model Attachment {
   id            String    @id @default(uuid())
+  storageProvider String  @default("local")
   bucket        String
   key           String
   filename      String
@@ -925,12 +936,17 @@ model Attachment {
   ownerId       String?
   // pending | scanning | clean | infected | deleted
   status        String    @default("pending")
+  checksumSha256 String?
+  uploadedAt    DateTime?
   scannedAt     DateTime?
   expiresAt     DateTime?
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
 
   @@index([ownerType, ownerId])
   @@index([status])
+  @@index([uploadedById])
+  @@index([expiresAt])
   @@map("attachment")
 }
 
