@@ -37,6 +37,20 @@ const HR_MANAGED_STAFF_ROLES = [
 	STAFF_ROLES.support,
 ] as const satisfies readonly StaffRole[];
 
+const TICKET_OPERATION_ROLES = [
+	STAFF_ROLES.superAdmin,
+	STAFF_ROLES.opsManager,
+	STAFF_ROLES.complianceOfficer,
+	STAFF_ROLES.hrManager,
+	STAFF_ROLES.financeManager,
+	STAFF_ROLES.itManager,
+	STAFF_ROLES.trainingManager,
+	STAFF_ROLES.support,
+	STAFF_ROLES.stationSupervisor,
+	STAFF_ROLES.agent,
+	STAFF_ROLES.instructor,
+] as const satisfies readonly StaffRole[];
+
 export const STAFF_ACCESS_ROLES = {
 	workerEmployerOperations: [
 		STAFF_ROLES.superAdmin,
@@ -75,19 +89,7 @@ export const STAFF_ACCESS_ROLES = {
 	],
 	complaintExternalReferral: [STAFF_ROLES.superAdmin, STAFF_ROLES.complianceOfficer, STAFF_ROLES.stationSupervisor],
 	complaintReferralLetter: [STAFF_ROLES.superAdmin, STAFF_ROLES.complianceOfficer],
-	ticketOperations: [
-		STAFF_ROLES.superAdmin,
-		STAFF_ROLES.opsManager,
-		STAFF_ROLES.complianceOfficer,
-		STAFF_ROLES.hrManager,
-		STAFF_ROLES.financeManager,
-		STAFF_ROLES.itManager,
-		STAFF_ROLES.trainingManager,
-		STAFF_ROLES.support,
-		STAFF_ROLES.stationSupervisor,
-		STAFF_ROLES.agent,
-		STAFF_ROLES.instructor,
-	],
+	ticketOperations: TICKET_OPERATION_ROLES,
 	ticketAssignment: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,
@@ -105,6 +107,7 @@ export const STAFF_ACCESS_ROLES = {
 		STAFF_ROLES.support,
 		STAFF_ROLES.stationSupervisor,
 	],
+	ticketClosure: TICKET_OPERATION_ROLES,
 	hqOverview: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,

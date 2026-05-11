@@ -130,3 +130,11 @@ export const useResolveTicket = () => {
 		onSuccess: () => qc.invalidateQueries({ queryKey: ticketKeys.all }),
 	});
 };
+
+export const useCloseTicket = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) => send<{ data: Ticket }>(`${BASE}/${id}/close`, "POST").then((body) => body.data),
+		onSuccess: () => qc.invalidateQueries({ queryKey: ticketKeys.all }),
+	});
+};

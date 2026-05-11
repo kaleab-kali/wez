@@ -67,4 +67,14 @@ export class TicketsController {
 		const session = await requirePermission(req, "ticket:resolve");
 		return { data: await this.service.resolve(session, id, dto, req.auditContext) };
 	}
+
+	@Post(":id/close")
+	@HttpCode(HttpStatus.OK)
+	@AuditLog(AUDIT_ACTIONS.ticketClosed)
+	@ApiOperation({ summary: "Close a resolved ticket" })
+	@ApiResponse({ status: 200, description: "Ticket closed" })
+	async close(@Param("id") id: string, @Req() req: WezRequest) {
+		const session = await requirePermission(req, "ticket:close");
+		return { data: await this.service.close(session, id, req.auditContext) };
+	}
 }

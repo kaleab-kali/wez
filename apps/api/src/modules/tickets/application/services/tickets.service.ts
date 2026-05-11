@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
 import { AuditEventsService } from "#modules/audit-log/audit-events.service";
 import { NotificationOutboxService } from "#modules/notification/application/services/notification-outbox.service";
@@ -116,6 +116,8 @@ export class TicketsService {
 	async assign(session: WezSession, id: string, dto: AssignTicketDto, auditContext: AuditRequestContext | undefined) {
 		const ticket = await this.getById(id);
 		await this.assertTicketAccess(session, ticket);
+		if (ticket.status === "closed") throw new ConflictException({ code: "TICKET_ALREADY_CLOSED" });
+		if (ticket.status === "resolved") throw new ConflictException({ code: "TICKET_ALREADY_RESOLVED" });
 		const assignee = await this.prisma.adminUser.findFirst({
 			where: { id: dto.assignedToId, active: true },
 			select: { id: true },
@@ -145,6 +147,8 @@ export class TicketsService {
 	async resolve(session: WezSession, id: string, dto: ResolveTicketDto, auditContext: AuditRequestContext | undefined) {
 		const ticket = await this.getById(id);
 		await this.assertTicketAccess(session, ticket);
+		if (ticket.status === "closed") throw new ConflictException({ code: "TICKET_ALREADY_CLOSED" });
+		if (ticket.status === "resolved") throw new ConflictException({ code: "TICKET_ALREADY_RESOLVED" });
 		const updated = await this.repo.update(id, {
 			status: "resolved",
 			resolution: dto.resolution,
@@ -171,6 +175,32 @@ export class TicketsService {
 		return updated;
 	}
 
+	async close(session: WezSession, id: string, auditContext: AuditRequestContext | undefined) {
+		const ticket = await this.getById(id);
+		await this.assertTicketCloseAccess(session, ticket);
+		if (ticket.status === "closed") throw new ConflictException({ code: "TICKET_ALREADY_CLOSED" });
+		if (ticket.status !== "resolved") throw new ConflictException({ code: "TICKET_NOT_RESOLVED" });
+		const updated = await this.repo.update(id, { status: "closed" });
+		await this.auditEvents.recordEvent({
+			actorId: session.user.id,
+			actorRole: session.user.role,
+			action: AUDIT_ACTIONS.ticketClosed,
+			targetType: AUDIT_TARGET_TYPES.ticket,
+			targetId: id,
+			context: auditContext,
+			metadata: {
+				category: updated.category,
+				priority: updated.priority,
+				previousStatus: ticket.status,
+				status: updated.status,
+				assignedToId: updated.assignedToId,
+				raisedById: updated.raisedById,
+			},
+		});
+		await this.notifyTicketClosed(updated, session.user.id);
+		return updated;
+	}
+
 	private async getById(id: string) {
 		const ticket = await this.repo.findById(id);
 		if (!ticket) throw new NotFoundException({ code: "TICKET_NOT_FOUND" });
@@ -190,6 +220,17 @@ export class TicketsService {
 			if (visibleRaisedByIds.includes(ticket.raisedById)) return;
 		}
 		throw new ForbiddenException({ code: "TICKET_NOT_IN_SCOPE" });
+	}
+
+	private async assertTicketCloseAccess(session: WezSession, ticket: Ticket) {
+		this.assertStaffSession(session);
+		if (this.staffAccess.hasAnyRole(session, TICKET_GLOBAL_ACCESS_ROLES)) return;
+		if (ticket.raisedById === session.user.id) return;
+		if (this.staffAccess.hasAnyRole(session, ["station_supervisor"])) {
+			const visibleRaisedByIds = await this.visibleRaisedByIds(session);
+			if (visibleRaisedByIds.includes(ticket.raisedById)) return;
+		}
+		throw new ForbiddenException({ code: "TICKET_CLOSE_NOT_ALLOWED" });
 	}
 
 	private async visibleRaisedByIds(session: WezSession): Promise<string[]> {
@@ -246,6 +287,15 @@ export class TicketsService {
 
 	private async notifyTicketResolved(ticket: Ticket) {
 		await this.createStaffNotification(ticket.raisedById, "ticket.resolved", {
+			ticketId: ticket.id,
+			category: ticket.category,
+			status: ticket.status,
+		});
+	}
+
+	private async notifyTicketClosed(ticket: Ticket, closedById: string) {
+		if (!ticket.assignedToId || ticket.assignedToId === closedById) return;
+		await this.createStaffNotification(ticket.assignedToId, "ticket.closed", {
 			ticketId: ticket.id,
 			category: ticket.category,
 			status: ticket.status,

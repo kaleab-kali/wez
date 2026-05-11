@@ -7,13 +7,14 @@ import {
 	type TicketPriority,
 	type TicketStatus,
 	useAssignTicket,
+	useCloseTicket,
 	useCreateTicket,
 	useResolveTicket,
 	useTicketAssignmentOptions,
 	useTickets,
 } from "#features/tickets/api/ticket.queries";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
-import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES, STAFF_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,15 @@ const TicketsPage = React.memo(() => {
 	const userRoles = React.useMemo(() => effectiveStaffRoles(user?.role, user?.roles), [user?.role, user?.roles]);
 	const canAssign = React.useMemo(() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.ticketAssignment), [userRoles]);
 	const canResolve = React.useMemo(() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.ticketResolution), [userRoles]);
+	const canClose = React.useMemo(() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.ticketClosure), [userRoles]);
+	const canCloseGlobally = React.useMemo(
+		() => hasAnyStaffRole(userRoles, [STAFF_ROLES.superAdmin, STAFF_ROLES.opsManager]),
+		[userRoles],
+	);
+	const canCloseForSupervisedAgents = React.useMemo(
+		() => hasAnyStaffRole(userRoles, [STAFF_ROLES.stationSupervisor]),
+		[userRoles],
+	);
 	const onStatusChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
 		setFilter((current) => ({ ...current, status: (event.target.value || undefined) as TicketStatus, page: 1 }));
 	}, []);
@@ -100,7 +110,16 @@ const TicketsPage = React.memo(() => {
 			{isLoading && <p className="text-sm text-muted-foreground">Loading tickets...</p>}
 			<div className="space-y-3">
 				{data?.data.map((ticket) => (
-					<TicketRow key={ticket.id} ticket={ticket} canAssign={canAssign} canResolve={canResolve} />
+					<TicketRow
+						key={ticket.id}
+						ticket={ticket}
+						currentUserId={session?.user?.id}
+						canAssign={canAssign}
+						canResolve={canResolve}
+						canClose={canClose}
+						canCloseGlobally={canCloseGlobally}
+						canCloseForSupervisedAgents={canCloseForSupervisedAgents}
+					/>
 				))}
 				{data && data.data.length === 0 && (
 					<Card className="border-dashed">
@@ -225,15 +244,24 @@ TicketCreateForm.displayName = "TicketCreateForm";
 const TicketRow = React.memo(
 	({
 		ticket,
+		currentUserId,
 		canAssign,
 		canResolve,
+		canClose,
+		canCloseGlobally,
+		canCloseForSupervisedAgents,
 	}: {
 		readonly ticket: Ticket;
+		readonly currentUserId: string | undefined;
 		readonly canAssign: boolean;
 		readonly canResolve: boolean;
+		readonly canClose: boolean;
+		readonly canCloseGlobally: boolean;
+		readonly canCloseForSupervisedAgents: boolean;
 	}) => {
 		const assignTicket = useAssignTicket();
 		const resolveTicket = useResolveTicket();
+		const closeTicket = useCloseTicket();
 		const { data: assignmentOptions } = useTicketAssignmentOptions(canAssign);
 		const [assignedToId, setAssignedToId] = React.useState(ticket.assignedToId ?? "");
 		const [resolution, setResolution] = React.useState("");
@@ -249,7 +277,14 @@ const TicketRow = React.memo(
 		const onResolve = React.useCallback(() => {
 			resolveTicket.mutate({ id: ticket.id, resolution });
 		}, [resolution, resolveTicket, ticket.id]);
+		const onClose = React.useCallback(() => {
+			closeTicket.mutate(ticket.id);
+		}, [closeTicket, ticket.id]);
 		const canWork = ticket.status !== "resolved" && ticket.status !== "closed";
+		const canCloseResolved =
+			canClose &&
+			ticket.status === "resolved" &&
+			(canCloseGlobally || canCloseForSupervisedAgents || ticket.raisedById === currentUserId);
 
 		return (
 			<Card>
@@ -327,6 +362,13 @@ const TicketRow = React.memo(
 									</div>
 								</>
 							)}
+						</div>
+					)}
+					{canCloseResolved && (
+						<div className="flex justify-end border-t pt-3">
+							<Button type="button" variant="outline" onClick={onClose} disabled={closeTicket.isPending}>
+								Close ticket
+							</Button>
 						</div>
 					)}
 				</CardContent>

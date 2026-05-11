@@ -53,6 +53,7 @@ const AUDIT_ACTIONS = [
 	"ticket.created",
 	"ticket.assigned",
 	"ticket.resolved",
+	"ticket.closed",
 ] as const;
 const ACTOR_ROLES = [
 	"super_admin",
@@ -115,6 +116,7 @@ const actionTitle = (action: string) => {
 	if (action === "ticket.created") return "Ticket created";
 	if (action === "ticket.assigned") return "Ticket assigned";
 	if (action === "ticket.resolved") return "Ticket resolved";
+	if (action === "ticket.closed") return "Ticket closed";
 	return action.replaceAll("_", " ").replaceAll(".", " ");
 };
 const actionSentence = (event: AuditEvent) => {

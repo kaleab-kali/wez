@@ -38,6 +38,7 @@ export const AUDIT_ACTIONS = {
 	ticketCreated: "ticket.created",
 	ticketAssigned: "ticket.assigned",
 	ticketResolved: "ticket.resolved",
+	ticketClosed: "ticket.closed",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
