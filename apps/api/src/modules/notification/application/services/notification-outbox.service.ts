@@ -18,6 +18,13 @@ type EnqueueStaffNotificationInput = {
 	readonly payload: Record<string, string>;
 };
 
+type EnqueueStaffChannelsInput = {
+	readonly adminUserId: string;
+	readonly channels: readonly NotificationChannel[];
+	readonly templateKey: string;
+	readonly payload: Record<string, string>;
+};
+
 type EnqueueSmsInput = {
 	readonly phone: string;
 	readonly templateKey: string;
@@ -97,6 +104,41 @@ export class NotificationOutboxService {
 			this.gateway.emitToUser(input.adminUserId, row);
 		}
 		return row;
+	}
+
+	async enqueueStaffChannels(input: EnqueueStaffChannelsInput) {
+		const staff = await this.prisma.adminUser.findUnique({
+			where: { id: input.adminUserId },
+			select: { active: true, email: true },
+		});
+		if (!staff?.active) return { enqueued: 0 };
+
+		const enqueuedIds: string[] = [];
+		for (const channel of input.channels) {
+			if (channel === "in_app") {
+				const row = await this.enqueueStaff({
+					adminUserId: input.adminUserId,
+					channel,
+					templateKey: input.templateKey,
+					payload: input.payload,
+				});
+				enqueuedIds.push(row.id);
+			}
+			if (channel === "email" && staff.email) {
+				const row = await this.prisma.notification.create({
+					data: {
+						adminUserId: input.adminUserId,
+						recipientEmail: staff.email,
+						channel,
+						templateKey: input.templateKey,
+						payload: input.payload,
+						status: "pending",
+					},
+				});
+				enqueuedIds.push(row.id);
+			}
+		}
+		return { enqueued: enqueuedIds.length };
 	}
 
 	async enqueueStationAgents(input: EnqueueStationAgentsInput) {

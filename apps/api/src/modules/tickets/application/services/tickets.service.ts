@@ -35,6 +35,7 @@ const CATEGORY_OWNER_ROLE: Partial<Record<TicketCategory, string>> = {
 	training_request: "training_manager",
 	hr_issue: "hr_manager",
 };
+const STAFF_TICKET_NOTIFICATION_CHANNELS = ["in_app", "email"] as const;
 
 @Injectable()
 export class TicketsService {
@@ -252,6 +253,11 @@ export class TicketsService {
 	}
 
 	private async createStaffNotification(adminUserId: string, templateKey: string, payload: Record<string, string>) {
-		await this.notifications.enqueueStaff({ adminUserId, channel: "in_app", templateKey, payload });
+		await this.notifications.enqueueStaffChannels({
+			adminUserId,
+			channels: STAFF_TICKET_NOTIFICATION_CHANNELS,
+			templateKey,
+			payload,
+		});
 	}
 }

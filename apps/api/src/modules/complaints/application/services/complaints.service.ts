@@ -48,6 +48,7 @@ const WORKER_HOP_FLAG_ESCALATION: Record<string, string> = {
 	warning: "suspended",
 	suspended: "suspended",
 };
+const COMPLIANCE_NOTIFICATION_CHANNELS = ["in_app", "email"] as const;
 
 type ComplaintPlacement = {
 	id: string;
@@ -432,9 +433,9 @@ export class ComplaintsService {
 			select: { id: true },
 		});
 		for (const officer of officers) {
-			await this.notifications.enqueueStaff({
+			await this.notifications.enqueueStaffChannels({
 				adminUserId: officer.id,
-				channel: "in_app",
+				channels: COMPLIANCE_NOTIFICATION_CHANNELS,
 				templateKey: "complaint.referred_external",
 				payload: { complaintId: complaint.id, severity: complaint.severity, status: complaint.status },
 			});
