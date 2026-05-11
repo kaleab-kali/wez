@@ -6,6 +6,7 @@ import {
 	type ComplaintResolutionTag,
 	type ComplaintSeverity,
 	type ComplaintStatus,
+	complaintReferralLetterUrl,
 	useCloseComplaint,
 	useComplaints,
 	useCreateComplaint,
@@ -14,6 +15,8 @@ import {
 } from "#features/complaints/api/complaint.queries";
 import { usePlacements } from "#features/placements/api/placement.queries";
 import { usePublicStations } from "#features/stations/api/station.queries";
+import { useAdminSession } from "#shared/lib/admin-auth-client";
+import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +44,14 @@ const SEVERITIES = ["low", "medium", "high"] as const;
 const STATUSES = ["open", "mediating", "referred_external", "closed"] as const;
 const RESOLUTION_TAGS = ["amicable", "partial", "failed"] as const;
 
+type ComplaintActionPermissions = {
+	readonly canCreate: boolean;
+	readonly canMediate: boolean;
+	readonly canReferExternal: boolean;
+	readonly canClose: boolean;
+	readonly canPrintReferralLetter: boolean;
+};
+
 const STATUS_VARIANT: Record<ComplaintStatus, "default" | "secondary" | "outline" | "destructive"> = {
 	open: "default",
 	mediating: "secondary",
@@ -56,6 +67,21 @@ const humanize = (value: string) => value.replaceAll("_", " ");
 const ComplaintsPage = React.memo(() => {
 	const [filter, setFilter] = React.useState<ComplaintFilter>({ page: 1, limit: 20 });
 	const { data, isLoading } = useComplaints(filter);
+	const { data: session } = useAdminSession();
+	const userRoles = React.useMemo(
+		() => effectiveStaffRoles(session?.user?.role, session?.user?.roles),
+		[session?.user?.role, session?.user?.roles],
+	);
+	const permissions = React.useMemo<ComplaintActionPermissions>(
+		() => ({
+			canCreate: hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.complaintIntake),
+			canMediate: hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.complaintMediation),
+			canReferExternal: hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.complaintExternalReferral),
+			canClose: hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.complaintClosure),
+			canPrintReferralLetter: hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.complaintReferralLetter),
+		}),
+		[userRoles],
+	);
 	const onStatusChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
 		setFilter((current) => ({ ...current, status: (event.target.value || undefined) as ComplaintStatus, page: 1 }));
 	}, []);
@@ -100,12 +126,12 @@ const ComplaintsPage = React.memo(() => {
 				</div>
 			</div>
 
-			<ComplaintIntakeForm />
+			{permissions.canCreate && <ComplaintIntakeForm />}
 
 			{isLoading && <p className="text-sm text-muted-foreground">Loading complaints...</p>}
 			<div className="space-y-3">
 				{data?.data.map((complaint) => (
-					<ComplaintRow key={complaint.id} complaint={complaint} />
+					<ComplaintRow key={complaint.id} complaint={complaint} permissions={permissions} />
 				))}
 				{data && data.data.length === 0 && (
 					<Card className="border-dashed">
@@ -309,112 +335,146 @@ const ComplaintIntakeForm = React.memo(() => {
 });
 ComplaintIntakeForm.displayName = "ComplaintIntakeForm";
 
-const ComplaintRow = React.memo(({ complaint }: { readonly complaint: Complaint }) => {
-	const mediate = useMediateComplaint();
-	const referExternal = useReferComplaintExternal();
-	const close = useCloseComplaint();
-	const [resolution, setResolution] = React.useState("");
-	const [resolutionTag, setResolutionTag] = React.useState<ComplaintResolutionTag>("amicable");
-	const [externalCaseId, setExternalCaseId] = React.useState("");
-	const onResolutionChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-		setResolution(event.target.value);
-	}, []);
-	const onResolutionTagChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-		setResolutionTag(event.target.value as ComplaintResolutionTag);
-	}, []);
-	const onExternalCaseChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-		setExternalCaseId(event.target.value);
-	}, []);
-	const onMediate = React.useCallback(() => mediate.mutate(complaint.id), [complaint.id, mediate]);
-	const onReferExternal = React.useCallback(
-		() => referExternal.mutate({ id: complaint.id, externalCaseId: externalCaseId.trim() || undefined }),
-		[complaint.id, externalCaseId, referExternal],
-	);
-	const onClose = React.useCallback(
-		() => close.mutate({ id: complaint.id, resolution, resolutionTag }),
-		[close, complaint.id, resolution, resolutionTag],
-	);
-	const canWork = complaint.status !== "closed";
+const ComplaintRow = React.memo(
+	({ complaint, permissions }: { readonly complaint: Complaint; readonly permissions: ComplaintActionPermissions }) => {
+		const mediate = useMediateComplaint();
+		const referExternal = useReferComplaintExternal();
+		const close = useCloseComplaint();
+		const [resolution, setResolution] = React.useState("");
+		const [resolutionTag, setResolutionTag] = React.useState<ComplaintResolutionTag>("amicable");
+		const [externalCaseId, setExternalCaseId] = React.useState("");
+		const onResolutionChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+			setResolution(event.target.value);
+		}, []);
+		const onResolutionTagChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+			setResolutionTag(event.target.value as ComplaintResolutionTag);
+		}, []);
+		const onExternalCaseChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+			setExternalCaseId(event.target.value);
+		}, []);
+		const onMediate = React.useCallback(() => mediate.mutate(complaint.id), [complaint.id, mediate]);
+		const onReferExternal = React.useCallback(
+			() => referExternal.mutate({ id: complaint.id, externalCaseId: externalCaseId.trim() || undefined }),
+			[complaint.id, externalCaseId, referExternal],
+		);
+		const onClose = React.useCallback(
+			() => close.mutate({ id: complaint.id, resolution, resolutionTag }),
+			[close, complaint.id, resolution, resolutionTag],
+		);
+		const canWork =
+			complaint.status !== "closed" && (permissions.canMediate || permissions.canReferExternal || permissions.canClose);
+		const canShowResolution = permissions.canClose;
+		const canShowExternalCase = permissions.canReferExternal;
 
-	return (
-		<Card>
-			<CardContent className="space-y-3 p-4">
-				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div>
-						<div className="flex flex-wrap items-center gap-2">
-							<h2 className="font-semibold">
-								{complaint.filedByName ?? complaint.filedById.slice(0, 8)} against{" "}
-								{complaint.againstName ?? complaint.againstId.slice(0, 8)}
-							</h2>
-							<Badge variant={STATUS_VARIANT[complaint.status]}>{humanize(complaint.status)}</Badge>
-							<Badge variant={complaint.severity === "high" ? "destructive" : "outline"}>{complaint.severity}</Badge>
+		return (
+			<Card>
+				<CardContent className="space-y-3 p-4">
+					<div className="flex flex-wrap items-start justify-between gap-3">
+						<div>
+							<div className="flex flex-wrap items-center gap-2">
+								<h2 className="font-semibold">
+									{complaint.filedByName ?? complaint.filedById.slice(0, 8)} against{" "}
+									{complaint.againstName ?? complaint.againstId.slice(0, 8)}
+								</h2>
+								<Badge variant={STATUS_VARIANT[complaint.status]}>{humanize(complaint.status)}</Badge>
+								<Badge variant={complaint.severity === "high" ? "destructive" : "outline"}>{complaint.severity}</Badge>
+							</div>
+							<p className="mt-1 text-xs text-muted-foreground">
+								{humanize(complaint.type)} - {complaint.stationName ?? "No station"} - {formatDate(complaint.createdAt)}
+							</p>
 						</div>
-						<p className="mt-1 text-xs text-muted-foreground">
-							{humanize(complaint.type)} - {complaint.stationName ?? "No station"} - {formatDate(complaint.createdAt)}
-						</p>
+						<p className="font-mono text-xs text-muted-foreground">{complaint.id.slice(0, 8)}</p>
 					</div>
-					<p className="font-mono text-xs text-muted-foreground">{complaint.id.slice(0, 8)}</p>
-				</div>
-				<p className="text-sm">{complaint.description}</p>
-				{complaint.resolution && (
-					<div className="rounded-md border bg-muted/30 p-3 text-sm">
-						<p className="font-medium">
-							Resolution: {complaint.resolutionTag ? humanize(complaint.resolutionTag) : "-"}
-						</p>
-						<p className="mt-1 text-muted-foreground">{complaint.resolution}</p>
-					</div>
-				)}
-				{canWork && (
-					<div className="grid gap-3 border-t pt-3 lg:grid-cols-[1fr_160px_160px]">
-						<div className="space-y-2">
-							<Label htmlFor={`resolution-${complaint.id}`}>Resolution notes</Label>
-							<textarea
-								id={`resolution-${complaint.id}`}
-								value={resolution}
-								onChange={onResolutionChange}
-								className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-							/>
+					<p className="text-sm">{complaint.description}</p>
+					{complaint.resolution && (
+						<div className="rounded-md border bg-muted/30 p-3 text-sm">
+							<p className="font-medium">
+								Resolution: {complaint.resolutionTag ? humanize(complaint.resolutionTag) : "-"}
+							</p>
+							<p className="mt-1 text-muted-foreground">{complaint.resolution}</p>
 						</div>
-						<div className="space-y-2">
-							<Label htmlFor={`tag-${complaint.id}`}>Outcome</Label>
-							<select
-								id={`tag-${complaint.id}`}
-								value={resolutionTag}
-								onChange={onResolutionTagChange}
-								className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-							>
-								{RESOLUTION_TAGS.map((tag) => (
-									<option key={tag} value={tag}>
-										{humanize(tag)}
-									</option>
-								))}
-							</select>
-							<Input
-								value={externalCaseId}
-								onChange={onExternalCaseChange}
-								placeholder="External case ID"
-								className="mt-2"
-							/>
-						</div>
-						<div className="flex flex-col justify-end gap-2">
-							{complaint.status === "open" && (
-								<Button type="button" variant="outline" onClick={onMediate} disabled={mediate.isPending}>
-									Mark mediating
+					)}
+					{complaint.status === "referred_external" && (
+						<div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-destructive/5 p-3 text-sm">
+							<div>
+								<p className="font-medium">External referral</p>
+								<p className="text-muted-foreground">Case ID: {complaint.externalCaseId ?? "Not recorded yet"}</p>
+							</div>
+							{permissions.canPrintReferralLetter && (
+								<Button asChild type="button" variant="outline">
+									<a href={complaintReferralLetterUrl(complaint.id)} target="_blank" rel="noreferrer">
+										Print referral letter
+									</a>
 								</Button>
 							)}
-							<Button type="button" variant="outline" onClick={onReferExternal} disabled={referExternal.isPending}>
-								Refer external
-							</Button>
-							<Button type="button" onClick={onClose} disabled={resolution.trim().length < 5 || close.isPending}>
-								Close complaint
-							</Button>
 						</div>
-					</div>
-				)}
-			</CardContent>
-		</Card>
-	);
-});
+					)}
+					{canWork && (
+						<div className="grid gap-3 border-t pt-3 lg:grid-cols-[1fr_160px_160px]">
+							{canShowResolution && (
+								<div className="space-y-2">
+									<Label htmlFor={`resolution-${complaint.id}`}>Resolution notes</Label>
+									<textarea
+										id={`resolution-${complaint.id}`}
+										value={resolution}
+										onChange={onResolutionChange}
+										className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+									/>
+								</div>
+							)}
+							{(canShowResolution || canShowExternalCase) && (
+								<div className="space-y-2">
+									{canShowResolution && (
+										<>
+											<Label htmlFor={`tag-${complaint.id}`}>Outcome</Label>
+											<select
+												id={`tag-${complaint.id}`}
+												value={resolutionTag}
+												onChange={onResolutionTagChange}
+												className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+											>
+												{RESOLUTION_TAGS.map((tag) => (
+													<option key={tag} value={tag}>
+														{humanize(tag)}
+													</option>
+												))}
+											</select>
+										</>
+									)}
+									{canShowExternalCase && (
+										<Input
+											value={externalCaseId}
+											onChange={onExternalCaseChange}
+											placeholder="External case ID"
+											className="mt-2"
+										/>
+									)}
+								</div>
+							)}
+							<div className="flex flex-col justify-end gap-2">
+								{complaint.status === "open" && permissions.canMediate && (
+									<Button type="button" variant="outline" onClick={onMediate} disabled={mediate.isPending}>
+										Mark mediating
+									</Button>
+								)}
+								{permissions.canReferExternal && (
+									<Button type="button" variant="outline" onClick={onReferExternal} disabled={referExternal.isPending}>
+										Refer external
+									</Button>
+								)}
+								{permissions.canClose && (
+									<Button type="button" onClick={onClose} disabled={resolution.trim().length < 5 || close.isPending}>
+										Close complaint
+									</Button>
+								)}
+							</div>
+						</div>
+					)}
+				</CardContent>
+			</Card>
+		);
+	},
+);
 ComplaintRow.displayName = "ComplaintRow";
 
 export const Route = createFileRoute("/staff/complaints")({

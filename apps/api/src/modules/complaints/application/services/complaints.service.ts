@@ -32,6 +32,7 @@ import type {
 	ListComplaintsDto,
 	ReferComplaintExternalDto,
 } from "../dto/complaint.dto";
+import { ComplaintReferralLetterService } from "./complaint-referral-letter.service";
 
 const COMPLAINT_GLOBAL_ACCESS_ROLES = ["super_admin", "ops_manager", "compliance_officer"] as const;
 const EMPTY_SCOPE_ID = "__none__";
@@ -77,6 +78,7 @@ export class ComplaintsService {
 		private readonly auditEvents: AuditEventsService,
 		private readonly notifications: NotificationOutboxService,
 		private readonly staffAccess: StaffAccessService,
+		private readonly referralLetter: ComplaintReferralLetterService,
 	) {}
 
 	async list(filter: ComplaintFilter) {
@@ -113,6 +115,18 @@ export class ComplaintsService {
 		const complaint = await this.getById(id);
 		await this.assertComplaintAccess(session, complaint);
 		return complaint;
+	}
+
+	async generateReferralLetter(session: WezSession, id: string) {
+		const complaint = await this.getById(id);
+		await this.assertStaffComplaintAccess(session, complaint);
+		if (complaint.status !== "referred_external") {
+			throw new ConflictException({ code: "COMPLAINT_NOT_REFERRED_EXTERNAL" });
+		}
+		return this.referralLetter.generate({
+			complaint,
+			generatedBy: session.user.name ?? session.user.email ?? session.user.id,
+		});
 	}
 
 	async create(session: WezSession, dto: CreateComplaintDto, auditContext: AuditRequestContext | undefined) {

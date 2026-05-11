@@ -4,6 +4,7 @@ import { EmployersModule } from "#modules/employers/employers.module";
 import { NotificationModule } from "#modules/notification/notification.module";
 import { WorkersModule } from "#modules/workers/workers.module";
 import { StaffAccessService } from "#shared/auth/staff-access.service";
+import { ComplaintReferralLetterService } from "./application/services/complaint-referral-letter.service";
 import { ComplaintsService } from "./application/services/complaints.service";
 import { COMPLAINTS_REPO } from "./domain/repositories/complaints.repository";
 import { PrismaComplaintsRepository } from "./infrastructure/repositories/prisma-complaints.repository";
@@ -14,6 +15,7 @@ import { ComplaintsController } from "./presentation/controllers/complaints.cont
 	controllers: [ComplaintsController],
 	providers: [
 		ComplaintsService,
+		ComplaintReferralLetterService,
 		StaffAccessService,
 		{ provide: COMPLAINTS_REPO, useClass: PrismaComplaintsRepository },
 	],

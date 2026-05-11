@@ -64,6 +64,17 @@ export const STAFF_ACCESS_ROLES = {
 		STAFF_ROLES.stationSupervisor,
 		STAFF_ROLES.agent,
 	],
+	complaintIntake: [STAFF_ROLES.superAdmin, STAFF_ROLES.agent],
+	complaintMediation: [STAFF_ROLES.superAdmin, STAFF_ROLES.complianceOfficer, STAFF_ROLES.agent],
+	complaintClosure: [
+		STAFF_ROLES.superAdmin,
+		STAFF_ROLES.opsManager,
+		STAFF_ROLES.complianceOfficer,
+		STAFF_ROLES.stationSupervisor,
+		STAFF_ROLES.agent,
+	],
+	complaintExternalReferral: [STAFF_ROLES.superAdmin, STAFF_ROLES.complianceOfficer, STAFF_ROLES.stationSupervisor],
+	complaintReferralLetter: [STAFF_ROLES.superAdmin, STAFF_ROLES.complianceOfficer],
 	ticketOperations: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,

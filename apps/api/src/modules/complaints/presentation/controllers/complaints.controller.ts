@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req, StreamableFile } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AUDIT_ACTIONS } from "#modules/audit-log/audit-actions";
 import { AuditLog } from "#shared/audit/audit-log.decorator";
@@ -31,6 +31,19 @@ export class ComplaintsController {
 	async getById(@Param("id") id: string, @Req() req: WezRequest) {
 		const session = await requirePermission(req, "complaint:read");
 		return { data: await this.service.getByIdForSession(session, id) };
+	}
+
+	@Get(":id/referral-letter")
+	@ApiOperation({ summary: "Generate a printable external referral letter for a referred complaint" })
+	@ApiResponse({ status: 200, description: "Referral letter PDF returned" })
+	async referralLetter(@Param("id") id: string, @Req() req: WezRequest) {
+		const session = await requirePermission(req, "complaint:generate_referral_letter");
+		const buffer = await this.service.generateReferralLetter(session, id);
+		return new StreamableFile(buffer, {
+			type: "application/pdf",
+			disposition: `inline; filename="complaint-${id.slice(0, 8)}-referral-letter.pdf"`,
+			length: buffer.length,
+		});
 	}
 
 	@Post()

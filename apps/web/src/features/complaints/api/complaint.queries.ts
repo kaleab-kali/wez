@@ -76,6 +76,8 @@ const qs = (filter: ComplaintFilter) => {
 	return params.toString();
 };
 
+export const complaintReferralLetterUrl = (id: string) => `${BASE}/${id}/referral-letter`;
+
 export const useComplaints = (filter: ComplaintFilter) =>
 	useQuery({
 		queryKey: complaintKeys.list(filter),
