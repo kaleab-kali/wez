@@ -1,9 +1,12 @@
+import { Moon02Icon, Sun03Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "#shared/components/LanguageSwitcher";
 import { authClient } from "#shared/lib/auth-client";
 import { WezLogo } from "@/components/branding/WezLogo";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -14,6 +17,7 @@ const CustomerAppLayout = React.memo(() => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { data: session, isPending } = authClient.useSession();
+	const { theme, setTheme } = useTheme();
 	const role = (session?.user as { role?: string } | undefined)?.role;
 	const isEmployer = EMPLOYER_ROLES.has(role ?? "");
 	const isWorker = role === "worker";
@@ -22,6 +26,10 @@ const CustomerAppLayout = React.memo(() => {
 		await authClient.signOut();
 		window.location.href = "/";
 	}, []);
+
+	const onToggleTheme = React.useCallback(() => {
+		setTheme(theme === "dark" ? "light" : "dark");
+	}, [theme, setTheme]);
 
 	React.useEffect(() => {
 		if (!isPending && !session?.user) {
@@ -54,7 +62,7 @@ const CustomerAppLayout = React.memo(() => {
 							<div className="text-xs text-muted-foreground">{t("app.shell")}</div>
 						</div>
 					</div>
-					<nav className="flex items-center gap-1">
+					<nav className="order-3 flex w-full flex-wrap items-center gap-1 md:order-none md:w-auto">
 						<CustomerNavLink to="/app/dashboard" active={location.pathname === "/app/dashboard"}>
 							{t("nav.dashboard")}
 						</CustomerNavLink>
@@ -86,6 +94,15 @@ const CustomerAppLayout = React.memo(() => {
 					</nav>
 					<div className="flex items-center gap-2">
 						<LanguageSwitcher />
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon-sm"
+							aria-label={theme === "dark" ? t("common.lightMode") : t("common.darkMode")}
+							onClick={onToggleTheme}
+						>
+							<HugeiconsIcon icon={theme === "dark" ? Sun03Icon : Moon02Icon} className="size-4" />
+						</Button>
 						<Button variant="ghost" size="sm" onClick={onSignOut}>
 							{t("common.signOut")}
 						</Button>
