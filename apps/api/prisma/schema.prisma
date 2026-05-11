@@ -280,7 +280,7 @@ model IdempotencyKey {
   createdAt      DateTime @default(now())
   expiresAt      DateTime
 
-  @@id([key, userId, endpointHash])
+  @@id([key, userId])
   @@index([expiresAt])
   @@map("idempotency_key")
 }
