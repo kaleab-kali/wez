@@ -54,6 +54,7 @@ const AUDIT_ACTIONS = [
 	"ticket.assigned",
 	"ticket.resolved",
 	"ticket.closed",
+	"permission.denied",
 ] as const;
 const ACTOR_ROLES = [
 	"super_admin",
@@ -86,6 +87,7 @@ const TARGET_TYPES = [
 	"agent_assignment",
 	"complaint",
 	"ticket",
+	"permission",
 ] as const;
 const DEFAULT_LIMIT = 25;
 const FIRST_PAGE = 1;
@@ -117,6 +119,7 @@ const actionTitle = (action: string) => {
 	if (action === "ticket.assigned") return "Ticket assigned";
 	if (action === "ticket.resolved") return "Ticket resolved";
 	if (action === "ticket.closed") return "Ticket closed";
+	if (action === "permission.denied") return "Permission denied";
 	return action.replaceAll("_", " ").replaceAll(".", " ");
 };
 const actionSentence = (event: AuditEvent) => {
@@ -132,6 +135,9 @@ const actionSentence = (event: AuditEvent) => {
 	}
 	if (event.targetType === "ticket") {
 		return `${event.actorRole} updated a ${metadataValue(event, "priority")} ${metadataValue(event, "category")} ticket.`;
+	}
+	if (event.targetType === "permission") {
+		return `${event.actorRole} was denied ${metadataValue(event, "permission")}.`;
 	}
 	const summary = event.targetSummary;
 	if (!summary) return `${event.actorRole} updated a ${event.targetType ?? "record"}.`;
@@ -346,6 +352,28 @@ const EventFacts = React.memo(({ event }: { readonly event: AuditEvent }) => {
 				<div className="rounded-md border bg-muted/20 p-3">
 					<p className="text-xs text-muted-foreground">Assignee</p>
 					<p className="mt-1 font-medium">{compactId(metadataValue(event, "assignedToId"))}</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "permission") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Permission</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "permission")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Method</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "method")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "routePath")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route params</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "routeParams")}</p>
 				</div>
 			</div>
 		);

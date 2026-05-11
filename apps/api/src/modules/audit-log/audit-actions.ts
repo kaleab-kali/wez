@@ -39,6 +39,7 @@ export const AUDIT_ACTIONS = {
 	ticketAssigned: "ticket.assigned",
 	ticketResolved: "ticket.resolved",
 	ticketClosed: "ticket.closed",
+	permissionDenied: "permission.denied",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -60,6 +61,7 @@ export const AUDIT_TARGET_TYPES = {
 	agentAssignment: "agent_assignment",
 	complaint: "complaint",
 	ticket: "ticket",
+	permission: "permission",
 } as const;
 
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[keyof typeof AUDIT_TARGET_TYPES];
