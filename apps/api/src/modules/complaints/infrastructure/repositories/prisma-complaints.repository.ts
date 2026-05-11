@@ -25,6 +25,8 @@ type ComplaintRow = {
 	station?: { name: string } | null;
 	takenByAgentId: string | null;
 	takenByAgent?: { name: string; email: string } | null;
+	assignedToAgentId: string | null;
+	assignedToAgent?: { name: string; email: string } | null;
 	type: string;
 	severity: string;
 	description: string;
@@ -42,6 +44,7 @@ type ComplaintRow = {
 const COMPLAINT_INCLUDE = {
 	station: { select: { name: true } },
 	takenByAgent: { select: { name: true, email: true } },
+	assignedToAgent: { select: { name: true, email: true } },
 	closedBy: { select: { name: true, email: true } },
 } as const;
 const DEFAULT_PAGE = 1;
@@ -69,6 +72,7 @@ export class PrismaComplaintsRepository implements IComplaintsRepository {
 				placementId: data.placementId,
 				stationId: data.stationId,
 				takenByAgentId: data.takenByAgentId,
+				assignedToAgentId: data.assignedToAgentId,
 				type: data.type,
 				severity: data.severity,
 				description: data.description,
@@ -167,6 +171,8 @@ export class PrismaComplaintsRepository implements IComplaintsRepository {
 			stationName: row.station?.name ?? null,
 			takenByAgentId: row.takenByAgentId,
 			takenByAgentName: row.takenByAgent?.name ?? row.takenByAgent?.email ?? null,
+			assignedToAgentId: row.assignedToAgentId,
+			assignedToAgentName: row.assignedToAgent?.name ?? row.assignedToAgent?.email ?? null,
 			type: row.type,
 			severity: row.severity as ComplaintSeverity,
 			description: row.description,

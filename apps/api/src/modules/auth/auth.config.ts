@@ -2,6 +2,7 @@ import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession, phoneNumber } from "better-auth/plugins";
+import { authAuditPlugin } from "#shared/audit/auth-audit.plugin";
 import { prisma } from "#shared/database/prisma-instance";
 import { sendSms } from "#shared/notifications/sms-sender";
 
@@ -45,6 +46,7 @@ export const auth = betterAuth({
 	},
 
 	plugins: [
+		authAuditPlugin("customer"),
 		// Worker phone+OTP login (modules.md 1.1.2). HQ + business employers use email.
 		phoneNumber({
 			otpLength: 6,

@@ -32,6 +32,24 @@ export type ComplaintSeverity = "low" | "medium" | "high";
 export type ComplaintStatus = "open" | "mediating" | "closed" | "referred_external";
 export type ComplaintResolutionTag = "amicable" | "partial" | "failed";
 
+export const WORKER_COMPLAINT_TYPES = [
+	"late_wages",
+	"unpaid_wages",
+	"mistreatment",
+	"harassment",
+	"unsafe_conditions",
+	"excessive_hours",
+	"other",
+] as const;
+export const EMPLOYER_COMPLAINT_TYPES = [
+	"absences",
+	"theft",
+	"misconduct",
+	"quit_without_notice",
+	"below_skill",
+	"other",
+] as const;
+
 export type Complaint = {
 	id: string;
 	filedByType: ComplaintPartyType;
@@ -43,6 +61,8 @@ export type Complaint = {
 	placementId: string | null;
 	stationId: string | null;
 	stationName?: string | null;
+	assignedToAgentId: string | null;
+	assignedToAgentName?: string | null;
 	type: string;
 	severity: ComplaintSeverity;
 	status: ComplaintStatus;

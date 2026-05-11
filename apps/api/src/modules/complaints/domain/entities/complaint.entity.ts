@@ -17,6 +17,8 @@ export interface Complaint {
 	stationName?: string | null;
 	takenByAgentId: string | null;
 	takenByAgentName?: string | null;
+	assignedToAgentId: string | null;
+	assignedToAgentName?: string | null;
 	type: string;
 	severity: ComplaintSeverity;
 	description: string;
@@ -38,6 +40,7 @@ export type NewComplaint = Omit<
 	| "againstName"
 	| "stationName"
 	| "takenByAgentName"
+	| "assignedToAgentName"
 	| "closedByName"
 	| "closedAt"
 	| "closedById"
@@ -55,6 +58,7 @@ export type ComplaintPatch = Partial<{
 	externalCaseId: string | null;
 	closedAt: Date | null;
 	closedById: string | null;
+	assignedToAgentId: string | null;
 }>;
 
 export interface ComplaintFilter {

@@ -182,6 +182,7 @@ const ComplaintFacts = React.memo(({ complaint }: { readonly complaint: Complain
 			<Fact label="Filed by" value={partyName(complaint, "filed")} />
 			<Fact label="Against" value={partyName(complaint, "against")} />
 			<Fact label="Station" value={complaint.stationName ?? "-"} />
+			<Fact label="Assigned to" value={complaint.assignedToAgentName ?? "-"} />
 			<Fact label="External case" value={complaint.externalCaseId ?? "-"} mono />
 			<Fact label="Closed at" value={complaint.closedAt ? formatDate(complaint.closedAt) : "-"} />
 			<Fact label="Closed by" value={complaint.closedByName ?? "-"} />

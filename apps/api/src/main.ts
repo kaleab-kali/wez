@@ -9,16 +9,25 @@ import { RequestMethod, ValidationPipe, VERSION_NEUTRAL, VersioningType } from "
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { toNodeHandler } from "better-auth/node";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import * as compression from "compression";
 import * as cookieParser from "cookie-parser";
 import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import { Logger } from "nestjs-pino";
 import { adminAuth } from "#modules/admin/auth/admin-auth.config";
+import { auth } from "#modules/auth/auth.config";
+import { createAuthAuditMiddleware } from "#shared/audit/auth-audit.middleware";
 import { AppModule } from "./app.module";
 
 const _MAX_BODY_SIZE = "10mb";
+
+type AuthAuditUser = {
+	readonly id: string;
+	readonly role?: string | null;
+};
+
+const toAuditSessionUser = (user: AuthAuditUser) => ({ id: user.id, role: user.role ?? undefined });
 
 const bootstrap = async () => {
 	const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -41,6 +50,39 @@ const bootstrap = async () => {
 		prefix: "/uploads/",
 		index: false,
 	});
+
+	app.use(
+		"/api/auth",
+		createAuthAuditMiddleware({
+			realm: "customer",
+			basePath: "/api/auth",
+			resolveSession: async (req) => {
+				const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+				if (!session?.user) return null;
+				return {
+					kind: "customer",
+					user: toAuditSessionUser(session.user as AuthAuditUser),
+					session: session.session as { id: string; token: string },
+				};
+			},
+		}),
+	);
+	app.use(
+		"/api/admin-auth",
+		createAuthAuditMiddleware({
+			realm: "staff",
+			basePath: "/api/admin-auth",
+			resolveSession: async (req) => {
+				const session = await adminAuth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+				if (!session?.user) return null;
+				return {
+					kind: "staff",
+					user: toAuditSessionUser(session.user as AuthAuditUser),
+					session: session.session as { id: string; token: string },
+				};
+			},
+		}),
+	);
 
 	// Admin auth routes (separate Better Auth instance)
 	// Mounted here so Better Auth handles its own cookie/session lifecycle.

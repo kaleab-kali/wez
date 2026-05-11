@@ -105,6 +105,12 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 		roles: STAFF_ACCESS_ROLES.hqOverview,
 	},
 	{
+		labelKey: "admin.nav.orgChart",
+		to: "/staff-admin/org-chart",
+		icon: UserMultipleIcon,
+		roles: STAFF_ACCESS_ROLES.hqOverview,
+	},
+	{
 		labelKey: "admin.nav.staffUsers",
 		to: "/staff-admin/staff-users",
 		icon: ContactBookIcon,

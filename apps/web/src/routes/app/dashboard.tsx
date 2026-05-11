@@ -1,4 +1,4 @@
-import { Book02Icon, ContactBookIcon, NoteEditIcon, UserMultipleIcon } from "@hugeicons/core-free-icons";
+import { Book02Icon, ContactBookIcon, NoteEditIcon, SecurityIcon, UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
@@ -14,7 +14,13 @@ import { Badge } from "@/components/ui/badge";
 const EMPLOYER_ROLES = new Set(["employer_business", "employer_household"]);
 
 type CustomerAdAudience = "employer" | "worker";
-type CustomerAppRoute = "/app/workers" | "/app/jobs" | "/app/requests" | "/app/referrals" | "/app/profile";
+type CustomerAppRoute =
+	| "/app/workers"
+	| "/app/jobs"
+	| "/app/requests"
+	| "/app/referrals"
+	| "/app/profile"
+	| "/app/complaints";
 
 type DashboardAction = {
 	readonly icon: typeof UserMultipleIcon;
@@ -53,6 +59,12 @@ const EMPLOYER_ACTIONS: readonly DashboardAction[] = [
 		bodyKey: "app.actionReferralsBody",
 		to: "/app/referrals",
 	},
+	{
+		icon: SecurityIcon,
+		titleKey: "app.actionComplaints",
+		bodyKey: "app.actionComplaintsBody",
+		to: "/app/complaints",
+	},
 ];
 
 const WORKER_ACTIONS: readonly DashboardAction[] = [
@@ -68,6 +80,12 @@ const WORKER_ACTIONS: readonly DashboardAction[] = [
 		titleKey: "app.actionProfile",
 		bodyKey: "app.actionProfileBody",
 		to: "/app/profile",
+	},
+	{
+		icon: SecurityIcon,
+		titleKey: "app.actionComplaints",
+		bodyKey: "app.workerActionComplaintsBody",
+		to: "/app/complaints",
 	},
 ];
 

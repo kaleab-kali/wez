@@ -93,7 +93,12 @@ export const STAFF_ACCESS_ROLES = {
 	ticketAssignment: [
 		STAFF_ROLES.superAdmin,
 		STAFF_ROLES.opsManager,
+		STAFF_ROLES.complianceOfficer,
+		STAFF_ROLES.hrManager,
+		STAFF_ROLES.financeManager,
 		STAFF_ROLES.itManager,
+		STAFF_ROLES.trainingManager,
+		STAFF_ROLES.support,
 		STAFF_ROLES.stationSupervisor,
 	],
 	ticketResolution: [
@@ -191,6 +196,7 @@ const STAFF_ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles?: readonly Staff
 	{ prefix: "/staff/complaints", roles: STAFF_ACCESS_ROLES.complaintOperations },
 	{ prefix: "/staff/tickets", roles: STAFF_ACCESS_ROLES.ticketOperations },
 	{ prefix: "/staff-admin", roles: STAFF_ACCESS_ROLES.hqOverview, exact: true },
+	{ prefix: "/staff-admin/org-chart", roles: STAFF_ACCESS_ROLES.hqOverview },
 	{ prefix: "/staff-admin/staff-users", roles: STAFF_ACCESS_ROLES.staffUsers },
 	{ prefix: "/staff-admin/access-review", roles: STAFF_ACCESS_ROLES.accessReview },
 	{ prefix: "/staff-admin/stations", roles: STAFF_ACCESS_ROLES.platformConfig },

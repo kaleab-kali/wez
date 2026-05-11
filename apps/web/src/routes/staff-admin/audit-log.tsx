@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const AUDIT_ACTIONS = [
+	"auth.login",
+	"auth.logout",
+	"auth.failed_login",
 	"job.created",
 	"job.updated",
 	"job.closed",
@@ -67,6 +70,11 @@ const ACTOR_ROLES = [
 	"station_supervisor",
 	"agent",
 	"support",
+	"customer_auth",
+	"staff_auth",
+	"worker",
+	"employer_business",
+	"employer_household",
 	"system",
 	"anonymous",
 ] as const;
@@ -88,6 +96,7 @@ const TARGET_TYPES = [
 	"complaint",
 	"ticket",
 	"permission",
+	"auth",
 ] as const;
 const DEFAULT_LIMIT = 25;
 const FIRST_PAGE = 1;
@@ -120,9 +129,17 @@ const actionTitle = (action: string) => {
 	if (action === "ticket.resolved") return "Ticket resolved";
 	if (action === "ticket.closed") return "Ticket closed";
 	if (action === "permission.denied") return "Permission denied";
+	if (action === "auth.login") return "Signed in";
+	if (action === "auth.logout") return "Signed out";
+	if (action === "auth.failed_login") return "Failed sign-in";
 	return action.replaceAll("_", " ").replaceAll(".", " ");
 };
 const actionSentence = (event: AuditEvent) => {
+	if (event.targetType === "auth") {
+		const realm = metadataValue(event, "realm");
+		const status = metadataValue(event, "statusCode");
+		return `${event.actorRole} triggered ${event.action} in ${realm}${status !== "-" ? ` with status ${status}` : ""}.`;
+	}
 	if (event.targetType === "job") {
 		const title =
 			metadataValue(event, "afterTitle") !== "-" ? metadataValue(event, "afterTitle") : metadataValue(event, "title");
@@ -374,6 +391,28 @@ const EventFacts = React.memo(({ event }: { readonly event: AuditEvent }) => {
 				<div className="rounded-md border bg-muted/20 p-3">
 					<p className="text-xs text-muted-foreground">Route params</p>
 					<p className="mt-1 truncate font-medium">{metadataValue(event, "routeParams")}</p>
+				</div>
+			</div>
+		);
+	}
+	if (event.targetType === "auth") {
+		return (
+			<div className="grid gap-3 md:grid-cols-4">
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Auth realm</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "realm")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Route</p>
+					<p className="mt-1 truncate font-medium">{metadataValue(event, "path")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Method</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "method")}</p>
+				</div>
+				<div className="rounded-md border bg-muted/20 p-3">
+					<p className="text-xs text-muted-foreground">Status</p>
+					<p className="mt-1 font-medium">{metadataValue(event, "statusCode")}</p>
 				</div>
 			</div>
 		);

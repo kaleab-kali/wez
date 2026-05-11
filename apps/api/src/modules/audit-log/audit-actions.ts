@@ -1,4 +1,7 @@
 export const AUDIT_ACTIONS = {
+	authLogin: "auth.login",
+	authLogout: "auth.logout",
+	authFailedLogin: "auth.failed_login",
 	jobCreated: "job.created",
 	jobUpdated: "job.updated",
 	jobClosed: "job.closed",
@@ -59,6 +62,7 @@ export const AUDIT_TARGET_TYPES = {
 	location: "location",
 	station: "station",
 	agentAssignment: "agent_assignment",
+	auth: "auth",
 	complaint: "complaint",
 	ticket: "ticket",
 	permission: "permission",

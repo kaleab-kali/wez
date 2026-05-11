@@ -2,6 +2,7 @@ import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { customSession, twoFactor } from "better-auth/plugins";
+import { authAuditPlugin } from "#shared/audit/auth-audit.plugin";
 import { prisma } from "#shared/database/prisma-instance";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -45,6 +46,7 @@ export const adminAuth = betterAuth({
 	},
 
 	plugins: [
+		authAuditPlugin("staff"),
 		// HQ 2FA per modules.md 1.1.3 — TOTP. Trusted-device cookie 30 days.
 		twoFactor({
 			schema: { twoFactor: { modelName: "adminTwoFactor" } },

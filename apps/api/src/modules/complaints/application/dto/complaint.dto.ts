@@ -12,6 +12,23 @@ export const COMPLAINT_PARTY_TYPES = ["worker", "employer"] as const;
 export const COMPLAINT_SEVERITIES = ["low", "medium", "high"] as const;
 export const COMPLAINT_STATUSES = ["open", "mediating", "closed", "referred_external"] as const;
 export const COMPLAINT_RESOLUTION_TAGS = ["amicable", "partial", "failed"] as const;
+export const WORKER_COMPLAINT_TYPES = [
+	"late_wages",
+	"unpaid_wages",
+	"mistreatment",
+	"harassment",
+	"unsafe_conditions",
+	"excessive_hours",
+	"other",
+] as const;
+export const EMPLOYER_COMPLAINT_TYPES = [
+	"absences",
+	"theft",
+	"misconduct",
+	"quit_without_notice",
+	"below_skill",
+	"other",
+] as const;
 
 export class CreateComplaintDto {
 	@ApiProperty({ enum: COMPLAINT_PARTY_TYPES })
@@ -41,7 +58,7 @@ export class CreateComplaintDto {
 	@IsString()
 	stationId?: string;
 
-	@ApiProperty({ description: "Complaint category lookup value" })
+	@ApiProperty({ description: "Worker or employer complaint category; allowed values depend on filedByType" })
 	@IsString()
 	type!: string;
 

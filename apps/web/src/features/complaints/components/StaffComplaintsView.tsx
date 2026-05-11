@@ -155,9 +155,16 @@ const complaintColumns = (): ColumnDef<Complaint>[] => [
 	},
 	{
 		id: "station",
-		accessorFn: (row) => row.stationName ?? "",
-		header: "Station",
-		cell: ({ row }) => row.original.stationName ?? "-",
+		accessorFn: (row) => `${row.stationName ?? ""} ${row.assignedToAgentName ?? ""}`,
+		header: "Routing",
+		cell: ({ row }) => (
+			<div className="min-w-40">
+				<p className="text-sm">{row.original.stationName ?? "-"}</p>
+				<p className="text-muted-foreground text-xs">
+					{row.original.assignedToAgentName ? `assigned to ${row.original.assignedToAgentName}` : "no assignee"}
+				</p>
+			</div>
+		),
 	},
 	{
 		id: "actions",

@@ -32,6 +32,7 @@ import type {
 	ListComplaintsDto,
 	ReferComplaintExternalDto,
 } from "../dto/complaint.dto";
+import { EMPLOYER_COMPLAINT_TYPES, WORKER_COMPLAINT_TYPES } from "../dto/complaint.dto";
 import { ComplaintReferralLetterService } from "./complaint-referral-letter.service";
 
 const COMPLAINT_GLOBAL_ACCESS_ROLES = ["super_admin", "ops_manager", "compliance_officer"] as const;
@@ -50,6 +51,7 @@ const WORKER_HOP_FLAG_ESCALATION: Record<string, string> = {
 	suspended: "suspended",
 };
 const COMPLIANCE_NOTIFICATION_CHANNELS = ["in_app", "email"] as const;
+const COMPLAINT_ASSIGNEE_NOTIFICATION_CHANNELS = ["in_app", "email"] as const;
 
 type ComplaintPlacement = {
 	id: string;
@@ -131,6 +133,7 @@ export class ComplaintsService {
 
 	async create(session: WezSession, dto: CreateComplaintDto, auditContext: AuditRequestContext | undefined) {
 		this.assertOpposingParties(dto.filedByType, dto.againstType);
+		this.assertValidComplaintType(dto.filedByType, dto.type);
 		const parties = await this.resolveParties(session, dto);
 		const placement = await this.resolvePlacement(parties, dto.placementId);
 		const stationId = await this.resolveStationId(session, dto.stationId, placement.stationId);
@@ -138,6 +141,7 @@ export class ComplaintsService {
 			await this.staffAccess.assertStationAccess(session, stationId, COMPLAINT_GLOBAL_ACCESS_ROLES);
 		}
 		const status = this.initialStatus(dto.severity);
+		const assignedToAgentId = await this.resolveInitialAssignee(session, stationId, dto.severity);
 		const complaint = await this.repo.create({
 			filedByType: parties.filedByType,
 			filedById: parties.filedById,
@@ -147,6 +151,7 @@ export class ComplaintsService {
 			placementId: placement.id,
 			stationId,
 			takenByAgentId: session.kind === "staff" ? session.user.id : null,
+			assignedToAgentId,
 			type: dto.type,
 			severity: dto.severity,
 			description: dto.description,
@@ -316,6 +321,16 @@ export class ComplaintsService {
 		if (filedByType === againstType) throw new BadRequestException({ code: "COMPLAINT_PARTIES_MUST_OPPOSE" });
 	}
 
+	private assertValidComplaintType(filedByType: ComplaintPartyType, type: string) {
+		const allowedTypes = filedByType === "worker" ? WORKER_COMPLAINT_TYPES : EMPLOYER_COMPLAINT_TYPES;
+		if (!(allowedTypes as readonly string[]).includes(type)) {
+			throw new BadRequestException({
+				code: "INVALID_COMPLAINT_CATEGORY",
+				message: `Allowed categories: ${allowedTypes.join(", ")}`,
+			});
+		}
+	}
+
 	private async assertPartyExists(type: ComplaintPartyType, id: string) {
 		const exists = type === "worker" ? await this.workers.findById(id) : await this.employers.findById(id);
 		if (!exists) throw new NotFoundException({ code: type === "worker" ? "WORKER_NOT_FOUND" : "EMPLOYER_NOT_FOUND" });
@@ -347,6 +362,22 @@ export class ComplaintsService {
 
 	private initialStatus(severity: ComplaintSeverity): ComplaintStatus {
 		return severity === "high" ? "referred_external" : "open";
+	}
+
+	private async resolveInitialAssignee(
+		session: WezSession,
+		stationId: string,
+		severity: ComplaintSeverity,
+	): Promise<string | null> {
+		if (severity === "high") return null;
+		const sessionRoles = (session.user as { roles?: readonly string[] }).roles ?? [session.user.role ?? ""];
+		if (session.kind === "staff" && sessionRoles.includes("agent")) return session.user.id;
+		const assignment = await this.prisma.agentAssignment.findFirst({
+			where: { stationId, active: true, removedAt: null, user: { active: true } },
+			orderBy: { assignedAt: "asc" },
+			select: { userId: true },
+		});
+		return assignment?.userId ?? null;
 	}
 
 	private async assertComplaintAccess(session: WezSession, complaint: Complaint) {
@@ -412,6 +443,7 @@ export class ComplaintsService {
 			severity: complaint.severity,
 			type: complaint.type,
 			status: complaint.status,
+			assignedToAgentId: complaint.assignedToAgentId,
 		};
 	}
 
@@ -419,7 +451,14 @@ export class ComplaintsService {
 		if (complaint.status === "referred_external") {
 			await this.notifyCompliance(complaint);
 		}
-		if (complaint.stationId) {
+		if (complaint.assignedToAgentId) {
+			await this.notifications.enqueueStaffChannels({
+				adminUserId: complaint.assignedToAgentId,
+				channels: COMPLAINT_ASSIGNEE_NOTIFICATION_CHANNELS,
+				templateKey: "complaint.assigned",
+				payload: { complaintId: complaint.id, severity: complaint.severity, status: complaint.status },
+			});
+		} else if (complaint.stationId) {
 			await this.notifications.enqueueStationAgents({
 				stationId: complaint.stationId,
 				templateKey: "complaint.created.station",
