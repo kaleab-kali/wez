@@ -40,9 +40,41 @@ const EMPLOYER_COMPLAINT_TYPES = [
 	"below_skill",
 	"other",
 ] as const;
+const COMPLAINT_INTAKE_MODES = [
+	{
+		value: "worker_to_employer",
+		title: "Worker complaint",
+		direction: "Worker reports employer",
+		filedByType: "worker",
+		againstType: "employer",
+		filedByLabel: "Worker filing",
+		againstLabel: "Employer named",
+		categories: WORKER_COMPLAINT_TYPES,
+		statementLabel: "Worker statement",
+		submitLabel: "Create worker complaint",
+	},
+	{
+		value: "employer_to_worker",
+		title: "Employer complaint",
+		direction: "Employer reports worker",
+		filedByType: "employer",
+		againstType: "worker",
+		filedByLabel: "Employer filing",
+		againstLabel: "Worker named",
+		categories: EMPLOYER_COMPLAINT_TYPES,
+		statementLabel: "Employer statement",
+		submitLabel: "Create employer complaint",
+	},
+] as const;
+type ComplaintIntakeMode = (typeof COMPLAINT_INTAKE_MODES)[number]["value"];
+const COMPLAINT_INTAKE_MODE_BY_VALUE = {
+	worker_to_employer: COMPLAINT_INTAKE_MODES[0],
+	employer_to_worker: COMPLAINT_INTAKE_MODES[1],
+} as const satisfies Record<ComplaintIntakeMode, (typeof COMPLAINT_INTAKE_MODES)[number]>;
 const SEVERITIES = ["low", "medium", "high"] as const;
 const STATUSES = ["open", "mediating", "referred_external", "closed"] as const;
 const RESOLUTION_TAGS = ["amicable", "partial", "failed"] as const;
+const COMPLAINT_DESCRIPTION_MIN_LENGTH = 10;
 
 type ComplaintActionPermissions = {
 	readonly canCreate: boolean;
@@ -146,25 +178,62 @@ const ComplaintsPage = React.memo(() => {
 });
 ComplaintsPage.displayName = "ComplaintsPage";
 
+type ComplaintModeButtonProps = {
+	readonly item: (typeof COMPLAINT_INTAKE_MODES)[number];
+	readonly selected: boolean;
+	readonly onSelect: (mode: ComplaintIntakeMode) => void;
+};
+
+const ComplaintModeButton = React.memo(({ item, selected, onSelect }: ComplaintModeButtonProps) => {
+	const onClick = React.useCallback(() => {
+		onSelect(item.value);
+	}, [item.value, onSelect]);
+
+	return (
+		<Button
+			aria-pressed={selected}
+			className="h-auto justify-start gap-3 px-3 py-3 text-left"
+			onClick={onClick}
+			type="button"
+			variant={selected ? "default" : "outline"}
+		>
+			<span className="min-w-0">
+				<span className="block font-medium">{item.title}</span>
+				<span className={selected ? "block text-primary-foreground/80 text-xs" : "block text-muted-foreground text-xs"}>
+					{item.direction}
+				</span>
+			</span>
+		</Button>
+	);
+});
+ComplaintModeButton.displayName = "ComplaintModeButton";
+
 const ComplaintIntakeForm = React.memo(() => {
 	const { data: placements } = usePlacements({ page: 1, limit: 100 });
 	const { data: stations } = usePublicStations();
 	const createComplaint = useCreateComplaint();
+	const [mode, setMode] = React.useState<ComplaintIntakeMode>("worker_to_employer");
 	const [placementId, setPlacementId] = React.useState("");
 	const [stationId, setStationId] = React.useState("");
-	const [filedByType, setFiledByType] = React.useState<"worker" | "employer">("worker");
 	const [type, setType] = React.useState<string>(WORKER_COMPLAINT_TYPES[0]);
 	const [severity, setSeverity] = React.useState<ComplaintSeverity>("medium");
 	const [description, setDescription] = React.useState("");
 	const [message, setMessage] = React.useState("");
+	const modeConfig = COMPLAINT_INTAKE_MODE_BY_VALUE[mode];
+	const filedByType = modeConfig.filedByType;
+	const againstType = modeConfig.againstType;
 	const selectedPlacement = React.useMemo(
 		() => placements?.data.find((placement) => placement.id === placementId),
 		[placementId, placements?.data],
 	);
-	const complaintTypes = filedByType === "worker" ? WORKER_COMPLAINT_TYPES : EMPLOYER_COMPLAINT_TYPES;
-	const againstType = filedByType === "worker" ? "employer" : "worker";
 	const filedById = filedByType === "worker" ? selectedPlacement?.workerId : selectedPlacement?.employerId;
-	const againstId = filedByType === "worker" ? selectedPlacement?.employerId : selectedPlacement?.workerId;
+	const againstId = againstType === "worker" ? selectedPlacement?.workerId : selectedPlacement?.employerId;
+	const workerDisplayName = selectedPlacement?.worker?.fullName ?? selectedPlacement?.workerId ?? "-";
+	const employerDisplayName = selectedPlacement?.employer?.name ?? selectedPlacement?.employerId ?? "-";
+	const filedByDisplayName = filedByType === "worker" ? workerDisplayName : employerDisplayName;
+	const againstDisplayName = againstType === "worker" ? workerDisplayName : employerDisplayName;
+	const canSubmit =
+		Boolean(filedById && againstId && stationId) && description.trim().length >= COMPLAINT_DESCRIPTION_MIN_LENGTH;
 
 	const onPlacementChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
 		setPlacementId(event.target.value);
@@ -174,10 +243,11 @@ const ComplaintIntakeForm = React.memo(() => {
 		setStationId(event.target.value);
 		setMessage("");
 	}, []);
-	const onFiledByTypeChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-		const next = event.target.value as "worker" | "employer";
-		setFiledByType(next);
-		setType(next === "worker" ? WORKER_COMPLAINT_TYPES[0] : EMPLOYER_COMPLAINT_TYPES[0]);
+	const onModeChange = React.useCallback((nextMode: ComplaintIntakeMode) => {
+		const nextConfig = COMPLAINT_INTAKE_MODE_BY_VALUE[nextMode];
+		setMode(nextMode);
+		setType(nextConfig.categories[0]);
+		setDescription("");
 		setMessage("");
 	}, []);
 	const onTypeChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -195,7 +265,10 @@ const ComplaintIntakeForm = React.memo(() => {
 	const onSubmit = React.useCallback(
 		async (event: React.FormEvent) => {
 			event.preventDefault();
-			if (!filedById || !againstId) return;
+			const trimmedDescription = description.trim();
+			if (!filedById || !againstId || !stationId || trimmedDescription.length < COMPLAINT_DESCRIPTION_MIN_LENGTH) {
+				return;
+			}
 			const complaint = await createComplaint.mutateAsync({
 				placementId,
 				stationId,
@@ -205,10 +278,10 @@ const ComplaintIntakeForm = React.memo(() => {
 				againstId,
 				type,
 				severity,
-				description,
+				description: trimmedDescription,
 			});
 			setDescription("");
-			setMessage(`Complaint ${complaint.id.slice(0, 8)} created with status ${humanize(complaint.status)}.`);
+			setMessage(`${modeConfig.title} ${complaint.id.slice(0, 8)} created with status ${humanize(complaint.status)}.`);
 		},
 		[
 			againstId,
@@ -217,6 +290,7 @@ const ComplaintIntakeForm = React.memo(() => {
 			description,
 			filedById,
 			filedByType,
+			modeConfig.title,
 			placementId,
 			severity,
 			stationId,
@@ -231,8 +305,21 @@ const ComplaintIntakeForm = React.memo(() => {
 			</CardHeader>
 			<CardContent>
 				<form className="grid gap-3 lg:grid-cols-4" onSubmit={onSubmit}>
+					<div className="space-y-2 lg:col-span-4">
+						<Label>Complaint source</Label>
+						<div className="grid gap-2 md:grid-cols-2">
+							{COMPLAINT_INTAKE_MODES.map((item) => (
+								<ComplaintModeButton
+									item={item}
+									key={item.value}
+									onSelect={onModeChange}
+									selected={item.value === mode}
+								/>
+							))}
+						</div>
+					</div>
 					<div className="space-y-2 lg:col-span-2">
-						<Label htmlFor="complaint-placement">Placement</Label>
+						<Label htmlFor="complaint-placement">Placement record</Label>
 						<select
 							id="complaint-placement"
 							value={placementId}
@@ -243,7 +330,7 @@ const ComplaintIntakeForm = React.memo(() => {
 							<option value="">Select placement history</option>
 							{placements?.data.map((placement) => (
 								<option key={placement.id} value={placement.id}>
-									{placement.worker?.fullName ?? placement.workerId.slice(0, 8)} to{" "}
+									Worker: {placement.worker?.fullName ?? placement.workerId.slice(0, 8)} | Employer:{" "}
 									{placement.employer?.name ?? placement.employerId.slice(0, 8)}
 								</option>
 							))}
@@ -266,19 +353,21 @@ const ComplaintIntakeForm = React.memo(() => {
 							))}
 						</select>
 					</div>
-					<div className="space-y-2">
-						<Label htmlFor="complaint-filed-by">Filed by</Label>
-						<select
-							id="complaint-filed-by"
-							value={filedByType}
-							onChange={onFiledByTypeChange}
-							className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-						>
-							<option value="worker">Worker</option>
-							<option value="employer">Employer</option>
-						</select>
-					</div>
-					<div className="space-y-2">
+					{selectedPlacement && (
+						<div className="rounded-md border bg-muted/30 p-3 lg:col-span-4">
+							<div className="grid gap-3 md:grid-cols-2">
+								<div>
+									<p className="text-muted-foreground text-xs">{modeConfig.filedByLabel}</p>
+									<p className="font-medium text-sm">{filedByDisplayName}</p>
+								</div>
+								<div>
+									<p className="text-muted-foreground text-xs">{modeConfig.againstLabel}</p>
+									<p className="font-medium text-sm">{againstDisplayName}</p>
+								</div>
+							</div>
+						</div>
+					)}
+					<div className="space-y-2 lg:col-span-2">
 						<Label htmlFor="complaint-type">Category</Label>
 						<select
 							id="complaint-type"
@@ -286,7 +375,7 @@ const ComplaintIntakeForm = React.memo(() => {
 							onChange={onTypeChange}
 							className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
 						>
-							{complaintTypes.map((item) => (
+							{modeConfig.categories.map((item) => (
 								<option key={item} value={item}>
 									{humanize(item)}
 								</option>
@@ -309,12 +398,12 @@ const ComplaintIntakeForm = React.memo(() => {
 						</select>
 					</div>
 					<div className="space-y-2 lg:col-span-4">
-						<Label htmlFor="complaint-description">Description</Label>
+						<Label htmlFor="complaint-description">{modeConfig.statementLabel}</Label>
 						<textarea
 							id="complaint-description"
 							value={description}
 							onChange={onDescriptionChange}
-							minLength={10}
+							minLength={COMPLAINT_DESCRIPTION_MIN_LENGTH}
 							className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 							required
 						/>
@@ -324,8 +413,8 @@ const ComplaintIntakeForm = React.memo(() => {
 						<p className="text-sm text-destructive lg:col-span-4">{createComplaint.error.message}</p>
 					)}
 					<div className="lg:col-span-4">
-						<Button type="submit" disabled={!filedById || !againstId || createComplaint.isPending}>
-							Create complaint
+						<Button type="submit" disabled={!canSubmit || createComplaint.isPending}>
+							{modeConfig.submitLabel}
 						</Button>
 					</div>
 				</form>
