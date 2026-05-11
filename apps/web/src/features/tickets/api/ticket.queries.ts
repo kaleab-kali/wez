@@ -73,6 +73,7 @@ export type TicketFilter = {
 export const ticketKeys = {
 	all: ["tickets"] as const,
 	list: (filter: TicketFilter) => [...ticketKeys.all, "list", filter] as const,
+	detail: (id: string) => [...ticketKeys.all, "detail", id] as const,
 	assignmentOptions: () => [...ticketKeys.all, "assignment-options"] as const,
 };
 
@@ -91,6 +92,13 @@ export const useTickets = (filter: TicketFilter) =>
 			get<{ data: Ticket[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
 				`${BASE}?${qs(filter)}`,
 			),
+	});
+
+export const useTicket = (id: string | undefined) =>
+	useQuery({
+		queryKey: id ? ticketKeys.detail(id) : ["tickets", "detail", "none"],
+		queryFn: () => get<{ data: Ticket }>(`${BASE}/${id}`).then((body) => body.data),
+		enabled: !!id,
 	});
 
 export const useTicketAssignmentOptions = (enabled: boolean) =>

@@ -66,6 +66,7 @@ export type ComplaintFilter = {
 export const complaintKeys = {
 	all: ["complaints"] as const,
 	list: (filter: ComplaintFilter) => [...complaintKeys.all, "list", filter] as const,
+	detail: (id: string) => [...complaintKeys.all, "detail", id] as const,
 };
 
 const qs = (filter: ComplaintFilter) => {
@@ -85,6 +86,13 @@ export const useComplaints = (filter: ComplaintFilter) =>
 			get<{ data: Complaint[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
 				`${BASE}?${qs(filter)}`,
 			),
+	});
+
+export const useComplaint = (id: string | undefined) =>
+	useQuery({
+		queryKey: id ? complaintKeys.detail(id) : ["complaints", "detail", "none"],
+		queryFn: () => get<{ data: Complaint }>(`${BASE}/${id}`).then((body) => body.data),
+		enabled: !!id,
 	});
 
 export const useCreateComplaint = () => {
