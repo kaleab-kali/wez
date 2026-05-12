@@ -870,7 +870,7 @@ const seed = async () => {
 			channel: "sms",
 			bodyEn:
 				"{{employerName}} requested to hire you for {{roleName}} at {{salaryBirr}} ETB. Visit your station to confirm.",
-			bodyAm: "{{employerName}} ለ{{role}} ስራ በ{{salary}} ብር ሊቀጥሮት ጠይቋል። ለማረጋገጥ ጣቢያዎን ይጎብኙ።",
+			bodyAm: "{{employerName}} ለ{{roleName}} ስራ በ{{salaryBirr}} ብር ሊቀጥሮት ጠይቋል። ለማረጋገጥ ጣቢያዎን ይጎብኙ።",
 		},
 		{
 			key: "hire_request.created.employer",
@@ -919,16 +919,16 @@ const seed = async () => {
 		{
 			key: "placement.finalized.worker",
 			channel: "sms",
-			bodyEn: "Placement confirmed at {{employerName}}. Salary {{salary}} ETB. Welcome.",
-			bodyAm: "ምደባዎ ተረጋግጧል በ{{employerName}}። ደመወዝ {{salary}} ብር። እንኳን ደህና መጡ።",
+			bodyEn: "Placement confirmed at {{employerName}}. Salary {{salaryBirr}} ETB. Welcome.",
+			bodyAm: "ምደባዎ ተረጋግጧል በ{{employerName}}። ደመወዝ {{salaryBirr}} ብር። እንኳን ደህና መጡ።",
 		},
 		{
 			key: "placement.finalized.employer",
 			channel: "email",
 			subjectEn: "Wez placement finalized",
 			subjectAm: "Wez placement finalized",
-			bodyEn: "Placement {{placementId}} was finalized. Commission due: {{commission}} ETB.",
-			bodyAm: "Placement {{placementId}} was finalized. Commission due: {{commission}} ETB.",
+			bodyEn: "Placement {{placementId}} was finalized. Commission due: {{commissionBirr}} ETB.",
+			bodyAm: "Placement {{placementId}} was finalized. Commission due: {{commissionBirr}} ETB.",
 		},
 		{
 			key: "placement.ended.worker",
