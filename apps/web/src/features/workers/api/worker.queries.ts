@@ -11,11 +11,11 @@ const get = async <T>(url: string): Promise<T> => {
 	return res.json();
 };
 
-const send = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
+const send = async <T>(url: string, method: string, body?: unknown, idempotencyKey?: string): Promise<T> => {
 	const res = await fetch(url, {
 		method,
 		credentials: "include",
-		headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+		headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey ?? crypto.randomUUID() },
 		body: body ? JSON.stringify(body) : undefined,
 	});
 	if (!res.ok) {
@@ -44,6 +44,7 @@ export type Worker = {
 	registeredAtStationName: string | null;
 	ratingAverage: number | null;
 	placementsCount: number;
+	photoAttachmentId: string | null;
 	roles: string[];
 	createdAt: string;
 	updatedAt: string;
@@ -136,8 +137,12 @@ export const useRegisterWorker = () => {
 export const useUpdateWorker = (id: string) => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (patch: Partial<Worker>) => send<{ data: Worker }>(`${BASE}/${id}`, "PATCH", patch).then((b) => b.data),
-		onSuccess: () => {
+		mutationFn: (input: Partial<Worker> & { readonly idempotencyKey?: string }) => {
+			const { idempotencyKey, ...patch } = input;
+			return send<{ data: Worker }>(`${BASE}/${id}`, "PATCH", patch, idempotencyKey).then((b) => b.data);
+		},
+		onSuccess: (worker) => {
+			qc.setQueryData(workerKeys.detail(id), worker);
 			qc.invalidateQueries({ queryKey: workerKeys.lists() });
 			qc.invalidateQueries({ queryKey: workerKeys.detail(id) });
 		},
@@ -147,9 +152,18 @@ export const useUpdateWorker = (id: string) => {
 export const useUpdateMyWorkerProfile = () => {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (patch: { bio?: string; languages?: string[] }) =>
-			send<{ data: Worker }>(`${BASE}/me`, "PATCH", patch).then((b) => b.data),
+		mutationFn: (input: {
+			readonly bio?: string;
+			readonly languages?: string[];
+			readonly photoAttachmentId?: string;
+			readonly idempotencyKey?: string;
+		}) => {
+			const { idempotencyKey, ...patch } = input;
+			return send<{ data: Worker }>(`${BASE}/me`, "PATCH", patch, idempotencyKey).then((b) => b.data);
+		},
 		onSuccess: (worker) => {
+			qc.setQueryData(workerKeys.me(), worker);
+			qc.setQueryData(workerKeys.detail(worker.id), worker);
 			qc.invalidateQueries({ queryKey: workerKeys.me() });
 			qc.invalidateQueries({ queryKey: workerKeys.detail(worker.id) });
 		},

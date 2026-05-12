@@ -3,7 +3,7 @@ import {
 	DashboardSquare01Icon,
 	NoteEditIcon,
 	SecurityIcon,
-	UserMultipleIcon,
+	type UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useCreateHireRequest } from "#features/hire-requests/api/hire-request.queries";
 import { type Role, usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorker, type Worker } from "#features/workers/api/worker.queries";
+import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,21 +59,11 @@ function CustomerWorkerDetailPage() {
 
 const ProfileHero = React.memo(({ worker }: { readonly worker: Worker }) => {
 	const { t } = useTranslation();
-	const initials = React.useMemo(
-		() =>
-			worker.fullName
-				.split(" ")
-				.map((part) => part[0])
-				.slice(0, 2)
-				.join("")
-				.toUpperCase(),
-		[worker.fullName],
-	);
 
 	return (
 		<section className="overflow-hidden rounded-lg border bg-card">
 			<div className="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
-				<ProfilePhoto initials={initials} />
+				<ProfilePhoto worker={worker} />
 				<div className="space-y-5 p-6">
 					<div className="flex flex-wrap items-start justify-between gap-3">
 						<div className="min-w-0">
@@ -115,13 +106,11 @@ const ProfileHero = React.memo(({ worker }: { readonly worker: Worker }) => {
 });
 ProfileHero.displayName = "ProfileHero";
 
-const ProfilePhoto = React.memo(({ initials }: { readonly initials: string }) => {
+const ProfilePhoto = React.memo(({ worker }: { readonly worker: Worker }) => {
 	const { t } = useTranslation();
 	return (
 		<div className="flex min-h-56 flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
-			<div className="flex size-32 items-center justify-center rounded-full border bg-background text-4xl font-semibold text-primary shadow-sm">
-				{initials || <HugeiconsIcon icon={UserMultipleIcon} className="size-12" />}
-			</div>
+			<WorkerProfilePhoto worker={worker} className="size-32 text-4xl" />
 			<p className="max-w-36 text-xs text-muted-foreground">{t("app.photoProtectedBody")}</p>
 		</div>
 	);

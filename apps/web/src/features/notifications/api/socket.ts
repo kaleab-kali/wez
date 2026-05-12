@@ -4,12 +4,11 @@ let socket: Socket | null = null;
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
-export const connectNotificationSocket = (userId: string): Socket => {
+export const connectNotificationSocket = (): Socket => {
 	if (socket?.connected) return socket;
 	socket = io(`${API_URL}/notifications`, {
 		path: "/socket.io",
 		transports: ["polling", "websocket"],
-		auth: { userId },
 		withCredentials: true,
 	});
 	return socket;

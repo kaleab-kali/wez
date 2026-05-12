@@ -71,8 +71,8 @@ export class NotificationOutboxService {
 			locale,
 		});
 		if (input.channel === "in_app") {
-			this.gateway.emitToUser(input.userId, row);
-			await this.emitBadge(input.userId);
+			this.gateway.emitToPrincipal("customer", input.userId, row);
+			await this.emitBadge("customer", input.userId);
 		}
 		return row;
 	}
@@ -113,8 +113,8 @@ export class NotificationOutboxService {
 			payload: input.payload,
 		});
 		if (input.channel === "in_app") {
-			this.gateway.emitToUser(input.adminUserId, row);
-			await this.emitBadge(input.adminUserId);
+			this.gateway.emitToPrincipal("staff", input.adminUserId, row);
+			await this.emitBadge("staff", input.adminUserId);
 		}
 		return row;
 	}
@@ -216,14 +216,14 @@ export class NotificationOutboxService {
 		return user?.localePref ?? "en";
 	}
 
-	private async emitBadge(userId: string) {
+	private async emitBadge(kind: "staff" | "customer", userId: string) {
 		const unread = await this.prisma.notification.count({
 			where: {
-				OR: [{ userId }, { adminUserId: userId }],
+				...(kind === "staff" ? { adminUserId: userId } : { userId }),
 				channel: "in_app",
 				readAt: null,
 			},
 		});
-		this.gateway.emitBadgeCount(userId, unread);
+		this.gateway.emitBadgeCount(kind, userId, unread);
 	}
 }

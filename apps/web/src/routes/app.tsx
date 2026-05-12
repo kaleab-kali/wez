@@ -103,7 +103,7 @@ const CustomerAppLayout = React.memo(() => {
 					</nav>
 					<div className="flex items-center gap-2">
 						<LanguageSwitcher />
-						<NotificationBell userId={session.user.id} />
+						<NotificationBell />
 						<Button
 							type="button"
 							variant="ghost"

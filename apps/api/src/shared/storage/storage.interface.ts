@@ -19,6 +19,8 @@ export interface StorageDriver {
 
 	exists(key: string): Promise<boolean>;
 
+	read(key: string): Promise<Buffer>;
+
 	getUrl(key: string): string;
 }
 

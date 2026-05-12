@@ -64,6 +64,7 @@ export type WorkerPatch = Partial<{
 	hopFlag: HopFlag;
 	available: boolean;
 	tin: string | null;
+	photoAttachmentId: string | null;
 	roles: string[];
 }>;
 

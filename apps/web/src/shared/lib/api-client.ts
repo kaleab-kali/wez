@@ -2,6 +2,7 @@ const API_BASE = "/api/v1";
 
 interface RequestConfig extends RequestInit {
 	params?: Record<string, string | number | boolean | undefined>;
+	idempotencyKey?: string;
 }
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -23,18 +24,18 @@ const requestHeaders = (config: RequestConfig): HeadersInit => {
 		headers.set("Content-Type", "application/json");
 	}
 	if (config.method && MUTATING_METHODS.has(config.method.toUpperCase()) && !headers.has("Idempotency-Key")) {
-		headers.set("Idempotency-Key", crypto.randomUUID());
+		headers.set("Idempotency-Key", config.idempotencyKey ?? crypto.randomUUID());
 	}
 	return headers;
 };
 
 async function request<T>(url: string, config: RequestConfig = {}): Promise<T> {
-	const { params, ...fetchConfig } = config;
+	const { params, idempotencyKey, ...fetchConfig } = config;
 
 	const response = await fetch(requestUrl(url, params), {
 		...fetchConfig,
 		credentials: "include",
-		headers: requestHeaders(fetchConfig),
+		headers: requestHeaders({ ...fetchConfig, idempotencyKey }),
 	});
 
 	if (!response.ok) {

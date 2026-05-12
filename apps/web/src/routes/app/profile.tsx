@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { AttachmentUploadField } from "#features/files/components/AttachmentUploadField";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { useMyWorkerProfile, useUpdateMyWorkerProfile } from "#features/workers/api/worker.queries";
+import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { authClient } from "#shared/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ const WorkerProfilePage = React.memo(() => {
 	const [bio, setBio] = React.useState("");
 	const [selectedLanguages, setSelectedLanguages] = React.useState<string[]>([]);
 	const [message, setMessage] = React.useState("");
+	const [photoMessage, setPhotoMessage] = React.useState("");
 
 	React.useEffect(() => {
 		if (worker) {
@@ -55,6 +58,14 @@ const WorkerProfilePage = React.memo(() => {
 			setMessage(t("app.profileSaved"));
 		},
 		[bio, selectedLanguages, updateProfile, t],
+	);
+
+	const onPhotoUploaded = React.useCallback(
+		async (attachment: { readonly id: string }, context: { readonly idempotencyKey: string }) => {
+			await updateProfile.mutateAsync({ photoAttachmentId: attachment.id, idempotencyKey: context.idempotencyKey });
+			setPhotoMessage(t("app.profilePhotoSaved"));
+		},
+		[t, updateProfile],
 	);
 
 	if (isEmployer) {
@@ -130,6 +141,33 @@ const WorkerProfilePage = React.memo(() => {
 			</section>
 
 			<aside className="space-y-4">
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base">{t("app.profilePhoto")}</CardTitle>
+						<CardDescription>{t("app.profilePhotoBody")}</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="flex items-center gap-4">
+							<WorkerProfilePhoto worker={worker} className="size-24 text-2xl" />
+							<div className="min-w-0">
+								<p className="text-sm font-medium">{worker.fullName}</p>
+								<p className="mt-1 text-xs text-muted-foreground">{t("app.profilePhotoPrivacy")}</p>
+							</div>
+						</div>
+						<AttachmentUploadField
+							ownerType="worker"
+							ownerId={worker.id}
+							title={t("app.uploadProfilePhoto")}
+							description={t("app.uploadProfilePhotoBody")}
+							chooseLabel={t("files.chooseImage")}
+							replaceLabel={t("files.changeImage")}
+							saveLabel={t("files.savePhoto")}
+							onUploaded={onPhotoUploaded}
+							disabled={updateProfile.isPending}
+						/>
+						{photoMessage && <p className="text-sm font-medium text-primary">{photoMessage}</p>}
+					</CardContent>
+				</Card>
 				<Card>
 					<CardHeader>
 						<CardTitle className="text-base">{t("app.readOnlyProfile")}</CardTitle>

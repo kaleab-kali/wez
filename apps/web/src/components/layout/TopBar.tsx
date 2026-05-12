@@ -11,7 +11,7 @@ export const TopBar = React.memo(
 			<Separator orientation="vertical" className="mr-2 h-4" />
 			{title && <h1 className="text-sm font-semibold">{title}</h1>}
 			<div className="flex-1" />
-			{notificationUserId && <NotificationBell userId={notificationUserId} />}
+			{notificationUserId && <NotificationBell />}
 			<LanguageSwitcher />
 		</header>
 	),

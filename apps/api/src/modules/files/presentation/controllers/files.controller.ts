@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Param, Post, Req, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Req, Res, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "#modules/audit-log/audit-actions";
 import { AuditLog } from "#shared/audit/audit-log.decorator";
 import { requirePermission, type WezRequest } from "#shared/auth/session";
 import { SignPutFileDto } from "../../application/dto/file.dto";
 import { FilesService } from "../../application/services/files.service";
+
+const PRIVATE_FILE_CACHE_SECONDS = 300;
 
 @ApiTags("Files")
 @ApiBearerAuth()
@@ -64,5 +67,18 @@ export class FilesController {
 	async downloadUrl(@Param("id") id: string, @Req() req: WezRequest) {
 		const session = await requirePermission(req, "file:read");
 		return this.service.downloadUrl(session, id);
+	}
+
+	@Get(":id/content")
+	@ApiOperation({ summary: "Stream an attachment after access checks" })
+	@ApiResponse({ status: 200, description: "Attachment bytes returned" })
+	async content(@Param("id") id: string, @Req() req: WezRequest, @Res() res: Response) {
+		const session = await requirePermission(req, "file:read");
+		const file = await this.service.downloadContent(session, id);
+		res.setHeader("Content-Type", file.mimeType);
+		res.setHeader("Content-Length", String(file.buffer.length));
+		res.setHeader("Cache-Control", `private, max-age=${PRIVATE_FILE_CACHE_SECONDS}`);
+		res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(file.filename)}`);
+		return res.send(file.buffer);
 	}
 }

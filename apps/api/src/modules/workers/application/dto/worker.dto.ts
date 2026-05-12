@@ -129,6 +129,11 @@ export class UpdateWorkerDto extends PartialType(RegisterWorkerDto) {
 	@IsOptional()
 	@IsBoolean()
 	available?: boolean;
+
+	@ApiProperty({ required: false, description: "Finalized worker-owned image attachment id" })
+	@IsOptional()
+	@IsString()
+	photoAttachmentId?: string;
 }
 
 export class UpdateOwnWorkerProfileDto {
@@ -145,6 +150,11 @@ export class UpdateOwnWorkerProfileDto {
 	@ArrayMaxSize(10)
 	@IsString({ each: true })
 	languages?: string[];
+
+	@ApiProperty({ required: false, description: "Finalized worker-owned image attachment id" })
+	@IsOptional()
+	@IsString()
+	photoAttachmentId?: string;
 }
 
 export class ListWorkersDto {

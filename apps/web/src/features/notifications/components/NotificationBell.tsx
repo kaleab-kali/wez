@@ -15,10 +15,6 @@ import { connectNotificationSocket, disconnectNotificationSocket } from "#featur
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 
-type NotificationBellProps = {
-	readonly userId: string;
-};
-
 type NotificationScope = "staff" | "customer";
 
 type NotificationTarget =
@@ -74,7 +70,7 @@ const targetForNotification = (notification: NotificationItem, scope: Notificati
 	return null;
 };
 
-export const NotificationBell = React.memo(({ userId }: NotificationBellProps) => {
+export const NotificationBell = React.memo(() => {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
@@ -89,7 +85,7 @@ export const NotificationBell = React.memo(({ userId }: NotificationBellProps) =
 	);
 
 	React.useEffect(() => {
-		const socket = connectNotificationSocket(userId);
+		const socket = connectNotificationSocket();
 		const onNotification = () => {
 			void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
 		};
@@ -100,7 +96,7 @@ export const NotificationBell = React.memo(({ userId }: NotificationBellProps) =
 			socket.off("badge", onNotification);
 			disconnectNotificationSocket();
 		};
-	}, [queryClient, userId]);
+	}, [queryClient]);
 
 	const onMarkAll = React.useCallback(() => {
 		markAllRead.mutate();

@@ -89,6 +89,6 @@ export class NotificationInboxService {
 
 	private async emitBadge(session: WezSession) {
 		const unread = await this.unreadCount(session);
-		this.gateway.emitBadgeCount(session.user.id, unread);
+		this.gateway.emitBadgeCount(session.kind, session.user.id, unread);
 	}
 }

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
+import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
@@ -198,24 +199,6 @@ const FilterPanel = React.memo(
 );
 FilterPanel.displayName = "FilterPanel";
 
-const Avatar = React.memo(
-	({ name }: { readonly name: string }) => {
-		const initials = name
-			.split(" ")
-			.map((p) => p[0])
-			.slice(0, 2)
-			.join("")
-			.toUpperCase();
-		return (
-			<div className="size-10 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm shrink-0">
-				{initials || "?"}
-			</div>
-		);
-	},
-	(p, n) => p.name === n.name,
-);
-Avatar.displayName = "Avatar";
-
 const WorkerCard = React.memo(
 	({ w }: { readonly w: Worker }) => {
 		const { t } = useTranslation();
@@ -224,7 +207,7 @@ const WorkerCard = React.memo(
 				<Card className="h-full transition-all group-hover:border-primary/40 group-hover:shadow-sm">
 					<CardHeader className="pb-3">
 						<div className="flex items-start gap-3">
-							<Avatar name={w.fullName} />
+							<WorkerProfilePhoto worker={w} className="size-10 shrink-0 text-sm" />
 							<div className="min-w-0 flex-1">
 								<CardTitle className="text-base truncate">{w.fullName}</CardTitle>
 								<CardDescription className="text-xs">

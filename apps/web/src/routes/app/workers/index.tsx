@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
+import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,12 +136,15 @@ function CustomerWorkersPage() {
 					<Link key={worker.id} to="/app/workers/$id" params={{ id: worker.id }} className="block group">
 						<Card className="h-full transition group-hover:border-primary/40 group-hover:shadow-sm">
 							<CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-								<div>
-									<CardTitle className="text-base">{worker.fullName}</CardTitle>
-									<p className="mt-1 text-sm text-muted-foreground">
-										{worker.area} - {worker.experienceYears} years -{" "}
-										{worker.gender === "M" ? t("workers.genderM") : t("workers.genderF")}
-									</p>
+								<div className="flex min-w-0 items-start gap-3">
+									<WorkerProfilePhoto worker={worker} className="size-12 shrink-0 text-base" />
+									<div className="min-w-0">
+										<CardTitle className="truncate text-base">{worker.fullName}</CardTitle>
+										<p className="mt-1 text-sm text-muted-foreground">
+											{worker.area} - {worker.experienceYears} years -{" "}
+											{worker.gender === "M" ? t("workers.genderM") : t("workers.genderF")}
+										</p>
+									</div>
 								</div>
 								<Badge variant={TIER_VARIANT[worker.tier]}>{worker.tier}</Badge>
 							</CardHeader>
