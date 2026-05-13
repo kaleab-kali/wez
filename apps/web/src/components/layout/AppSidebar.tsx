@@ -1,4 +1,5 @@
 import {
+	BellDotIcon,
 	Book02Icon,
 	Briefcase02Icon,
 	Coins01Icon,
@@ -161,6 +162,11 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 ];
 
 const ACCOUNT: ReadonlyArray<NavItem> = [
+	{
+		labelKey: "admin.nav.notificationPreferences",
+		to: "/staff/notification-preferences",
+		icon: BellDotIcon,
+	},
 	{
 		labelKey: "admin.nav.twoFactor",
 		to: "/staff-admin/2fa",

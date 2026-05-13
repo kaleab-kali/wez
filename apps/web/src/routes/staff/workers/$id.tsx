@@ -1,13 +1,15 @@
-import { ContactBookIcon, NoteEditIcon, SecurityIcon, UserMultipleIcon } from "@hugeicons/core-free-icons";
+import { ContactBookIcon, NoteEditIcon, SecurityIcon, type UserMultipleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useEmployers } from "#features/employers/api/employer.queries";
+import { AttachmentUploadField } from "#features/files/components/AttachmentUploadField";
 import { useCreateHireRequest } from "#features/hire-requests/api/hire-request.queries";
 import { type Role, usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { usePublicStations } from "#features/stations/api/station.queries";
-import { useWorker, type Worker } from "#features/workers/api/worker.queries";
+import { useUpdateWorker, useWorker, type Worker } from "#features/workers/api/worker.queries";
+import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,16 +52,32 @@ WorkerDetailPage.displayName = "WorkerDetailPage";
 
 const StaffProfileHero = React.memo(({ worker }: { readonly worker: Worker }) => {
 	const { t } = useTranslation();
-	const initials = React.useMemo(() => getInitials(worker.fullName), [worker.fullName]);
+	const updateWorker = useUpdateWorker(worker.id);
+
+	const onPhotoUploaded = React.useCallback(
+		async (attachment: { readonly id: string }, context: { readonly idempotencyKey: string }) => {
+			await updateWorker.mutateAsync({ photoAttachmentId: attachment.id, idempotencyKey: context.idempotencyKey });
+		},
+		[updateWorker],
+	);
 
 	return (
 		<section className="overflow-hidden rounded-lg border bg-card">
-			<div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
-				<div className="flex min-h-56 flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
-					<div className="flex size-32 items-center justify-center rounded-full border bg-background text-4xl font-semibold text-primary shadow-sm">
-						{initials || <HugeiconsIcon icon={UserMultipleIcon} className="size-12" />}
-					</div>
-					<p className="text-xs text-muted-foreground">{t("staff.workerPhotoInternal")}</p>
+			<div className="grid md:grid-cols-[280px_minmax(0,1fr)]">
+				<div className="flex min-h-56 flex-col items-center justify-center gap-4 bg-muted p-5 text-center">
+					<WorkerProfilePhoto worker={worker} className="size-32 text-4xl" />
+					<AttachmentUploadField
+						ownerType="worker"
+						ownerId={worker.id}
+						title={t("app.uploadProfilePhoto")}
+						description={t("app.profilePhotoPrivacy")}
+						chooseLabel={t("app.uploadProfilePhoto")}
+						replaceLabel={t("files.changeImage")}
+						variant="button"
+						onUploaded={onPhotoUploaded}
+						disabled={updateWorker.isPending}
+						className="w-full max-w-48"
+					/>
 				</div>
 				<div className="space-y-5 p-6">
 					<div className="flex flex-wrap items-start justify-between gap-3">
@@ -433,14 +451,6 @@ const InfoBlock = React.memo(
 	),
 );
 InfoBlock.displayName = "InfoBlock";
-
-const getInitials = (name: string) =>
-	name
-		.split(" ")
-		.map((part) => part[0])
-		.slice(0, 2)
-		.join("")
-		.toUpperCase();
 
 const formatBirr = (cents: string) => `${(Number(cents) / 100).toLocaleString()} ETB`;
 

@@ -870,7 +870,7 @@ const seed = async () => {
 			channel: "sms",
 			bodyEn:
 				"{{employerName}} requested to hire you for {{roleName}} at {{salaryBirr}} ETB. Visit your station to confirm.",
-			bodyAm: "{{employerName}} ለ{{role}} ስራ በ{{salary}} ብር ሊቀጥሮት ጠይቋል። ለማረጋገጥ ጣቢያዎን ይጎብኙ።",
+			bodyAm: "{{employerName}} ለ{{roleName}} ስራ በ{{salaryBirr}} ብር ሊቀጥሮት ጠይቋል። ለማረጋገጥ ጣቢያዎን ይጎብኙ።",
 		},
 		{
 			key: "hire_request.created.employer",
@@ -919,8 +919,86 @@ const seed = async () => {
 		{
 			key: "placement.finalized.worker",
 			channel: "sms",
-			bodyEn: "Placement confirmed at {{employerName}}. Salary {{salary}} ETB. Welcome.",
-			bodyAm: "ምደባዎ ተረጋግጧል በ{{employerName}}። ደመወዝ {{salary}} ብር። እንኳን ደህና መጡ።",
+			bodyEn: "Placement confirmed at {{employerName}}. Salary {{salaryBirr}} ETB. Welcome.",
+			bodyAm: "ምደባዎ ተረጋግጧል በ{{employerName}}። ደመወዝ {{salaryBirr}} ብር። እንኳን ደህና መጡ።",
+		},
+		{
+			key: "placement.finalized.employer",
+			channel: "email",
+			subjectEn: "Wez placement finalized",
+			subjectAm: "Wez placement finalized",
+			bodyEn: "Placement {{placementId}} was finalized. Commission due: {{commissionBirr}} ETB.",
+			bodyAm: "Placement {{placementId}} was finalized. Commission due: {{commissionBirr}} ETB.",
+		},
+		{
+			key: "placement.ended.worker",
+			channel: "sms",
+			bodyEn: "Placement {{placementId}} ended. Please rate your experience in Wez.",
+			bodyAm: "Placement {{placementId}} ended. Please rate your experience in Wez.",
+		},
+		{
+			key: "placement.ended.employer",
+			channel: "email",
+			subjectEn: "Wez placement ended",
+			subjectAm: "Wez placement ended",
+			bodyEn: "Placement {{placementId}} ended. Please complete the closing rating.",
+			bodyAm: "Placement {{placementId}} ended. Please complete the closing rating.",
+		},
+		{
+			key: "placement.ended.station_agent",
+			channel: "in_app",
+			bodyEn: "Placement {{placementId}} was ended and needs follow-up.",
+			bodyAm: "Placement {{placementId}} was ended and needs follow-up.",
+		},
+		{
+			key: "complaint.assigned",
+			channel: "in_app",
+			bodyEn: "Complaint {{complaintId}} was assigned to you. Severity: {{severity}}.",
+			bodyAm: "Complaint {{complaintId}} was assigned to you. Severity: {{severity}}.",
+		},
+		{
+			key: "complaint.created.station",
+			channel: "in_app",
+			bodyEn: "Complaint {{complaintId}} was opened for your station. Severity: {{severity}}.",
+			bodyAm: "Complaint {{complaintId}} was opened for your station. Severity: {{severity}}.",
+		},
+		{
+			key: "complaint.created.origin_station",
+			channel: "in_app",
+			bodyEn: "Complaint {{complaintId}} was filed at another station for one of your placements.",
+			bodyAm: "Complaint {{complaintId}} was filed at another station for one of your placements.",
+		},
+		{
+			key: "complaint.referred_external",
+			channel: "email",
+			subjectEn: "Complaint referred externally",
+			subjectAm: "Complaint referred externally",
+			bodyEn: "Complaint {{complaintId}} was referred externally. Severity: {{severity}}.",
+			bodyAm: "Complaint {{complaintId}} was referred externally. Severity: {{severity}}.",
+		},
+		{
+			key: "complaint.closed",
+			channel: "in_app",
+			bodyEn: "Complaint {{complaintId}} was closed with outcome {{resolutionTag}}.",
+			bodyAm: "Complaint {{complaintId}} was closed with outcome {{resolutionTag}}.",
+		},
+		{
+			key: "ticket.assigned",
+			channel: "in_app",
+			bodyEn: "Ticket {{ticketId}} was assigned to you. Priority: {{priority}}.",
+			bodyAm: "Ticket {{ticketId}} was assigned to you. Priority: {{priority}}.",
+		},
+		{
+			key: "ticket.resolved",
+			channel: "in_app",
+			bodyEn: "Ticket {{ticketId}} was resolved.",
+			bodyAm: "Ticket {{ticketId}} was resolved.",
+		},
+		{
+			key: "ticket.closed",
+			channel: "in_app",
+			bodyEn: "Ticket {{ticketId}} was closed.",
+			bodyAm: "Ticket {{ticketId}} was closed.",
 		},
 	];
 	for (const t of templates) {

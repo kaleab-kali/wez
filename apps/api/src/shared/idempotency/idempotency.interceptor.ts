@@ -10,6 +10,7 @@ import type { Request, Response } from "express";
 import { catchError, from, mergeMap, Observable, of, throwError } from "rxjs";
 import type { WezSession } from "#shared/auth/session";
 import { PrismaService } from "#shared/database/prisma.service";
+import { Prisma } from "../../generated/prisma/client";
 
 const IDEMPOTENCY_HEADER = "idempotency-key";
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -63,6 +64,9 @@ const userIdentity = (request: RequestWithIdempotency) => {
 
 const parseCachedBody = (cached: CachedResponse) => JSON.parse(cached.responseBody) as unknown;
 
+const isUniqueConflict = (error: unknown): boolean =>
+	error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
 	constructor(private readonly prisma: PrismaService) {}
@@ -80,40 +84,19 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
 		await this.prisma.idempotencyKey.deleteMany({ where: { expiresAt: { lt: now } } });
 
-		const existing = await this.prisma.idempotencyKey.findFirst({
-			where: { key, userId, expiresAt: { gt: now } },
-		});
+		const existing = await this.prisma.idempotencyKey.findUnique({ where: { key_userId: { key, userId } } });
 
-		if (existing && existing.endpointHash !== endpointHash) {
-			throw new ConflictException({ code: "IDEMPOTENCY_KEY_REUSED" });
-		}
+		if (existing && existing.expiresAt > now) return this.handleExisting(context, existing, endpointHash);
+		if (existing) await this.prisma.idempotencyKey.deleteMany({ where: { key, userId } });
 
-		if (existing?.responseStatus === IN_PROGRESS_STATUS) {
-			throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS" });
-		}
-
-		if (existing) {
-			const response = context.switchToHttp().getResponse<Response>();
-			response.status(existing.responseStatus);
-			return of(parseCachedBody(existing));
-		}
-
-		await this.prisma.idempotencyKey.create({
-			data: {
-				key,
-				userId,
-				endpointHash,
-				responseStatus: IN_PROGRESS_STATUS,
-				responseBody: "null",
-				expiresAt: new Date(now.getTime() + IDEMPOTENCY_TTL_MS),
-			},
-		});
+		const racedReservation = await this.reserveKey(context, key, userId, endpointHash, now);
+		if (racedReservation) return racedReservation;
 
 		return next.handle().pipe(
 			mergeMap((body) =>
 				from(
 					this.prisma.idempotencyKey.update({
-						where: { key_userId_endpointHash: { key, userId, endpointHash } },
+						where: { key_userId: { key, userId } },
 						data: {
 							responseStatus: context.switchToHttp().getResponse<Response>().statusCode,
 							responseBody: JSON.stringify(body ?? null),
@@ -127,5 +110,50 @@ export class IdempotencyInterceptor implements NestInterceptor {
 				),
 			),
 		);
+	}
+
+	private handleExisting(
+		context: ExecutionContext,
+		existing: CachedResponse & { readonly responseStatus: number },
+		endpointHash: string,
+	): Observable<unknown> {
+		if (existing.endpointHash !== endpointHash) {
+			throw new ConflictException({ code: "IDEMPOTENCY_KEY_REUSED" });
+		}
+
+		if (existing.responseStatus === IN_PROGRESS_STATUS) {
+			throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS" });
+		}
+
+		const response = context.switchToHttp().getResponse<Response>();
+		response.status(existing.responseStatus);
+		return of(parseCachedBody(existing));
+	}
+
+	private async reserveKey(
+		context: ExecutionContext,
+		key: string,
+		userId: string,
+		endpointHash: string,
+		now: Date,
+	): Promise<undefined | Observable<unknown>> {
+		try {
+			await this.prisma.idempotencyKey.create({
+				data: {
+					key,
+					userId,
+					endpointHash,
+					responseStatus: IN_PROGRESS_STATUS,
+					responseBody: "null",
+					expiresAt: new Date(now.getTime() + IDEMPOTENCY_TTL_MS),
+				},
+			});
+		} catch (error) {
+			if (!isUniqueConflict(error)) throw error;
+			const existing = await this.prisma.idempotencyKey.findUnique({ where: { key_userId: { key, userId } } });
+			if (!existing || existing.expiresAt <= now)
+				throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS" });
+			return this.handleExisting(context, existing, endpointHash);
+		}
 	}
 }

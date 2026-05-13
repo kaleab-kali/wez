@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { NotificationBell } from "#features/notifications/components/NotificationBell";
 import { LanguageSwitcher } from "#shared/components/LanguageSwitcher";
 import { authClient } from "#shared/lib/auth-client";
 import { WezLogo } from "@/components/branding/WezLogo";
@@ -91,6 +92,9 @@ const CustomerAppLayout = React.memo(() => {
 								{t("app.profile")}
 							</CustomerNavLink>
 						)}
+						<CustomerNavLink to="/app/notifications" active={location.pathname.startsWith("/app/notifications")}>
+							{t("app.notifications")}
+						</CustomerNavLink>
 						{isEmployer && (
 							<CustomerNavLink to="/app/referrals" active={location.pathname.startsWith("/app/referrals")}>
 								{t("referrals.title")}
@@ -99,6 +103,7 @@ const CustomerAppLayout = React.memo(() => {
 					</nav>
 					<div className="flex items-center gap-2">
 						<LanguageSwitcher />
+						<NotificationBell />
 						<Button
 							type="button"
 							variant="ghost"

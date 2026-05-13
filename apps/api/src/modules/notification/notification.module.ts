@@ -1,13 +1,32 @@
 import { Module } from "@nestjs/common";
 import { PrismaModule } from "#shared/database/prisma.module";
+import { EmailModule } from "#shared/email/email.module";
+import { NotificationDispatcherService } from "./application/services/notification-dispatcher.service";
+import { NotificationInboxService } from "./application/services/notification-inbox.service";
 import { NotificationOutboxService } from "./application/services/notification-outbox.service";
+import { NotificationPreferencesService } from "./application/services/notification-preferences.service";
+import { NotificationTemplateService } from "./application/services/notification-template.service";
 import { NotificationGateway } from "./infrastructure/gateways/notification.gateway";
+import { NotificationsController } from "./presentation/controllers/notifications.controller";
 
-// Phase 1A: minimal — just the socket.io gateway for in-app push.
-// Phase 1G builds dispatcher, channel adapters (SMS/email/in_app), templates, preferences, retry policy.
 @Module({
-	imports: [PrismaModule],
-	providers: [NotificationGateway, NotificationOutboxService],
-	exports: [NotificationGateway, NotificationOutboxService],
+	imports: [PrismaModule, EmailModule],
+	controllers: [NotificationsController],
+	providers: [
+		NotificationGateway,
+		NotificationInboxService,
+		NotificationOutboxService,
+		NotificationTemplateService,
+		NotificationPreferencesService,
+		NotificationDispatcherService,
+	],
+	exports: [
+		NotificationGateway,
+		NotificationInboxService,
+		NotificationOutboxService,
+		NotificationTemplateService,
+		NotificationPreferencesService,
+		NotificationDispatcherService,
+	],
 })
 export class NotificationModule {}

@@ -2,29 +2,40 @@ const API_BASE = "/api/v1";
 
 interface RequestConfig extends RequestInit {
 	params?: Record<string, string | number | boolean | undefined>;
+	idempotencyKey?: string;
 }
 
-async function request<T>(url: string, config: RequestConfig = {}): Promise<T> {
-	const { params, ...fetchConfig } = config;
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-	let fullUrl = `${API_BASE}${url}`;
-
-	if (params) {
-		const searchParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(params)) {
-			if (value !== undefined) searchParams.append(key, String(value));
-		}
-		const queryString = searchParams.toString();
-		if (queryString) fullUrl += `?${queryString}`;
+const requestUrl = (url: string, params?: Record<string, string | number | boolean | undefined>): string => {
+	const fullUrl = `${API_BASE}${url}`;
+	if (!params) return fullUrl;
+	const searchParams = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		if (value !== undefined) searchParams.append(key, String(value));
 	}
+	const queryString = searchParams.toString();
+	return queryString ? `${fullUrl}?${queryString}` : fullUrl;
+};
 
-	const response = await fetch(fullUrl, {
+const requestHeaders = (config: RequestConfig): HeadersInit => {
+	const headers = new Headers(config.headers);
+	if (!(config.body instanceof FormData) && !headers.has("Content-Type")) {
+		headers.set("Content-Type", "application/json");
+	}
+	if (config.method && MUTATING_METHODS.has(config.method.toUpperCase()) && !headers.has("Idempotency-Key")) {
+		headers.set("Idempotency-Key", config.idempotencyKey ?? crypto.randomUUID());
+	}
+	return headers;
+};
+
+async function request<T>(url: string, config: RequestConfig = {}): Promise<T> {
+	const { params, idempotencyKey, ...fetchConfig } = config;
+
+	const response = await fetch(requestUrl(url, params), {
 		...fetchConfig,
 		credentials: "include",
-		headers: {
-			"Content-Type": "application/json",
-			...fetchConfig.headers,
-		},
+		headers: requestHeaders({ ...fetchConfig, idempotencyKey }),
 	});
 
 	if (!response.ok) {

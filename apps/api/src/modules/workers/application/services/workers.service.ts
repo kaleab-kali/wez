@@ -16,6 +16,7 @@ import type { ListWorkersDto, RegisterWorkerDto, UpdateOwnWorkerProfileDto, Upda
 
 const WORKER_ROLE = "worker";
 const WORKER_GLOBAL_ACCESS_ROLES = ["super_admin", "ops_manager", "hr_manager"] as const;
+const IMAGE_MIME_PREFIX = "image/";
 
 @Injectable()
 export class WorkersService {
@@ -140,6 +141,7 @@ export class WorkersService {
 
 	async update(id: string, dto: UpdateWorkerDto) {
 		await this.getById(id);
+		await this.assertProfilePhotoAttachment(id, dto.photoAttachmentId);
 		if (dto.roles) {
 			for (const roleId of dto.roles) {
 				const r = await this.roles.findById(roleId);
@@ -158,6 +160,7 @@ export class WorkersService {
 			hopFlag: dto.hopFlag,
 			available: dto.available,
 			tin: dto.tin,
+			photoAttachmentId: dto.photoAttachmentId,
 			roles: dto.roles,
 		});
 	}
@@ -174,7 +177,11 @@ export class WorkersService {
 		}
 		const worker = await this.getOwnProfile(session.user.id);
 		if (worker.id !== id) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
-		return this.updateOwnProfile(session, { bio: dto.bio, languages: dto.languages }, auditContext);
+		return this.updateOwnProfile(
+			session,
+			{ bio: dto.bio, languages: dto.languages, photoAttachmentId: dto.photoAttachmentId },
+			auditContext,
+		);
 	}
 
 	async updateOwnProfile(
@@ -183,9 +190,11 @@ export class WorkersService {
 		auditContext: AuditRequestContext | undefined,
 	) {
 		const worker = await this.getOwnProfile(session.user.id);
+		await this.assertProfilePhotoAttachment(worker.id, dto.photoAttachmentId);
 		const updated = await this.repo.update(worker.id, {
 			bio: dto.bio,
 			languages: dto.languages,
+			photoAttachmentId: dto.photoAttachmentId,
 		});
 		await this.auditEvents.recordEvent({
 			actorId: session.user.id,
@@ -204,8 +213,27 @@ export class WorkersService {
 					dto.languages.slice().sort().join(",") !== worker.languages.slice().sort().join(","),
 				beforeLanguages: worker.languages.join(","),
 				afterLanguages: updated.languages.join(","),
+				photoChanged: dto.photoAttachmentId !== undefined && dto.photoAttachmentId !== worker.photoAttachmentId,
 			},
 		});
 		return updated;
+	}
+
+	private async assertProfilePhotoAttachment(workerId: string, photoAttachmentId: string | undefined) {
+		if (!photoAttachmentId) return;
+		const attachment = await this.prisma.attachment.findFirst({
+			where: {
+				id: photoAttachmentId,
+				deletedAt: null,
+				ownerType: "worker",
+				ownerId: workerId,
+			},
+			select: { id: true, mimeType: true, status: true },
+		});
+		if (!attachment) throw new NotFoundException({ code: "WORKER_PHOTO_ATTACHMENT_NOT_FOUND" });
+		if (!attachment.mimeType.toLowerCase().startsWith(IMAGE_MIME_PREFIX)) {
+			throw new BadRequestException({ code: "WORKER_PHOTO_IMAGE_REQUIRED" });
+		}
+		if (attachment.status !== "clean") throw new ConflictException({ code: "WORKER_PHOTO_ATTACHMENT_NOT_READY" });
 	}
 }

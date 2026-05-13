@@ -1,16 +1,12 @@
-// Phase 1B placeholder. Phase 1G replaces with Afromessage adapter behind INotificationSender.
-// Logs OTP to console in dev so the developer can paste it into the verify form without an SMS gateway.
+import { Logger } from "@nestjs/common";
 
-const log = (...args: unknown[]) => {
-	const ts = new Date().toISOString();
-	console.log(`[sms-sender ${ts}]`, ...args);
-};
+const logger = new Logger("SmsSender");
 
 export const sendSms = async (to: string, body: string): Promise<void> => {
-	if (process.env.NODE_ENV === "production") {
-		// Real adapter (Afromessage) lands in Phase 1G.
-		log(`PRODUCTION SMS NOT YET WIRED — would send to ${to}: ${body}`);
+	const provider = process.env.SMS_PROVIDER ?? "disabled";
+	if (provider !== "disabled") {
+		logger.warn(`SMS provider ${provider} is configured but direct OTP delivery is disabled; would send to ${to}.`);
 		return;
 	}
-	log(`SMS to ${to}: ${body}`);
+	logger.log(`disabled:sms would send to ${to}: ${body}`);
 };

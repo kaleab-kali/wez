@@ -57,6 +57,11 @@ const AUDIT_ACTIONS = [
 	"ticket.assigned",
 	"ticket.resolved",
 	"ticket.closed",
+	"notification.read",
+	"notification.preferences_updated",
+	"file.upload_signed",
+	"file.uploaded",
+	"file.finalized",
 	"permission.denied",
 ] as const;
 const ACTOR_ROLES = [
@@ -95,6 +100,9 @@ const TARGET_TYPES = [
 	"agent_assignment",
 	"complaint",
 	"ticket",
+	"notification",
+	"notification_preference",
+	"attachment",
 	"permission",
 	"auth",
 ] as const;
@@ -128,6 +136,11 @@ const actionTitle = (action: string) => {
 	if (action === "ticket.assigned") return "Ticket assigned";
 	if (action === "ticket.resolved") return "Ticket resolved";
 	if (action === "ticket.closed") return "Ticket closed";
+	if (action === "notification.read") return "Notification read";
+	if (action === "notification.preferences_updated") return "Notification preference updated";
+	if (action === "file.upload_signed") return "File upload slot created";
+	if (action === "file.uploaded") return "File uploaded";
+	if (action === "file.finalized") return "File finalized";
 	if (action === "permission.denied") return "Permission denied";
 	if (action === "auth.login") return "Signed in";
 	if (action === "auth.logout") return "Signed out";

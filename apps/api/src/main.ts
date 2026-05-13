@@ -1,4 +1,3 @@
-import * as path from "node:path";
 import { RequestMethod, ValidationPipe, VERSION_NEUTRAL, VersioningType } from "@nestjs/common";
 
 // Serialize BigInt as string in all JSON responses (Wez money columns).
@@ -44,12 +43,6 @@ const bootstrap = async () => {
 
 	// Cookie parsing
 	app.use(cookieParser());
-
-	// Serve uploaded files statically
-	app.useStaticAssets(path.resolve(process.cwd(), "uploads"), {
-		prefix: "/uploads/",
-		index: false,
-	});
 
 	app.use(
 		"/api/auth",
