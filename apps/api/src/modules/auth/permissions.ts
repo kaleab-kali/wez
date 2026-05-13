@@ -396,8 +396,6 @@ const staffPermissions: Record<WezStaffRole, ReadonlyArray<Permission>> = {
 		"notification:update_preferences",
 		"file:read",
 		"file:create",
-		"report:read",
-		"report:export",
 		"flag:read",
 		"flag:set",
 		"flag:lift",

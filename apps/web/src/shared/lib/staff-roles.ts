@@ -151,6 +151,14 @@ export const STAFF_ACCESS_ROLES = {
 		STAFF_ROLES.itManager,
 		STAFF_ROLES.executiveViewer,
 	],
+	reports: [
+		STAFF_ROLES.superAdmin,
+		STAFF_ROLES.opsManager,
+		STAFF_ROLES.complianceOfficer,
+		STAFF_ROLES.financeManager,
+		STAFF_ROLES.executiveViewer,
+	],
+	reportFiling: [STAFF_ROLES.superAdmin, STAFF_ROLES.financeManager],
 } as const satisfies Record<string, readonly StaffRole[]>;
 
 export const HQ_ADMIN_ROLES = new Set<string>([
@@ -206,6 +214,7 @@ const STAFF_ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles?: readonly Staff
 	{ prefix: "/staff-admin/hiring-policy", roles: STAFF_ACCESS_ROLES.hiringPolicy },
 	{ prefix: "/staff-admin/lookups", roles: STAFF_ACCESS_ROLES.platformConfig },
 	{ prefix: "/staff-admin/audit-log", roles: STAFF_ACCESS_ROLES.auditLog },
+	{ prefix: "/staff-admin/government-reports", roles: STAFF_ACCESS_ROLES.reports },
 	{ prefix: "/staff-admin/2fa", roles: STAFF_ACCESS_ROLES.accountSecurity },
 	{ prefix: "/staff-admin/sessions", roles: STAFF_ACCESS_ROLES.accountSecurity },
 ];

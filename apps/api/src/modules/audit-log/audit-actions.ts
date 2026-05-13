@@ -47,6 +47,8 @@ export const AUDIT_ACTIONS = {
 	fileUploadSigned: "file.upload_signed",
 	fileUploaded: "file.uploaded",
 	fileFinalized: "file.finalized",
+	governmentReportGenerated: "government_report.generated",
+	governmentReportFiled: "government_report.filed",
 	permissionDenied: "permission.denied",
 } as const;
 
@@ -73,6 +75,7 @@ export const AUDIT_TARGET_TYPES = {
 	notification: "notification",
 	notificationPreference: "notification_preference",
 	attachment: "attachment",
+	governmentReport: "government_report",
 	permission: "permission",
 } as const;
 
