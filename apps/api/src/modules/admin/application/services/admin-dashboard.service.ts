@@ -24,6 +24,12 @@ type StationPerformancePoint = {
 	readonly complaints: number;
 };
 
+type StationActivity = {
+	readonly stationId: string;
+	readonly placements: number;
+	readonly complaints: number;
+};
+
 export type AdminDashboardMetrics = {
 	readonly money: {
 		readonly lifetimeCommissionCents: string;
@@ -183,23 +189,32 @@ export class AdminDashboardService {
 				_count: { id: true },
 			}),
 		]);
-		const placementCounts = this.sortCounts(
-			placementGroups.map((group) => ({ key: group.stationId, count: group._count.id })),
+		const activityByStationId = new Map<string, Omit<StationActivity, "stationId">>();
+		for (const group of placementGroups) {
+			activityByStationId.set(group.stationId, { placements: group._count.id, complaints: 0 });
+		}
+		for (const group of complaintGroups) {
+			if (!group.stationId) continue;
+			const existing = activityByStationId.get(group.stationId);
+			activityByStationId.set(group.stationId, {
+				placements: existing?.placements ?? 0,
+				complaints: group._count.id,
+			});
+		}
+		const activity = this.sortStationActivity(
+			Array.from(activityByStationId.entries()).map(([stationId, counts]) => ({ stationId, ...counts })),
 			STATION_PERFORMANCE_LIMIT,
 		);
-		const complaintCounts = new Map(
-			complaintGroups.flatMap((group) => (group.stationId ? [[group.stationId, group._count.id] as const] : [])),
-		);
 		const stations = await this.prisma.station.findMany({
-			where: { id: { in: placementCounts.map((group) => group.key) } },
+			where: { id: { in: activity.map((group) => group.stationId) } },
 			select: { id: true, name: true },
 		});
 		const stationsById = new Map(stations.map((station) => [station.id, station.name]));
-		return placementCounts.map((group) => ({
-			stationId: group.key,
-			stationName: stationsById.get(group.key) ?? group.key,
-			placements: group.count,
-			complaints: complaintCounts.get(group.key) ?? 0,
+		return activity.map((group) => ({
+			stationId: group.stationId,
+			stationName: stationsById.get(group.stationId) ?? group.stationId,
+			placements: group.placements,
+			complaints: group.complaints,
 		}));
 	}
 
@@ -242,6 +257,16 @@ export class AdminDashboardService {
 	private sortCounts<T extends { readonly count: number }>(items: readonly T[], limit: number): readonly T[] {
 		return Array.from(items)
 			.sort((left, right) => right.count - left.count)
+			.slice(0, limit);
+	}
+
+	private sortStationActivity(items: readonly StationActivity[], limit: number): readonly StationActivity[] {
+		return Array.from(items)
+			.sort((left, right) => {
+				const totalDelta = right.placements + right.complaints - (left.placements + left.complaints);
+				if (totalDelta !== 0) return totalDelta;
+				return right.placements - left.placements;
+			})
 			.slice(0, limit);
 	}
 }
