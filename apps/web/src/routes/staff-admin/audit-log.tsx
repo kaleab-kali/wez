@@ -62,6 +62,8 @@ const AUDIT_ACTIONS = [
 	"file.upload_signed",
 	"file.uploaded",
 	"file.finalized",
+	"government_report.generated",
+	"government_report.filed",
 	"permission.denied",
 ] as const;
 const ACTOR_ROLES = [
@@ -103,6 +105,7 @@ const TARGET_TYPES = [
 	"notification",
 	"notification_preference",
 	"attachment",
+	"government_report",
 	"permission",
 	"auth",
 ] as const;
@@ -141,6 +144,8 @@ const actionTitle = (action: string) => {
 	if (action === "file.upload_signed") return "File upload slot created";
 	if (action === "file.uploaded") return "File uploaded";
 	if (action === "file.finalized") return "File finalized";
+	if (action === "government_report.generated") return "Government report generated";
+	if (action === "government_report.filed") return "Government report filed";
 	if (action === "permission.denied") return "Permission denied";
 	if (action === "auth.login") return "Signed in";
 	if (action === "auth.logout") return "Signed out";

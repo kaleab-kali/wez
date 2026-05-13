@@ -12,6 +12,7 @@ import { ComplaintsModule } from "#modules/complaints/complaints.module";
 import { EmployersModule } from "#modules/employers/employers.module";
 import { ErrorReportingModule } from "#modules/error-reporting/error-reporting.module";
 import { FilesModule } from "#modules/files/files.module";
+import { GovernmentReportsModule } from "#modules/government-reports/government-reports.module";
 import { HealthModule } from "#modules/health/health.module";
 import { HireRequestsModule } from "#modules/hire-requests/hire-requests.module";
 import { JobsModule } from "#modules/jobs/jobs.module";
@@ -69,6 +70,7 @@ import { StorageModule } from "#shared/storage/storage.module";
 		TicketsModule,
 		ErrorReportingModule,
 		FilesModule,
+		GovernmentReportsModule,
 	],
 	providers: [
 		{ provide: APP_FILTER, useClass: GlobalExceptionFilter },

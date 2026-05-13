@@ -159,6 +159,12 @@ const ADMINISTRATION: ReadonlyArray<NavItem> = [
 		icon: SecurityIcon,
 		roles: STAFF_ACCESS_ROLES.auditLog,
 	},
+	{
+		labelKey: "admin.nav.governmentReports",
+		to: "/staff-admin/government-reports",
+		icon: NoteEditIcon,
+		roles: STAFF_ACCESS_ROLES.reports,
+	},
 ];
 
 const ACCOUNT: ReadonlyArray<NavItem> = [
