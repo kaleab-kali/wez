@@ -972,7 +972,7 @@ model GovernmentReport {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@unique([type, periodStart, periodEnd])
+  @@unique([type, periodStart, periodEnd, format])
   @@index([type, status])
   @@map("government_report")
 }

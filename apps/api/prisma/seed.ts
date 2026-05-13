@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { adminAuth } from "../src/modules/admin/auth/admin-auth.config";
 import { prisma } from "../src/shared/database/prisma-instance";
+import { seedLocationHierarchy } from "./seed-locations";
+import { buildCoverageWorkers, type CoverageWorkerLocality, type SeedWorkerInput } from "./seed-worker-coverage";
+import { seedWorkerProfilePhotos } from "./seed-worker-photos";
 
 const seed = async () => {
 	const adminEmail = process.env.SUPER_ADMIN_EMAIL;
@@ -219,6 +222,10 @@ const seed = async () => {
 		},
 	});
 	console.log(`  locations: ${addisAbaba.id}, ${sidama.id}, ${hawassaTaborKebele01.id}`);
+	const locationSeed = await seedLocationHierarchy(prisma);
+	console.log(
+		`  expanded to ${locationSeed.adminAreas.length} admin areas, ${locationSeed.subAreas.length} sub-areas, ${locationSeed.localities.length} localities`,
+	);
 
 	console.log("Creating stations...");
 	const stationBole = await prisma.station.create({
@@ -241,7 +248,53 @@ const seed = async () => {
 			supervisorUserId: supervisor.id,
 		},
 	});
-	console.log(`  ${stationBole.id} (Bole Woreda 03), ${stationMegenagna.id} (Yeka Woreda 08)`);
+	const subAreaNameById = new Map(locationSeed.subAreas.map((subArea) => [subArea.id, subArea.nameEn]));
+	const compactSubAreaName = (name: string) =>
+		name
+			.replace(/\s+(Subcity|Zone|City Administration)$/u, "")
+			.replace(/\s+/g, " ")
+			.trim();
+	const buildStationName = (locality: { readonly nameEn: string }, parentName?: string) => {
+		const compactParentName = parentName ? compactSubAreaName(parentName) : undefined;
+		const localityName = locality.nameEn.replace(/\s+/g, " ").trim();
+		const compactLocalityName =
+			compactParentName && localityName.startsWith(`${compactParentName} `)
+				? localityName
+				: `${compactParentName ?? "Local"} ${localityName}`;
+		return `${compactLocalityName} Station`;
+	};
+	const stationsByLocalityCode = new Map([
+		["aa-bole-w03", stationBole],
+		["aa-yeka-w08", stationMegenagna],
+	]);
+	const stationAssignmentSeeds: Array<{
+		readonly stationId: string;
+		readonly localityCode: string;
+		readonly agentId: string;
+	}> = [
+		{ stationId: stationBole.id, localityCode: "aa-bole-w03", agentId: agentBole.id },
+		{ stationId: stationMegenagna.id, localityCode: "aa-yeka-w08", agentId: agentMegenagna.id },
+	];
+	const additionalStationLocalities = locationSeed.localities.filter(
+		(locality) => locality.code !== "aa-bole-w03" && locality.code !== "aa-yeka-w08",
+	);
+	for (const [index, locality] of additionalStationLocalities.entries()) {
+		const parentName = locality.parentId ? subAreaNameById.get(locality.parentId) : undefined;
+		const agentId = index % 2 === 0 ? agentBole.id : agentMegenagna.id;
+		const createdStation = await prisma.station.create({
+			data: {
+				name: buildStationName(locality, parentName),
+				woreda: locality.code,
+				address: `${parentName ?? "Local area"}, ${locality.nameEn}`,
+				phone: `+251115${String(100_003 + index).padStart(6, "0")}`,
+				localityId: locality.id,
+				supervisorUserId: supervisor.id,
+			},
+		});
+		stationsByLocalityCode.set(locality.code, createdStation);
+		stationAssignmentSeeds.push({ stationId: createdStation.id, localityCode: locality.code, agentId });
+	}
+	console.log(`  ${stationsByLocalityCode.size} stations across seeded localities`);
 
 	console.log("Assigning agents...");
 	await prisma.agentAssignment.create({
@@ -289,6 +342,19 @@ const seed = async () => {
 			},
 		],
 	});
+	await prisma.staffRoleAssignment.createMany({
+		data: [
+			...locationSeed.subAreas
+				.filter((subArea) => subArea.code !== "aa-bole" && subArea.code !== "aa-yeka")
+				.map((subArea) => ({
+					adminUserId: supervisor.id,
+					role: "station_supervisor",
+					scopeType: "sub_area",
+					scopeId: subArea.id,
+					assignedById: opsManager.id,
+				})),
+		],
+	});
 
 	console.log("Seeding starter roles catalog...");
 	const roles = [
@@ -318,6 +384,33 @@ const seed = async () => {
 			commValue: 1800,
 			salaryMinCents: 300_000n,
 			salaryMaxCents: 800_000n,
+		},
+		{
+			id: "chef",
+			name: "Chef",
+			category: "hospitality",
+			commType: "percent",
+			commValue: 12,
+			salaryMinCents: 700_000n,
+			salaryMaxCents: 1_800_000n,
+		},
+		{
+			id: "line_cook",
+			name: "Line Cook",
+			category: "hospitality",
+			commType: "percent",
+			commValue: 10,
+			salaryMinCents: 450_000n,
+			salaryMaxCents: 1_000_000n,
+		},
+		{
+			id: "dishwasher",
+			name: "Dishwasher",
+			category: "hospitality",
+			commType: "flat",
+			commValue: 1000,
+			salaryMinCents: 200_000n,
+			salaryMaxCents: 450_000n,
 		},
 		{
 			id: "barista",
@@ -471,7 +564,7 @@ const seed = async () => {
 	console.log(`  ${employers.length} employers`);
 
 	console.log("Seeding sample workers...");
-	const sampleWorkers = [
+	const curatedWorkers: SeedWorkerInput[] = [
 		{
 			fullName: "Yonas Alemu",
 			fayda: "F-2345-6789-CD",
@@ -744,9 +837,86 @@ const seed = async () => {
 			tier: "trusted",
 			ratingAverage: 4.9,
 		},
-	] as const;
+		{
+			fullName: "Kalkidan Tesema",
+			fayda: "F-9010-2340-KT",
+			phone: "+251912990077",
+			gender: "F",
+			area: "bole",
+			languages: ["am", "en"],
+			experienceYears: 9,
+			hasHealthCard: true,
+			hasPoliceClearance: true,
+			roles: ["chef"],
+			agentId: agentBole.id,
+			stationId: stationBole.id,
+			bio: "Head chef for restaurant and private-event kitchens.",
+			tier: "trusted",
+			ratingAverage: 4.8,
+		},
+		{
+			fullName: "Natnael Teshome",
+			fayda: "F-0120-3450-NT",
+			phone: "+251913001188",
+			gender: "M",
+			area: "megenagna",
+			languages: ["am", "en"],
+			experienceYears: 4,
+			hasHealthCard: true,
+			hasPoliceClearance: false,
+			roles: ["line_cook"],
+			agentId: agentMegenagna.id,
+			stationId: stationMegenagna.id,
+			bio: "Line cook for prep, grill, and high-volume service shifts.",
+			tier: "trained",
+			ratingAverage: 4.3,
+		},
+		{
+			fullName: "Sofia Mohammed",
+			fayda: "F-1230-4560-SM",
+			phone: "+251913112299",
+			gender: "F",
+			area: "bole",
+			languages: ["am", "ar"],
+			experienceYears: 2,
+			hasHealthCard: true,
+			hasPoliceClearance: false,
+			roles: ["dishwasher"],
+			agentId: agentBole.id,
+			stationId: stationBole.id,
+			bio: "Kitchen steward for dishwashing, sanitation, and prep support.",
+			tier: "basic",
+			ratingAverage: 4.1,
+		},
+	];
 
-	const seededWorkers = [];
+	const coverageWorkerLocalities: CoverageWorkerLocality[] = locationSeed.localities.map((locality) => {
+		const station = stationsByLocalityCode.get(locality.code);
+		const assignment = stationAssignmentSeeds.find((seedAssignment) => seedAssignment.localityCode === locality.code);
+		if (!station || !assignment) {
+			throw new Error(`Missing station or agent assignment for seeded locality ${locality.code}`);
+		}
+		const parentName = locality.parentId ? subAreaNameById.get(locality.parentId) : undefined;
+		return {
+			localityCode: locality.code,
+			localityName: locality.nameEn,
+			parentName: parentName ?? "Local area",
+			stationId: station.id,
+			agentId: assignment.agentId,
+		};
+	});
+	const coverageWorkers = buildCoverageWorkers({
+		localities: coverageWorkerLocalities,
+		startIndex: curatedWorkers.length,
+	});
+	const sampleWorkers: readonly SeedWorkerInput[] = [...curatedWorkers, ...coverageWorkers];
+
+	const seededWorkers: Array<{
+		readonly id: string;
+		readonly fullName: string;
+		readonly roles: readonly string[];
+		readonly uploadedById: string;
+	}> = [];
 	for (const worker of sampleWorkers) {
 		const created = await prisma.worker.create({
 			data: {
@@ -768,9 +938,17 @@ const seed = async () => {
 				workerRoles: { create: worker.roles.map((roleId) => ({ roleId })) },
 			},
 		});
-		seededWorkers.push(created);
+		seededWorkers.push({
+			id: created.id,
+			fullName: created.fullName,
+			roles: worker.roles,
+			uploadedById: worker.agentId,
+		});
 	}
 	console.log(`  ${seededWorkers.length} workers`);
+
+	console.log("Seeding worker profile photos...");
+	await seedWorkerProfilePhotos({ prismaClient: prisma, workers: seededWorkers });
 
 	console.log("Seeding sample jobs and hire requests...");
 	const jobs = await Promise.all([

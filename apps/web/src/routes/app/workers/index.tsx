@@ -7,7 +7,7 @@ import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/ap
 import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -21,6 +21,57 @@ const TIER_VARIANT: Record<Worker["tier"], "default" | "secondary" | "outline"> 
 	trained: "default",
 	trusted: "default",
 };
+
+const formatRoleId = (roleId: string) =>
+	roleId
+		.split("_")
+		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+		.join(" ");
+
+const CustomerWorkerCard = React.memo(({ worker }: { readonly worker: Worker }) => {
+	const { t } = useTranslation();
+	const primaryRole = worker.roles[0] ? formatRoleId(worker.roles[0]) : t("workers.profile.skillsTitle");
+	const stationLabel = worker.registeredAtStationName ?? t("hireRequests.workerStationPending");
+	const ratingLabel = worker.ratingAverage !== null ? worker.ratingAverage.toFixed(1) : t("workers.ratingNone");
+
+	return (
+		<Link to="/app/workers/$id" params={{ id: worker.id }} className="block group">
+			<Card className="h-full overflow-hidden transition group-hover:border-primary/40 group-hover:shadow-sm">
+				<CardContent className="p-4">
+					<div className="flex min-w-0 items-start gap-4">
+						<WorkerProfilePhoto worker={worker} className="size-16 shrink-0 text-xl sm:size-20 sm:text-2xl" />
+						<div className="min-w-0 flex-1 space-y-2">
+							<div className="min-w-0">
+								<CardTitle className="text-base leading-snug break-words [overflow-wrap:anywhere]">
+									{worker.fullName}
+								</CardTitle>
+								<p className="mt-1 text-sm leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+									{primaryRole} / {worker.gender === "M" ? t("workers.genderM") : t("workers.genderF")} /{" "}
+									{t("workers.expYearsShort", { n: worker.experienceYears })}
+								</p>
+							</div>
+							<div className="flex flex-wrap items-center gap-1.5">
+								<Badge variant={TIER_VARIANT[worker.tier]}>{worker.tier}</Badge>
+								<Badge variant="outline" className="font-normal">
+									{t("workers.ratingLabel")}: {ratingLabel}
+								</Badge>
+								{!worker.available && (
+									<Badge variant="secondary" className="font-normal">
+										{t("workers.busy")}
+									</Badge>
+								)}
+							</div>
+							<p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+								{t("hireRequests.station")}: {stationLabel}
+							</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
+	);
+});
+CustomerWorkerCard.displayName = "CustomerWorkerCard";
 
 function CustomerWorkersPage() {
 	const { t } = useTranslation();
@@ -133,36 +184,7 @@ function CustomerWorkersPage() {
 
 			<div className="grid gap-3 md:grid-cols-2">
 				{data?.data.map((worker) => (
-					<Link key={worker.id} to="/app/workers/$id" params={{ id: worker.id }} className="block group">
-						<Card className="h-full transition group-hover:border-primary/40 group-hover:shadow-sm">
-							<CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-								<div className="flex min-w-0 items-start gap-3">
-									<WorkerProfilePhoto worker={worker} className="size-12 shrink-0 text-base" />
-									<div className="min-w-0">
-										<CardTitle className="truncate text-base">{worker.fullName}</CardTitle>
-										<p className="mt-1 text-sm text-muted-foreground">
-											{worker.area} - {worker.experienceYears} years -{" "}
-											{worker.gender === "M" ? t("workers.genderM") : t("workers.genderF")}
-										</p>
-									</div>
-								</div>
-								<Badge variant={TIER_VARIANT[worker.tier]}>{worker.tier}</Badge>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								{worker.bio && <p className="line-clamp-2 text-sm text-muted-foreground">{worker.bio}</p>}
-								<div className="flex flex-wrap gap-1">
-									{worker.roles.slice(0, 4).map((role) => (
-										<Badge key={role} variant="outline" className="text-[10px]">
-											{role}
-										</Badge>
-									))}
-								</div>
-								<p className="text-xs text-muted-foreground">
-									{t("workers.placementsCount", { count: worker.placementsCount })}
-								</p>
-							</CardContent>
-						</Card>
-					</Link>
+					<CustomerWorkerCard key={worker.id} worker={worker} />
 				))}
 			</div>
 

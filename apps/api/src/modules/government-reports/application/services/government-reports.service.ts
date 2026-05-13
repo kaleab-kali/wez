@@ -22,9 +22,11 @@ import type {
 } from "../dto/government-report.dto";
 import {
 	ErcaMonthlyCsvReportStrategy,
+	ErcaMonthlyPdfReportStrategy,
 	type GeneratedGovernmentReportFile,
 	GovernmentReportStrategyFactory,
 	MolsQuarterlyCsvReportStrategy,
+	MolsQuarterlyPdfReportStrategy,
 } from "../strategies/government-report.strategy";
 
 const DEFAULT_PAGE = 1;
@@ -72,7 +74,9 @@ type GovernmentReportSummary = {
 export class GovernmentReportsService {
 	private readonly strategyFactory = new GovernmentReportStrategyFactory([
 		new ErcaMonthlyCsvReportStrategy(),
+		new ErcaMonthlyPdfReportStrategy(),
 		new MolsQuarterlyCsvReportStrategy(),
+		new MolsQuarterlyPdfReportStrategy(),
 	]);
 
 	constructor(
@@ -103,7 +107,12 @@ export class GovernmentReportsService {
 	async generate(session: WezSession, dto: GenerateGovernmentReportDto) {
 		const period = this.parsePeriod(dto.periodStart, dto.periodEnd);
 		const format = dto.format ?? "csv";
-		const existing = await this.reports.findByTypeAndPeriod(dto.type, period.periodStart, period.periodEnd);
+		const existing = await this.reports.findByTypePeriodAndFormat(
+			dto.type,
+			period.periodStart,
+			period.periodEnd,
+			format,
+		);
 		if (existing?.status === "ready" || existing?.status === "filed") return existing;
 		const report = existing
 			? await this.reports.resetPending(existing.id, this.pendingInput(session, dto.type, period, format))
@@ -115,7 +124,7 @@ export class GovernmentReportsService {
 		}
 		const dataset = await this.reports.fetchDataset(period);
 		try {
-			const generated = strategy.generate({ type: dto.type, format, period, dataset });
+			const generated = await strategy.generate({ type: dto.type, format, period, dataset });
 			const attachment = await this.storeGeneratedReport(report.id, session, generated);
 			return this.reports.markReady(report.id, `${FILE_CONTENT_URL_PREFIX}/${attachment.id}/content`);
 		} catch (err) {

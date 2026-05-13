@@ -1,32 +1,45 @@
 import { useQuery } from "@tanstack/react-query";
+import { api } from "#shared/lib/api-client";
 
-const BASE = "/api/v1/admin/dashboard";
+const BASE = "/admin/dashboard";
 
-const get = async <T>(url: string): Promise<T> => {
-	const res = await fetch(url, { credentials: "include" });
-	if (!res.ok) {
-		const body = await res.json().catch(() => ({}));
-		throw new Error(body?.error?.message ?? `Request failed: ${res.status}`);
-	}
-	return res.json();
+type CountChartPoint = {
+	readonly key: string;
+	readonly label: string;
+	readonly count: number;
+};
+
+type StationPerformancePoint = {
+	readonly stationId: string;
+	readonly stationName: string;
+	readonly placements: number;
+	readonly complaints: number;
 };
 
 export type AdminDashboardMetrics = {
-	money: {
-		lifetimeCommissionCents: string;
-		activeWagesCents: string;
+	readonly money: {
+		readonly lifetimeCommissionCents: string;
+		readonly activeWagesCents: string;
 	};
-	counts: {
-		totalPlacements: number;
-		activePlacements: number;
-		workers: number;
-		availableWorkers: number;
-		flaggedWorkers: number;
-		employers: number;
-		openComplaints: number;
-		openTickets: number;
-		stations: number;
-		activeStations: number;
+	readonly counts: {
+		readonly totalPlacements: number;
+		readonly activePlacements: number;
+		readonly workers: number;
+		readonly availableWorkers: number;
+		readonly flaggedWorkers: number;
+		readonly employers: number;
+		readonly openComplaints: number;
+		readonly openTickets: number;
+		readonly stations: number;
+		readonly activeStations: number;
+	};
+	readonly charts: {
+		readonly topRoles: readonly CountChartPoint[];
+		readonly placementsByCategory: readonly CountChartPoint[];
+		readonly stationPerformance: readonly StationPerformancePoint[];
+		readonly tierDistribution: readonly CountChartPoint[];
+		readonly genderSplit: readonly CountChartPoint[];
+		readonly workersByWoreda: readonly CountChartPoint[];
 	};
 };
 
@@ -38,5 +51,5 @@ export const adminDashboardKeys = {
 export const useAdminDashboardMetrics = () =>
 	useQuery({
 		queryKey: adminDashboardKeys.metrics(),
-		queryFn: () => get<AdminDashboardMetrics>(`${BASE}/metrics`),
+		queryFn: () => api.get<AdminDashboardMetrics>(`${BASE}/metrics`),
 	});

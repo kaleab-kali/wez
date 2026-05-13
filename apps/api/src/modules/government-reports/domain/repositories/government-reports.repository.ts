@@ -48,7 +48,12 @@ export const GOVERNMENT_REPORTS_REPOSITORY = Symbol("GovernmentReportsRepository
 export interface GovernmentReportsRepository {
 	list(filter: GovernmentReportListFilter): Promise<GovernmentReportsPage>;
 	findById(id: string): Promise<GovernmentReport | null>;
-	findByTypeAndPeriod(type: GovernmentReportType, periodStart: Date, periodEnd: Date): Promise<GovernmentReport | null>;
+	findByTypePeriodAndFormat(
+		type: GovernmentReportType,
+		periodStart: Date,
+		periodEnd: Date,
+		format: GovernmentReportFormat,
+	): Promise<GovernmentReport | null>;
 	createPending(input: CreatePendingGovernmentReportInput): Promise<GovernmentReport>;
 	resetPending(id: string, input: CreatePendingGovernmentReportInput): Promise<GovernmentReport>;
 	markReady(id: string, fileUrl: string): Promise<GovernmentReport>;

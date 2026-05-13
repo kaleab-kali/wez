@@ -12,7 +12,7 @@ import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -26,6 +26,12 @@ const TIER_VARIANT: Record<Worker["tier"], "default" | "secondary" | "outline"> 
 	trained: "default",
 	trusted: "default",
 };
+
+const formatRoleId = (roleId: string) =>
+	roleId
+		.split("_")
+		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+		.join(" ");
 
 const FilterPanel = React.memo(
 	({ filter, onChange }: { readonly filter: WorkerFilter; readonly onChange: (next: WorkerFilter) => void }) => {
@@ -202,63 +208,66 @@ FilterPanel.displayName = "FilterPanel";
 const WorkerCard = React.memo(
 	({ w }: { readonly w: Worker }) => {
 		const { t } = useTranslation();
-		return (
-			<Link to="/staff/workers/$id" params={{ id: w.id }} className="block group">
-				<Card className="h-full transition-all group-hover:border-primary/40 group-hover:shadow-sm">
-					<CardHeader className="pb-3">
-						<div className="flex items-start gap-3">
-							<WorkerProfilePhoto worker={w} className="size-10 shrink-0 text-sm" />
-							<div className="min-w-0 flex-1">
-								<CardTitle className="text-base truncate">{w.fullName}</CardTitle>
-								<CardDescription className="text-xs">
-									{w.area} · {w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} ·{" "}
+		const primaryRole = w.roles[0] ? formatRoleId(w.roles[0]) : t("workers.profile.skillsTitle");
+		const canOperate = w.canOperate ?? true;
+		const stationLabel = w.registeredAtStationName ?? t("hireRequests.workerStationPending");
+		const ratingLabel = w.ratingAverage !== null ? w.ratingAverage.toFixed(1) : t("workers.ratingNone");
+		const card = (
+			<Card
+				className={
+					canOperate
+						? "h-full overflow-hidden transition-all group-hover:border-primary/40 group-hover:shadow-sm"
+						: "h-full overflow-hidden border-dashed bg-muted/20"
+				}
+			>
+				<CardHeader className="p-4">
+					<div className="flex min-w-0 items-start gap-4">
+						<WorkerProfilePhoto worker={w} className="size-20 shrink-0 text-2xl sm:size-24 sm:text-3xl" />
+						<div className="min-w-0 flex-1 space-y-2">
+							<div className="min-w-0">
+								<CardTitle className="text-lg leading-snug break-words [overflow-wrap:anywhere]">
+									{w.fullName}
+								</CardTitle>
+								<p className="mt-1 text-sm leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+									{primaryRole} / {w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} /{" "}
 									{t("workers.expYearsShort", { n: w.experienceYears })}
-								</CardDescription>
-								{w.registeredAtStationName && (
-									<div className="mt-1 text-[11px] text-muted-foreground">{w.registeredAtStationName}</div>
-								)}
+								</p>
 							</div>
-							<div className="flex flex-col items-end gap-1 shrink-0">
+							<div className="flex flex-wrap items-center gap-1.5">
 								<Badge variant={TIER_VARIANT[w.tier]} className="capitalize">
 									{w.tier}
 								</Badge>
+								<Badge variant="outline" className="font-normal">
+									{t("workers.ratingLabel")}: {ratingLabel}
+								</Badge>
+								{!w.available && (
+									<Badge variant="secondary" className="font-normal">
+										{t("workers.busy")}
+									</Badge>
+								)}
+								{!canOperate && (
+									<Badge variant="secondary" className="font-normal">
+										{t("workers.networkOnly")}
+									</Badge>
+								)}
 								{w.hopFlag !== "none" && (
 									<Badge variant="destructive" className="capitalize text-[10px]">
 										{w.hopFlag}
 									</Badge>
 								)}
 							</div>
+							<p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+								{t("hireRequests.station")}: {stationLabel}
+							</p>
 						</div>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						{w.bio && <p className="text-sm text-muted-foreground line-clamp-2">{w.bio}</p>}
-						<div className="flex flex-wrap gap-1">
-							{w.roles.slice(0, 3).map((r) => (
-								<Badge key={r} variant="outline" className="text-[10px] font-normal">
-									{r}
-								</Badge>
-							))}
-							{w.roles.length > 3 && (
-								<Badge variant="outline" className="text-[10px] font-normal">
-									+{w.roles.length - 3}
-								</Badge>
-							)}
-						</div>
-						<div className="flex items-center gap-3 text-xs text-muted-foreground border-t pt-2.5">
-							<span className="font-mono">
-								{w.ratingAverage !== null ? `★ ${w.ratingAverage.toFixed(1)}` : `★ ${t("workers.ratingNone")}`}
-							</span>
-							<span aria-hidden>·</span>
-							<span>{t("workers.placementsCount", { count: w.placementsCount })}</span>
-							{!w.available && (
-								<>
-									<span aria-hidden>·</span>
-									<span className="text-amber-600 dark:text-amber-400 font-medium">{t("workers.busy")}</span>
-								</>
-							)}
-						</div>
-					</CardContent>
-				</Card>
+					</div>
+				</CardHeader>
+			</Card>
+		);
+		if (!canOperate) return <div className="block">{card}</div>;
+		return (
+			<Link to="/staff/workers/$id" params={{ id: w.id }} className="block group">
+				{card}
 			</Link>
 		);
 	},

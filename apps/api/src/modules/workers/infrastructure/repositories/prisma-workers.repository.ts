@@ -1,5 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
+import {
+	intersectRankedIds,
+	normalizeSearchQuery,
+	orderRowsByIdList,
+	pageWindow,
+	type RankedId,
+} from "#shared/search/postgres-fts";
+import { Prisma } from "../../../../generated/prisma/client";
 import { buildWorkerOrderBy, buildWorkerWhere } from "../../application/specifications/worker-filter.specification";
 import type {
 	Gender,
@@ -71,6 +79,8 @@ const toWorker = (row: Row): Worker => ({
 	createdAt: row.createdAt,
 	updatedAt: row.updatedAt,
 });
+const MAX_SEARCH_IDS = 10_000;
+const WORKER_LIST_INCLUDE = { workerRoles: true, registeringStation: { select: { name: true } } } as const;
 
 @Injectable()
 export class PrismaWorkersRepository implements IWorkersRepository {
@@ -155,18 +165,20 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 	}
 
 	async listByFilter(filter: WorkerFilter) {
+		const searchQuery = normalizeSearchQuery(filter.q);
+		if (searchQuery) return this.listByFullTextSearch(filter, searchQuery);
+
 		const where = buildWorkerWhere(filter);
 		const orderBy = buildWorkerOrderBy(filter);
-		const page = Math.max(1, filter.page ?? 1);
-		const limit = Math.min(Math.max(1, filter.limit ?? 20), 100);
+		const window = pageWindow(filter.page, filter.limit);
 
 		const [rows, total] = await Promise.all([
 			this.prisma.worker.findMany({
 				where,
 				orderBy,
-				skip: (page - 1) * limit,
-				take: limit,
-				include: { workerRoles: true, registeringStation: { select: { name: true } } },
+				skip: window.skip,
+				take: window.limit,
+				include: WORKER_LIST_INCLUDE,
 			}),
 			this.prisma.worker.count({ where }),
 		]);
@@ -176,5 +188,60 @@ export class PrismaWorkersRepository implements IWorkersRepository {
 
 	async softDelete(id: string) {
 		await this.prisma.worker.update({ where: { id }, data: { deletedAt: new Date() } });
+	}
+
+	private async listByFullTextSearch(filter: WorkerFilter, query: string) {
+		const rankedIds = await this.findRankedWorkerIds(query);
+		if (rankedIds.length === 0) return { items: [], total: 0 };
+
+		const allSearchIds = rankedIds.map((row) => row.id);
+		const where = {
+			...buildWorkerWhere({ ...filter, q: undefined }),
+			id: { in: allSearchIds },
+		} satisfies Prisma.WorkerWhereInput;
+		const matchingIds = await this.prisma.worker.findMany({ where, select: { id: true } });
+		const orderedIds = intersectRankedIds(rankedIds, matchingIds);
+		const window = pageWindow(filter.page, filter.limit);
+		const pageIds = orderedIds.slice(window.skip, window.skip + window.limit);
+		if (pageIds.length === 0) return { items: [], total: orderedIds.length };
+
+		const rows = await this.prisma.worker.findMany({
+			where: { id: { in: pageIds }, deletedAt: null },
+			include: WORKER_LIST_INCLUDE,
+		});
+
+		return {
+			items: orderRowsByIdList(rows as unknown as Row[], pageIds).map((row) => toWorker(row)),
+			total: orderedIds.length,
+		};
+	}
+
+	private async findRankedWorkerIds(query: string) {
+		return this.prisma.$queryRaw<RankedId[]>`
+			WITH search_query AS (SELECT websearch_to_tsquery('simple', ${query}) AS term)
+			SELECT w.id, MAX(ts_rank_cd(
+				setweight(to_tsvector('simple', coalesce(w."fullName", '')), 'A') ||
+				setweight(to_tsvector('simple', coalesce(w.bio, '')), 'B') ||
+				setweight(to_tsvector('simple', coalesce(w.phone, '')), 'B') ||
+				setweight(to_tsvector('simple', coalesce(array_to_string(w.languages, ' '), '')), 'C') ||
+				setweight(to_tsvector('simple', coalesce(r.name, '') || ' ' || coalesce(r.category, '')), 'A'),
+				search_query.term
+			))::float AS rank
+			FROM "worker" w
+			LEFT JOIN "worker_role" wr ON wr."workerId" = w.id
+			LEFT JOIN "role" r ON r.id = wr."roleId"
+			CROSS JOIN search_query
+			WHERE w."deletedAt" IS NULL
+				AND (
+					setweight(to_tsvector('simple', coalesce(w."fullName", '')), 'A') ||
+					setweight(to_tsvector('simple', coalesce(w.bio, '')), 'B') ||
+					setweight(to_tsvector('simple', coalesce(w.phone, '')), 'B') ||
+					setweight(to_tsvector('simple', coalesce(array_to_string(w.languages, ' '), '')), 'C') ||
+					setweight(to_tsvector('simple', coalesce(r.name, '') || ' ' || coalesce(r.category, '')), 'A')
+				) @@ search_query.term
+			GROUP BY w.id
+			ORDER BY rank DESC, w."createdAt" DESC
+			LIMIT ${MAX_SEARCH_IDS}
+		`;
 	}
 }

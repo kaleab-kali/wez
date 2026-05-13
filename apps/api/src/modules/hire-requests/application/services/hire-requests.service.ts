@@ -113,8 +113,23 @@ export class HireRequestsService {
 
 	async create(currentUserId: string, dto: CreateHireRequestDto, asAgent: boolean, session?: WezSession) {
 		if (asAgent && session) {
-			if (!dto.stationId) throw new BadRequestException({ code: "STATION_ID_REQUIRED_FOR_STAFF_REQUEST" });
-			await this.staffAccess.assertStationAccess(session, dto.stationId, HIRE_REQUEST_GLOBAL_ACCESS_ROLES);
+			const worker = await this.workers.findById(dto.workerId);
+			if (!worker) throw new NotFoundException({ code: "WORKER_NOT_FOUND" });
+			if (!worker.registeredAtStationId) throw new ConflictException({ code: "WORKER_REGISTERING_STATION_REQUIRED" });
+			if (dto.stationId && dto.stationId !== worker.registeredAtStationId) {
+				throw new BadRequestException({ code: "HIRE_REQUEST_STATION_DERIVED_FROM_WORKER" });
+			}
+			await this.staffAccess.assertStationAccess(
+				session,
+				worker.registeredAtStationId,
+				HIRE_REQUEST_GLOBAL_ACCESS_ROLES,
+			);
+			return this.createWithSourceReferral(
+				currentUserId,
+				{ ...dto, stationId: worker.registeredAtStationId },
+				asAgent,
+				null,
+			);
 		}
 		return this.createWithSourceReferral(currentUserId, dto, asAgent, null);
 	}
@@ -144,7 +159,7 @@ export class HireRequestsService {
 		if (!worker.roles.includes(dto.roleId)) {
 			throw new ConflictException({ code: "WORKER_DOES_NOT_PERFORM_ROLE" });
 		}
-		const stationId = this.resolveRequestStationId(dto.stationId, asAgent, worker.registeredAtStationId);
+		const stationId = this.resolveRequestStationId(dto.stationId, worker.registeredAtStationId);
 
 		const role = await this.roles.findById(dto.roleId);
 		if (!role?.active) throw new BadRequestException({ code: "INVALID_ROLE" });
@@ -196,11 +211,7 @@ export class HireRequestsService {
 		return request;
 	}
 
-	private resolveRequestStationId(dtoStationId: string | undefined, asAgent: boolean, workerStationId: string | null) {
-		if (asAgent) {
-			if (!dtoStationId) throw new BadRequestException({ code: "STATION_ID_REQUIRED_FOR_STAFF_REQUEST" });
-			return dtoStationId;
-		}
+	private resolveRequestStationId(dtoStationId: string | undefined, workerStationId: string | null) {
 		if (!workerStationId) throw new ConflictException({ code: "WORKER_REGISTERING_STATION_REQUIRED" });
 		if (dtoStationId && dtoStationId !== workerStationId) {
 			throw new BadRequestException({ code: "HIRE_REQUEST_STATION_DERIVED_FROM_WORKER" });

@@ -8,6 +8,7 @@ import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const JOB_STATUS_VARIANT: Record<Job["status"], "default" | "secondary" | "outline" | "destructive"> = {
@@ -25,19 +26,28 @@ const formatBirr = (cents: string) => `${(Number(cents) / CENTS_PER_BIRR).toLoca
 const StaffJobsPage = React.memo(() => {
 	const { t } = useTranslation();
 	const [employerId, setEmployerId] = React.useState("");
+	const [query, setQuery] = React.useState("");
 	const [error, setError] = React.useState("");
 	const [formVersion, setFormVersion] = React.useState(0);
+	const deferredQuery = React.useDeferredValue(query.trim());
 	const { data: session } = useAdminSession();
 	const user = session?.user as { role?: string; roles?: string[] } | undefined;
 	const userRoles = React.useMemo(() => effectiveStaffRoles(user?.role, user?.roles), [user?.role, user?.roles]);
 	const canCreateJob = React.useMemo(() => hasAnyStaffRole(userRoles, STAFF_ACCESS_ROLES.jobCreation), [userRoles]);
 	const { data: employers } = useEmployers({ page: DEFAULT_PAGE, limit: EMPLOYER_LOOKUP_LIMIT });
-	const { data: jobs, isLoading } = useJobs({ page: DEFAULT_PAGE, limit: DEFAULT_LIMIT });
+	const jobFilter = React.useMemo(
+		() => ({ page: DEFAULT_PAGE, limit: DEFAULT_LIMIT, q: deferredQuery || undefined }),
+		[deferredQuery],
+	);
+	const { data: jobs, isLoading } = useJobs(jobFilter);
 	const createJob = useCreateJob();
 
 	const onEmployerChange = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
 		setEmployerId(event.target.value);
 		setError("");
+	}, []);
+	const onQueryChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+		setQuery(event.target.value);
 	}, []);
 
 	const onSubmit = React.useCallback(
@@ -96,6 +106,19 @@ const StaffJobsPage = React.memo(() => {
 					<CardContent className="py-6 text-sm text-muted-foreground">{t("jobs.readOnlyNotice")}</CardContent>
 				</Card>
 			)}
+
+			<Card>
+				<CardHeader className="space-y-1">
+					<CardTitle className="text-base">{t("jobs.currentDemand")}</CardTitle>
+					<p className="text-sm text-muted-foreground">{t("jobs.count", { count: jobs?.meta.total ?? 0 })}</p>
+				</CardHeader>
+				<CardContent>
+					<div className="max-w-md space-y-2">
+						<Label htmlFor="job-search">{t("jobs.search")}</Label>
+						<Input id="job-search" value={query} onChange={onQueryChange} placeholder={t("jobs.searchPlaceholder")} />
+					</div>
+				</CardContent>
+			</Card>
 
 			<div className="grid gap-3">
 				{isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}

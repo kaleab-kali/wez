@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import {
 	type GovernmentReport,
+	type GovernmentReportFormat,
 	type GovernmentReportStatus,
 	type GovernmentReportType,
 	useGenerateGovernmentReport,
@@ -30,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const REPORT_TYPES = ["erca_monthly", "mols_quarterly"] as const;
+const REPORT_FORMATS = ["csv", "pdf"] as const;
 const REPORT_STATUSES = ["pending", "ready", "filed", "error"] as const;
 const MONTH_PERIOD_PRESETS = ["current_month", "last_month"] as const;
 const QUARTER_PERIOD_PRESETS = ["current_quarter", "last_quarter"] as const;
@@ -90,6 +92,7 @@ const reportTypeLabel = (type: GovernmentReportType, t: Translation) =>
 const reportTypeDescription = (type: GovernmentReportType, t: Translation) =>
 	type === "erca_monthly" ? t("governmentReports.types.ercaBody") : t("governmentReports.types.molsBody");
 const reportStatusLabel = (status: GovernmentReportStatus, t: Translation) => t(`governmentReports.status.${status}`);
+const reportFormatLabel = (format: GovernmentReportFormat, t: Translation) => t(`governmentReports.formats.${format}`);
 const statusVariant = (status: GovernmentReportStatus): "default" | "secondary" | "destructive" | "outline" => {
 	if (status === "filed") return "default";
 	if (status === "ready") return "secondary";
@@ -258,6 +261,7 @@ const GovernmentReportsPage = React.memo(() => {
 	const [periodStart, setPeriodStart] = React.useState(defaultPeriod.periodStart);
 	const [periodEnd, setPeriodEnd] = React.useState(defaultPeriod.periodEnd);
 	const [type, setType] = React.useState<GovernmentReportType>(DEFAULT_REPORT_TYPE);
+	const [format, setFormat] = React.useState<GovernmentReportFormat>("csv");
 	const [status, setStatus] = React.useState<GovernmentReportStatus | undefined>();
 	const [error, setError] = React.useState("");
 	const [filingError, setFilingError] = React.useState("");
@@ -299,17 +303,20 @@ const GovernmentReportsPage = React.memo(() => {
 	const onStatusChange = React.useCallback((value: string) => {
 		setStatus(value === ALL_FILTER_VALUE ? undefined : (value as GovernmentReportStatus));
 	}, []);
+	const onFormatChange = React.useCallback((value: string) => {
+		setFormat(value as GovernmentReportFormat);
+	}, []);
 	const onGenerate = React.useCallback(
 		async (event: React.FormEvent) => {
 			event.preventDefault();
 			setError("");
 			try {
-				await generate.mutateAsync({ type, periodStart, periodEnd, format: "csv" });
+				await generate.mutateAsync({ type, periodStart, periodEnd, format });
 			} catch (err) {
 				setError(err instanceof Error ? err.message : t("common.error"));
 			}
 		},
-		[generate, periodEnd, periodStart, t, type],
+		[format, generate, periodEnd, periodStart, t, type],
 	);
 	const onDownload = React.useCallback((report: GovernmentReport) => {
 		if (!report.fileUrl) return;
@@ -345,6 +352,11 @@ const GovernmentReportsPage = React.memo(() => {
 				accessorKey: "type",
 				header: t("governmentReports.table.type"),
 				cell: ({ row }) => reportTypeLabel(row.original.type, t),
+			},
+			{
+				accessorKey: "format",
+				header: t("governmentReports.table.format"),
+				cell: ({ row }) => reportFormatLabel(row.original.format, t),
 			},
 			{
 				accessorKey: "periodStart",
@@ -454,9 +466,26 @@ const GovernmentReportsPage = React.memo(() => {
 						<section className="rounded-md border bg-muted/20 p-4">
 							<StepHeader number="3" title={t("governmentReports.generate.createQuestion")} />
 							<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-								<p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-									{t("governmentReports.generate.createBody")}
-								</p>
+								<div className="max-w-2xl space-y-3">
+									<p className="text-sm leading-6 text-muted-foreground">
+										{t("governmentReports.generate.createBody")}
+									</p>
+									<div className="grid gap-2 sm:grid-cols-[10rem_1fr] sm:items-center">
+										<Label htmlFor="reportFormat">{t("governmentReports.generate.format")}</Label>
+										<Select value={format} onValueChange={onFormatChange}>
+											<SelectTrigger id="reportFormat" className="w-full sm:w-48">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												{REPORT_FORMATS.map((item) => (
+													<SelectItem key={item} value={item}>
+														{reportFormatLabel(item, t)}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								</div>
 								<Button type="submit" className="w-full md:w-auto" disabled={generate.isPending}>
 									{generate.isPending
 										? t("governmentReports.generate.generating")

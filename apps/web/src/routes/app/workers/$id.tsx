@@ -109,9 +109,9 @@ ProfileHero.displayName = "ProfileHero";
 const ProfilePhoto = React.memo(({ worker }: { readonly worker: Worker }) => {
 	const { t } = useTranslation();
 	return (
-		<div className="flex min-h-56 flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
-			<WorkerProfilePhoto worker={worker} className="size-32 text-4xl" />
-			<p className="max-w-36 text-xs text-muted-foreground">{t("app.photoProtectedBody")}</p>
+		<div className="flex min-h-72 flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
+			<WorkerProfilePhoto worker={worker} className="size-40 text-5xl" />
+			<p className="max-w-44 text-xs text-muted-foreground">{t("app.photoProtectedBody")}</p>
 		</div>
 	);
 });

@@ -148,7 +148,7 @@ const WorkerProfilePage = React.memo(() => {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="flex items-center gap-4">
-							<WorkerProfilePhoto worker={worker} className="size-24 text-2xl" />
+							<WorkerProfilePhoto worker={worker} className="size-32 text-4xl" />
 							<div className="min-w-0">
 								<p className="text-sm font-medium">{worker.fullName}</p>
 								<p className="mt-1 text-xs text-muted-foreground">{t("app.profilePhotoPrivacy")}</p>
