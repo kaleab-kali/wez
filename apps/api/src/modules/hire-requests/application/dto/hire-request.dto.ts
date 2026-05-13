@@ -24,7 +24,7 @@ export class CreateHireRequestDto {
 
 	@ApiProperty({
 		required: false,
-		description: "Required for staff in-station requests. Online employer requests derive this from the worker.",
+		description: "Optional compatibility field. Hire requests are routed to the worker's registered station.",
 	})
 	@IsOptional()
 	@IsString()

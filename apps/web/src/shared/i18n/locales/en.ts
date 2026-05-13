@@ -174,6 +174,7 @@ export const en = {
 		genderF: "Female",
 		expYearsShort: "{{n}}y exp",
 		busy: "Currently placed",
+		networkOnly: "Network",
 		ratingNone: "—",
 		placementsCount_one: "{{count}} placement",
 		placementsCount_other: "{{count}} placements",

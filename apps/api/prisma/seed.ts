@@ -249,6 +249,20 @@ const seed = async () => {
 		},
 	});
 	const subAreaNameById = new Map(locationSeed.subAreas.map((subArea) => [subArea.id, subArea.nameEn]));
+	const compactSubAreaName = (name: string) =>
+		name
+			.replace(/\s+(Subcity|Zone|City Administration)$/u, "")
+			.replace(/\s+/g, " ")
+			.trim();
+	const buildStationName = (locality: { readonly nameEn: string }, parentName?: string) => {
+		const compactParentName = parentName ? compactSubAreaName(parentName) : undefined;
+		const localityName = locality.nameEn.replace(/\s+/g, " ").trim();
+		const compactLocalityName =
+			compactParentName && localityName.startsWith(`${compactParentName} `)
+				? localityName
+				: `${compactParentName ?? "Local"} ${localityName}`;
+		return `${compactLocalityName} Station`;
+	};
 	const stationsByLocalityCode = new Map([
 		["aa-bole-w03", stationBole],
 		["aa-yeka-w08", stationMegenagna],
@@ -269,7 +283,7 @@ const seed = async () => {
 		const agentId = index % 2 === 0 ? agentBole.id : agentMegenagna.id;
 		const createdStation = await prisma.station.create({
 			data: {
-				name: `${parentName ?? "Local"} ${locality.nameEn} Station`,
+				name: buildStationName(locality, parentName),
 				woreda: locality.code,
 				address: `${parentName ?? "Local area"}, ${locality.nameEn}`,
 				phone: `+251115${String(100_003 + index).padStart(6, "0")}`,
@@ -288,11 +302,6 @@ const seed = async () => {
 	});
 	await prisma.agentAssignment.create({
 		data: { userId: agentMegenagna.id, stationId: stationMegenagna.id },
-	});
-	await prisma.agentAssignment.createMany({
-		data: stationAssignmentSeeds
-			.filter((assignment) => assignment.localityCode !== "aa-bole-w03" && assignment.localityCode !== "aa-yeka-w08")
-			.map((assignment) => ({ userId: assignment.agentId, stationId: assignment.stationId })),
 	});
 
 	console.log("Assigning staff role scopes...");
@@ -343,15 +352,6 @@ const seed = async () => {
 					scopeType: "sub_area",
 					scopeId: subArea.id,
 					assignedById: opsManager.id,
-				})),
-			...stationAssignmentSeeds
-				.filter((assignment) => assignment.localityCode !== "aa-bole-w03" && assignment.localityCode !== "aa-yeka-w08")
-				.map((assignment) => ({
-					adminUserId: assignment.agentId,
-					role: "agent",
-					scopeType: "station",
-					scopeId: assignment.stationId,
-					assignedById: supervisor.id,
 				})),
 		],
 	});

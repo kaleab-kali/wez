@@ -166,6 +166,7 @@ export const am = {
 		genderF: "ሴት",
 		expYearsShort: "{{n}}ዓ ልምድ",
 		busy: "Currently placed",
+		networkOnly: "Network",
 		ratingNone: "—",
 		placementsCount_one: "{{count}} ምደባ",
 		placementsCount_other: "{{count}} ምደባዎች",

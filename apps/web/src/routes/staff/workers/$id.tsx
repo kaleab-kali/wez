@@ -7,7 +7,6 @@ import { useEmployers } from "#features/employers/api/employer.queries";
 import { AttachmentUploadField } from "#features/files/components/AttachmentUploadField";
 import { useCreateHireRequest } from "#features/hire-requests/api/hire-request.queries";
 import { type Role, usePublicRoles } from "#features/role-catalog/api/role.queries";
-import { usePublicStations } from "#features/stations/api/station.queries";
 import { useUpdateWorker, useWorker, type Worker } from "#features/workers/api/worker.queries";
 import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { Badge } from "@/components/ui/badge";
@@ -246,14 +245,12 @@ AgentOperationalPanel.displayName = "AgentOperationalPanel";
 const InStationRequestPanel = React.memo(({ worker }: { readonly worker: Worker }) => {
 	const { t } = useTranslation();
 	const create = useCreateHireRequest();
-	const { data: stations } = usePublicStations();
 	const { data: employersList } = useEmployers({ page: 1, limit: 100 });
 	const { data: catalog } = usePublicRoles();
 	const [open, setOpen] = React.useState(false);
 	const [employerId, setEmployerId] = React.useState("");
 	const [roleId, setRoleId] = React.useState(worker.roles[0] ?? "");
 	const [salary, setSalary] = React.useState(0);
-	const [stationId, setStationId] = React.useState("");
 	const [note, setNote] = React.useState("");
 	const [error, setError] = React.useState("");
 	const selectedRole = React.useMemo(() => catalog?.find((role) => role.id === roleId), [catalog, roleId]);
@@ -268,7 +265,6 @@ const InStationRequestPanel = React.memo(({ worker }: { readonly worker: Worker 
 					employerId,
 					roleId,
 					proposedSalaryCents: salary * 100,
-					stationId,
 					channel: "in_person",
 					note: note || undefined,
 				});
@@ -278,7 +274,7 @@ const InStationRequestPanel = React.memo(({ worker }: { readonly worker: Worker 
 				setError(err instanceof Error ? err.message : t("common.error"));
 			}
 		},
-		[create, employerId, note, roleId, salary, stationId, t, worker.id],
+		[create, employerId, note, roleId, salary, t, worker.id],
 	);
 
 	if (!worker.available) {
@@ -340,13 +336,10 @@ const InStationRequestPanel = React.memo(({ worker }: { readonly worker: Worker 
 								required
 							/>
 						</div>
-						<FieldSelect
-							id="station"
-							label={t("hireRequests.station")}
-							value={stationId}
-							onChange={setStationId}
-							options={(stations ?? []).map((station) => ({ value: station.id, label: station.name }))}
-						/>
+						<div className="rounded-md border bg-muted/40 p-3 text-sm">
+							<p className="font-medium">{worker.registeredAtStationName ?? t("hireRequests.workerStationPending")}</p>
+							<p className="mt-1 text-xs text-muted-foreground">{t("hireRequests.stationDerivedFromWorker")}</p>
+						</div>
 						<div className="space-y-2">
 							<Label htmlFor="note">{t("hireRequests.note")}</Label>
 							<textarea

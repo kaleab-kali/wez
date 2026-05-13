@@ -46,6 +46,8 @@ export type Worker = {
 	placementsCount: number;
 	photoAttachmentId: string | null;
 	roles: string[];
+	accessLevel?: "global" | "own_station" | "network";
+	canOperate?: boolean;
 	createdAt: string;
 	updatedAt: string;
 };

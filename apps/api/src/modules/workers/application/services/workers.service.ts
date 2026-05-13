@@ -10,13 +10,18 @@ import type { AuditRequestContext } from "#shared/audit/audit-context";
 import type { WezSession } from "#shared/auth/session";
 import { StaffAccessService } from "#shared/auth/staff-access.service";
 import { PrismaService } from "#shared/database/prisma.service";
-import type { WorkerFilter } from "../../domain/entities/worker.entity";
+import type { Worker, WorkerFilter } from "../../domain/entities/worker.entity";
 import { type IWorkersRepository, WORKERS_REPO } from "../../domain/repositories/workers.repository";
 import type { ListWorkersDto, RegisterWorkerDto, UpdateOwnWorkerProfileDto, UpdateWorkerDto } from "../dto/worker.dto";
 
 const WORKER_ROLE = "worker";
 const WORKER_GLOBAL_ACCESS_ROLES = ["super_admin", "ops_manager", "hr_manager"] as const;
 const IMAGE_MIME_PREFIX = "image/";
+type WorkerListAccessLevel = "global" | "own_station" | "network";
+type WorkerListItem = Worker & {
+	readonly accessLevel: WorkerListAccessLevel;
+	readonly canOperate: boolean;
+};
 
 @Injectable()
 export class WorkersService {
@@ -41,10 +46,24 @@ export class WorkersService {
 
 	async listForSession(session: WezSession, filter: ListWorkersDto) {
 		if (session.kind !== "staff" || this.staffAccess.hasAnyRole(session, WORKER_GLOBAL_ACCESS_ROLES)) {
-			return this.list(filter);
+			const result = await this.list(filter);
+			if (session.kind !== "staff") return result;
+			return { ...result, data: result.data.map((worker) => this.markWorkerAccess(worker, "global", true)) };
 		}
 		const stationIds = await this.staffAccess.stationIdsForSession(session);
-		return this.list({ ...filter, registeredAtStationIds: stationIds });
+		const result = await this.list(filter);
+		return {
+			...result,
+			data: result.data.map((worker) => {
+				const canOperate = !!worker.registeredAtStationId && stationIds.includes(worker.registeredAtStationId);
+				return this.markWorkerAccess(worker, canOperate ? "own_station" : "network", canOperate);
+			}),
+		};
+	}
+
+	private markWorkerAccess(worker: Worker, accessLevel: WorkerListAccessLevel, canOperate: boolean): WorkerListItem {
+		if (canOperate) return { ...worker, accessLevel, canOperate };
+		return { ...worker, fayda: "", phone: "", accessLevel, canOperate };
 	}
 
 	async getById(id: string) {
