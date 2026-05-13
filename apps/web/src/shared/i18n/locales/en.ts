@@ -175,6 +175,7 @@ export const en = {
 		expYearsShort: "{{n}}y exp",
 		busy: "Currently placed",
 		networkOnly: "Network",
+		ratingLabel: "Rating",
 		ratingNone: "—",
 		placementsCount_one: "{{count}} placement",
 		placementsCount_other: "{{count}} placements",

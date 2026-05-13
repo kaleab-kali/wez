@@ -6,11 +6,10 @@ import { useTranslation } from "react-i18next";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
-import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
+import { WorkerDirectoryCard } from "#features/workers/components/WorkerDirectoryCard";
 import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES } from "#shared/lib/staff-roles";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,19 +18,6 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/staff/workers/")({
 	component: WorkerBrowsePage,
 });
-
-const TIER_VARIANT: Record<Worker["tier"], "default" | "secondary" | "outline"> = {
-	basic: "outline",
-	verified: "secondary",
-	trained: "default",
-	trusted: "default",
-};
-
-const formatRoleId = (roleId: string) =>
-	roleId
-		.split("_")
-		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-		.join(" ");
 
 const FilterPanel = React.memo(
 	({ filter, onChange }: { readonly filter: WorkerFilter; readonly onChange: (next: WorkerFilter) => void }) => {
@@ -207,59 +193,8 @@ FilterPanel.displayName = "FilterPanel";
 
 const WorkerCard = React.memo(
 	({ w }: { readonly w: Worker }) => {
-		const { t } = useTranslation();
-		const primaryRole = w.roles[0] ? formatRoleId(w.roles[0]) : t("workers.profile.skillsTitle");
 		const canOperate = w.canOperate ?? true;
-		const stationLabel = w.registeredAtStationName ?? t("hireRequests.workerStationPending");
-		const card = (
-			<Card
-				className={
-					canOperate
-						? "h-full overflow-hidden transition-all group-hover:border-primary/40 group-hover:shadow-sm"
-						: "h-full overflow-hidden border-dashed bg-muted/20"
-				}
-			>
-				<CardHeader className="p-4">
-					<div className="flex min-w-0 items-start gap-4">
-						<WorkerProfilePhoto worker={w} className="size-20 shrink-0 text-2xl sm:size-24 sm:text-3xl" />
-						<div className="min-w-0 flex-1 space-y-2">
-							<div className="min-w-0">
-								<CardTitle className="text-lg leading-snug break-words [overflow-wrap:anywhere]">
-									{w.fullName}
-								</CardTitle>
-								<p className="mt-1 text-sm leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
-									{primaryRole} / {w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} /{" "}
-									{t("workers.expYearsShort", { n: w.experienceYears })}
-								</p>
-							</div>
-							<div className="flex flex-wrap items-center gap-1.5">
-								<Badge variant={TIER_VARIANT[w.tier]} className="capitalize">
-									{w.tier}
-								</Badge>
-								{!w.available && (
-									<Badge variant="secondary" className="font-normal">
-										{t("workers.busy")}
-									</Badge>
-								)}
-								{!canOperate && (
-									<Badge variant="secondary" className="font-normal">
-										{t("workers.networkOnly")}
-									</Badge>
-								)}
-								{w.hopFlag !== "none" && (
-									<Badge variant="destructive" className="capitalize text-[10px]">
-										{w.hopFlag}
-									</Badge>
-								)}
-							</div>
-							<p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
-								{t("hireRequests.station")}: {stationLabel}
-							</p>
-						</div>
-					</div>
-				</CardHeader>
-			</Card>
-		);
+		const card = <WorkerDirectoryCard worker={w} variant="staff" canOperate={canOperate} showNetworkBadge />;
 		if (!canOperate) return <div className="block">{card}</div>;
 		return (
 			<Link to="/staff/workers/$id" params={{ id: w.id }} className="block group">
@@ -305,7 +240,7 @@ function WorkerBrowsePage() {
 				<FilterPanel filter={filter} onChange={setFilter} />
 				<div className="flex-1 min-w-0">
 					{isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+					<div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr))]">
 						{data?.data.map((w) => (
 							<WorkerCard key={w.id} w={w} />
 						))}

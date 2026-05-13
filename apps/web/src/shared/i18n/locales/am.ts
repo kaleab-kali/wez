@@ -167,6 +167,7 @@ export const am = {
 		expYearsShort: "{{n}}ዓ ልምድ",
 		busy: "Currently placed",
 		networkOnly: "Network",
+		ratingLabel: "Rating",
 		ratingNone: "—",
 		placementsCount_one: "{{count}} ምደባ",
 		placementsCount_other: "{{count}} ምደባዎች",
