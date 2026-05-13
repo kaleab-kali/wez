@@ -345,6 +345,8 @@ export const am = {
 			subtitle: "Read the placement network by role, station, worker tier, gender, and woreda.",
 			topRoles: "Top placed roles",
 			topRolesDesc: "Roles with the most finalized placements.",
+			placementsByCategory: "Placements by category",
+			placementsByCategoryDesc: "Finalized placements grouped by role category.",
 			stationPerformance: "Station performance",
 			stationPerformanceDesc: "Placements compared with complaints by station.",
 			tierDistribution: "Worker tier distribution",

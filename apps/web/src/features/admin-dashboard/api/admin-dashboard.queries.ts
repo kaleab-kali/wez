@@ -35,6 +35,7 @@ export type AdminDashboardMetrics = {
 	};
 	readonly charts: {
 		readonly topRoles: readonly CountChartPoint[];
+		readonly placementsByCategory: readonly CountChartPoint[];
 		readonly stationPerformance: readonly StationPerformancePoint[];
 		readonly tierDistribution: readonly CountChartPoint[];
 		readonly genderSplit: readonly CountChartPoint[];

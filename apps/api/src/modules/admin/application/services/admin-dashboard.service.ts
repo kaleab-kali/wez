@@ -7,6 +7,7 @@ const OPEN_TICKET_STATUSES = ["open", "in_progress", "escalated_higher"] as cons
 const FLAGGED_WORKER_STATUSES = ["notice", "warning", "suspended"] as const;
 const SOFT_DELETE_FILTER = { deletedAt: null } as const;
 const TOP_ROLE_LIMIT = 8;
+const PLACEMENT_CATEGORY_LIMIT = 8;
 const STATION_PERFORMANCE_LIMIT = 8;
 const WORKER_LOCATION_LIMIT = 10;
 
@@ -42,6 +43,7 @@ export type AdminDashboardMetrics = {
 	};
 	readonly charts: {
 		readonly topRoles: readonly CountChartPoint[];
+		readonly placementsByCategory: readonly CountChartPoint[];
 		readonly stationPerformance: readonly StationPerformancePoint[];
 		readonly tierDistribution: readonly CountChartPoint[];
 		readonly genderSplit: readonly CountChartPoint[];
@@ -113,15 +115,17 @@ export class AdminDashboardService {
 	}
 
 	private async getChartMetrics(): Promise<AdminDashboardMetrics["charts"]> {
-		const [topRoles, stationPerformance, tierDistribution, genderSplit, workersByWoreda] = await Promise.all([
-			this.getTopRoles(),
-			this.getStationPerformance(),
-			this.getTierDistribution(),
-			this.getGenderSplit(),
-			this.getWorkersByWoreda(),
-		]);
+		const [topRoles, placementsByCategory, stationPerformance, tierDistribution, genderSplit, workersByWoreda] =
+			await Promise.all([
+				this.getTopRoles(),
+				this.getPlacementsByCategory(),
+				this.getStationPerformance(),
+				this.getTierDistribution(),
+				this.getGenderSplit(),
+				this.getWorkersByWoreda(),
+			]);
 
-		return { topRoles, stationPerformance, tierDistribution, genderSplit, workersByWoreda };
+		return { topRoles, placementsByCategory, stationPerformance, tierDistribution, genderSplit, workersByWoreda };
 	}
 
 	private async getTopRoles(): Promise<readonly CountChartPoint[]> {
@@ -143,6 +147,31 @@ export class AdminDashboardService {
 			label: rolesById.get(group.key) ?? group.key,
 			count: group.count,
 		}));
+	}
+
+	private async getPlacementsByCategory(): Promise<readonly CountChartPoint[]> {
+		const roleGroups = await this.prisma.placement.groupBy({
+			by: ["roleId"],
+			_count: { id: true },
+		});
+		const roles = await this.prisma.role.findMany({
+			where: { id: { in: roleGroups.map((group) => group.roleId) } },
+			select: { id: true, category: true },
+		});
+		const categoryByRoleId = new Map(roles.map((role) => [role.id, role.category]));
+		const totalsByCategory = new Map<string, number>();
+		for (const group of roleGroups) {
+			const category = categoryByRoleId.get(group.roleId) ?? "uncategorized";
+			totalsByCategory.set(category, (totalsByCategory.get(category) ?? 0) + group._count.id);
+		}
+		return this.sortCounts(
+			Array.from(totalsByCategory.entries()).map(([category, count]) => ({
+				key: category,
+				label: category,
+				count,
+			})),
+			PLACEMENT_CATEGORY_LIMIT,
+		);
 	}
 
 	private async getStationPerformance(): Promise<readonly StationPerformancePoint[]> {

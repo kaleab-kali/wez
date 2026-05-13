@@ -385,6 +385,12 @@ const AdminDashboard = React.memo(() => {
 							emptyLabel={t("admin.charts.empty")}
 							data={metrics.charts.topRoles}
 						/>
+						<CountBarChartCard
+							title={t("admin.charts.placementsByCategory")}
+							description={t("admin.charts.placementsByCategoryDesc")}
+							emptyLabel={t("admin.charts.empty")}
+							data={metrics.charts.placementsByCategory}
+						/>
 						<StationPerformanceChartCard
 							title={t("admin.charts.stationPerformance")}
 							description={t("admin.charts.stationPerformanceDesc")}
