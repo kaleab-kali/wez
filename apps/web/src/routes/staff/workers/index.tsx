@@ -27,6 +27,12 @@ const TIER_VARIANT: Record<Worker["tier"], "default" | "secondary" | "outline"> 
 	trusted: "default",
 };
 
+const formatRoleId = (roleId: string) =>
+	roleId
+		.split("_")
+		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+		.join(" ");
+
 const FilterPanel = React.memo(
 	({ filter, onChange }: { readonly filter: WorkerFilter; readonly onChange: (next: WorkerFilter) => void }) => {
 		const { t } = useTranslation();
@@ -202,49 +208,49 @@ FilterPanel.displayName = "FilterPanel";
 const WorkerCard = React.memo(
 	({ w }: { readonly w: Worker }) => {
 		const { t } = useTranslation();
+		const primaryRole = w.roles[0] ? formatRoleId(w.roles[0]) : t("workers.profile.skillsTitle");
+		const extraRoleCount = Math.max(w.roles.length - 1, 0);
 		return (
 			<Link to="/staff/workers/$id" params={{ id: w.id }} className="block group">
-				<Card className="h-full transition-all group-hover:border-primary/40 group-hover:shadow-sm">
+				<Card className="h-full overflow-hidden transition-all group-hover:border-primary/40 group-hover:shadow-sm">
 					<CardHeader className="pb-3">
-						<div className="flex items-start gap-3">
-							<WorkerProfilePhoto worker={w} className="size-10 shrink-0 text-sm" />
+						<div className="flex items-start gap-4">
+							<WorkerProfilePhoto worker={w} className="size-20 shrink-0 text-2xl sm:size-24 sm:text-3xl" />
 							<div className="min-w-0 flex-1">
-								<CardTitle className="text-base truncate">{w.fullName}</CardTitle>
-								<CardDescription className="text-xs">
-									{w.area} · {w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} ·{" "}
+								<CardTitle className="text-lg leading-snug break-words [overflow-wrap:anywhere]">
+									{w.fullName}
+								</CardTitle>
+								<CardDescription className="mt-1 text-xs leading-relaxed">
+									{w.gender === "M" ? t("workers.genderM") : t("workers.genderF")} ·{" "}
 									{t("workers.expYearsShort", { n: w.experienceYears })}
 								</CardDescription>
-								{w.registeredAtStationName && (
-									<div className="mt-1 text-[11px] text-muted-foreground">{w.registeredAtStationName}</div>
-								)}
-							</div>
-							<div className="flex flex-col items-end gap-1 shrink-0">
-								<Badge variant={TIER_VARIANT[w.tier]} className="capitalize">
-									{w.tier}
-								</Badge>
-								{w.hopFlag !== "none" && (
-									<Badge variant="destructive" className="capitalize text-[10px]">
-										{w.hopFlag}
+								<div className="mt-2 flex flex-wrap items-center gap-1.5">
+									<Badge variant="outline" className="font-normal">
+										{primaryRole}
 									</Badge>
-								)}
+									<Badge variant={TIER_VARIANT[w.tier]} className="capitalize">
+										{w.tier}
+									</Badge>
+									{extraRoleCount > 0 && (
+										<Badge variant="outline" className="font-normal">
+											+{extraRoleCount}
+										</Badge>
+									)}
+									{w.hopFlag !== "none" && (
+										<Badge variant="destructive" className="capitalize text-[10px]">
+											{w.hopFlag}
+										</Badge>
+									)}
+								</div>
 							</div>
 						</div>
 					</CardHeader>
-					<CardContent className="space-y-3">
-						{w.bio && <p className="text-sm text-muted-foreground line-clamp-2">{w.bio}</p>}
-						<div className="flex flex-wrap gap-1">
-							{w.roles.slice(0, 3).map((r) => (
-								<Badge key={r} variant="outline" className="text-[10px] font-normal">
-									{r}
-								</Badge>
-							))}
-							{w.roles.length > 3 && (
-								<Badge variant="outline" className="text-[10px] font-normal">
-									+{w.roles.length - 3}
-								</Badge>
-							)}
-						</div>
-						<div className="flex items-center gap-3 text-xs text-muted-foreground border-t pt-2.5">
+					<CardContent className="space-y-2">
+						<p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+							<span className="font-medium text-foreground">{t("hireRequests.station")}:</span>{" "}
+							{w.registeredAtStationName ?? t("common.none")}
+						</p>
+						<div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2.5 text-xs text-muted-foreground">
 							<span className="font-mono">
 								{w.ratingAverage !== null ? `★ ${w.ratingAverage.toFixed(1)}` : `★ ${t("workers.ratingNone")}`}
 							</span>

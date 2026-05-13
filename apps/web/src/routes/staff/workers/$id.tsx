@@ -63,9 +63,9 @@ const StaffProfileHero = React.memo(({ worker }: { readonly worker: Worker }) =>
 
 	return (
 		<section className="overflow-hidden rounded-lg border bg-card">
-			<div className="grid md:grid-cols-[280px_minmax(0,1fr)]">
-				<div className="flex min-h-56 flex-col items-center justify-center gap-4 bg-muted p-5 text-center">
-					<WorkerProfilePhoto worker={worker} className="size-32 text-4xl" />
+			<div className="grid md:grid-cols-[340px_minmax(0,1fr)]">
+				<div className="flex min-h-72 flex-col items-center justify-center gap-4 bg-muted p-6 text-center">
+					<WorkerProfilePhoto worker={worker} className="size-40 text-5xl" />
 					<AttachmentUploadField
 						ownerType="worker"
 						ownerId={worker.id}
@@ -76,7 +76,7 @@ const StaffProfileHero = React.memo(({ worker }: { readonly worker: Worker }) =>
 						variant="button"
 						onUploaded={onPhotoUploaded}
 						disabled={updateWorker.isPending}
-						className="w-full max-w-48"
+						className="w-full max-w-56"
 					/>
 				</div>
 				<div className="space-y-5 p-6">
