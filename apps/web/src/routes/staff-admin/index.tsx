@@ -9,6 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAdminDashboardMetrics } from "#features/admin-dashboard/api/admin-dashboard.queries";
 import { useAdminSession } from "#shared/lib/admin-auth-client";
 import { effectiveStaffRoles, hasAnyStaffRole, STAFF_ACCESS_ROLES, type StaffRole } from "#shared/lib/staff-roles";
@@ -71,6 +72,20 @@ const centsToBirr = (value: string) => {
 };
 
 const formatCount = (value: number) => value.toLocaleString();
+const CHART_HEIGHT = 260;
+
+type CountChartDatum = {
+	readonly key: string;
+	readonly label: string;
+	readonly count: number;
+};
+
+type StationPerformanceDatum = {
+	readonly stationId: string;
+	readonly stationName: string;
+	readonly placements: number;
+	readonly complaints: number;
+};
 
 const MetricCard = React.memo(
 	({
@@ -116,6 +131,110 @@ const DashboardSkeleton = React.memo(
 	() => true,
 );
 DashboardSkeleton.displayName = "DashboardSkeleton";
+
+const EmptyChart = React.memo(({ label }: { readonly label: string }) => (
+	<div className="flex h-48 items-center justify-center rounded-md border border-dashed bg-muted/20 text-sm text-muted-foreground">
+		{label}
+	</div>
+));
+EmptyChart.displayName = "EmptyChart";
+
+const CountBarChartCard = React.memo(
+	({
+		title,
+		description,
+		emptyLabel,
+		data,
+	}: {
+		readonly title: string;
+		readonly description: string;
+		readonly emptyLabel: string;
+		readonly data: readonly CountChartDatum[];
+	}) => (
+		<Card>
+			<CardHeader className="space-y-1">
+				<CardTitle className="text-base">{title}</CardTitle>
+				<CardDescription>{description}</CardDescription>
+			</CardHeader>
+			<CardContent>
+				{data.length === 0 ? (
+					<EmptyChart label={emptyLabel} />
+				) : (
+					<div className="h-[260px]">
+						<ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+							<BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
+								<CartesianGrid vertical={false} strokeDasharray="3 3" />
+								<XAxis
+									dataKey="label"
+									axisLine={false}
+									tickLine={false}
+									interval={0}
+									angle={-25}
+									textAnchor="end"
+									height={64}
+									tick={{ fontSize: 11 }}
+								/>
+								<YAxis allowDecimals={false} axisLine={false} tickLine={false} width={34} tick={{ fontSize: 11 }} />
+								<Tooltip cursor={{ fill: "var(--muted)" }} />
+								<Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+							</BarChart>
+						</ResponsiveContainer>
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	),
+);
+CountBarChartCard.displayName = "CountBarChartCard";
+
+const StationPerformanceChartCard = React.memo(
+	({
+		title,
+		description,
+		emptyLabel,
+		data,
+	}: {
+		readonly title: string;
+		readonly description: string;
+		readonly emptyLabel: string;
+		readonly data: readonly StationPerformanceDatum[];
+	}) => (
+		<Card>
+			<CardHeader className="space-y-1">
+				<CardTitle className="text-base">{title}</CardTitle>
+				<CardDescription>{description}</CardDescription>
+			</CardHeader>
+			<CardContent>
+				{data.length === 0 ? (
+					<EmptyChart label={emptyLabel} />
+				) : (
+					<div className="h-[260px]">
+						<ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+							<BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 56 }}>
+								<CartesianGrid vertical={false} strokeDasharray="3 3" />
+								<XAxis
+									dataKey="stationName"
+									axisLine={false}
+									tickLine={false}
+									interval={0}
+									angle={-25}
+									textAnchor="end"
+									height={72}
+									tick={{ fontSize: 11 }}
+								/>
+								<YAxis allowDecimals={false} axisLine={false} tickLine={false} width={34} tick={{ fontSize: 11 }} />
+								<Tooltip cursor={{ fill: "var(--muted)" }} />
+								<Bar dataKey="placements" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+								<Bar dataKey="complaints" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
+							</BarChart>
+						</ResponsiveContainer>
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	),
+);
+StationPerformanceChartCard.displayName = "StationPerformanceChartCard";
 
 const AdminDashboard = React.memo(() => {
 	const { t } = useTranslation();
@@ -250,6 +369,49 @@ const AdminDashboard = React.memo(() => {
 					</div>
 				)}
 			</section>
+
+			{metrics && (
+				<section className="space-y-3">
+					<div>
+						<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+							{t("admin.charts.title")}
+						</h2>
+						<p className="mt-1 text-sm text-muted-foreground">{t("admin.charts.subtitle")}</p>
+					</div>
+					<div className="grid gap-3 xl:grid-cols-2">
+						<CountBarChartCard
+							title={t("admin.charts.topRoles")}
+							description={t("admin.charts.topRolesDesc")}
+							emptyLabel={t("admin.charts.empty")}
+							data={metrics.charts.topRoles}
+						/>
+						<StationPerformanceChartCard
+							title={t("admin.charts.stationPerformance")}
+							description={t("admin.charts.stationPerformanceDesc")}
+							emptyLabel={t("admin.charts.emptyStations")}
+							data={metrics.charts.stationPerformance}
+						/>
+						<CountBarChartCard
+							title={t("admin.charts.tierDistribution")}
+							description={t("admin.charts.tierDistributionDesc")}
+							emptyLabel={t("admin.charts.empty")}
+							data={metrics.charts.tierDistribution}
+						/>
+						<CountBarChartCard
+							title={t("admin.charts.genderSplit")}
+							description={t("admin.charts.genderSplitDesc")}
+							emptyLabel={t("admin.charts.empty")}
+							data={metrics.charts.genderSplit}
+						/>
+						<CountBarChartCard
+							title={t("admin.charts.workersByWoreda")}
+							description={t("admin.charts.workersByWoredaDesc")}
+							emptyLabel={t("admin.charts.empty")}
+							data={metrics.charts.workersByWoreda}
+						/>
+					</div>
+				</section>
+			)}
 
 			<section className="space-y-3">
 				<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">

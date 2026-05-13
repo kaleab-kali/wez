@@ -1,5 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "#shared/database/prisma.service";
+import {
+	intersectRankedIds,
+	normalizeSearchQuery,
+	orderRowsByIdList,
+	pageWindow,
+	type RankedId,
+} from "#shared/search/postgres-fts";
+import { Prisma } from "../../../../generated/prisma/client";
 import { buildJobOrderBy, buildJobWhere } from "../../application/specifications/job-filter.specification";
 import type { Job, JobFilter, JobPatch, JobStatus, NewJob } from "../../domain/entities/job.entity";
 import type { IJobsRepository } from "../../domain/repositories/jobs.repository";
@@ -52,9 +60,7 @@ const JOB_SUMMARY_INCLUDE = {
 	employer: { select: { name: true, type: true } },
 	role: { select: { name: true, category: true } },
 } as const;
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
+const MAX_SEARCH_IDS = 10_000;
 
 @Injectable()
 export class PrismaJobsRepository implements IJobsRepository {
@@ -99,17 +105,19 @@ export class PrismaJobsRepository implements IJobsRepository {
 	}
 
 	async listByFilter(filter: JobFilter) {
+		const searchQuery = normalizeSearchQuery(filter.q);
+		if (searchQuery) return this.listByFullTextSearch(filter, searchQuery);
+
 		const where = buildJobWhere(filter);
-		const page = Math.max(DEFAULT_PAGE, filter.page ?? DEFAULT_PAGE);
-		const limit = Math.min(Math.max(1, filter.limit ?? DEFAULT_LIMIT), MAX_LIMIT);
+		const window = pageWindow(filter.page, filter.limit);
 
 		const [rows, total] = await Promise.all([
 			this.prisma.job.findMany({
 				where,
 				include: JOB_SUMMARY_INCLUDE,
 				orderBy: buildJobOrderBy(filter),
-				skip: (page - 1) * limit,
-				take: limit,
+				skip: window.skip,
+				take: window.limit,
 			}),
 			this.prisma.job.count({ where }),
 		]);
@@ -119,5 +127,61 @@ export class PrismaJobsRepository implements IJobsRepository {
 
 	async softDelete(id: string) {
 		await this.prisma.job.update({ where: { id }, data: { deletedAt: new Date() } });
+	}
+
+	private async listByFullTextSearch(filter: JobFilter, query: string) {
+		const rankedIds = await this.findRankedJobIds(query);
+		if (rankedIds.length === 0) return { items: [], total: 0 };
+
+		const allSearchIds = rankedIds.map((row) => row.id);
+		const where = {
+			...buildJobWhere({ ...filter, q: undefined }),
+			id: { in: allSearchIds },
+		} satisfies Prisma.JobWhereInput;
+		const matchingIds = await this.prisma.job.findMany({ where, select: { id: true } });
+		const orderedIds = intersectRankedIds(rankedIds, matchingIds);
+		const window = pageWindow(filter.page, filter.limit);
+		const pageIds = orderedIds.slice(window.skip, window.skip + window.limit);
+		if (pageIds.length === 0) return { items: [], total: orderedIds.length };
+
+		const rows = await this.prisma.job.findMany({
+			where: { id: { in: pageIds }, deletedAt: null },
+			include: JOB_SUMMARY_INCLUDE,
+		});
+
+		return {
+			items: orderRowsByIdList(rows as unknown as Row[], pageIds).map((row) => toJob(row)),
+			total: orderedIds.length,
+		};
+	}
+
+	private async findRankedJobIds(query: string) {
+		return this.prisma.$queryRaw<RankedId[]>`
+			WITH search_query AS (SELECT websearch_to_tsquery('simple', ${query}) AS term)
+			SELECT j.id, ts_rank_cd(
+				setweight(to_tsvector('simple', coalesce(j.title, '')), 'A') ||
+				setweight(to_tsvector('simple', coalesce(j.description, '')), 'B') ||
+				setweight(to_tsvector('simple', coalesce(j.requirements, '')), 'B') ||
+				setweight(to_tsvector('simple', coalesce(j.perks, '')), 'C') ||
+				setweight(to_tsvector('simple', coalesce(e.name, '') || ' ' || coalesce(e."contactName", '')), 'C') ||
+				setweight(to_tsvector('simple', coalesce(r.name, '') || ' ' || coalesce(r.category, '')), 'A'),
+				search_query.term
+			)::float AS rank
+			FROM "job" j
+			INNER JOIN "employer" e ON e.id = j."employerId"
+			INNER JOIN "role" r ON r.id = j."roleId"
+			CROSS JOIN search_query
+			WHERE j."deletedAt" IS NULL
+				AND (
+					setweight(to_tsvector('simple', coalesce(j.title, '')), 'A') ||
+					setweight(to_tsvector('simple', coalesce(j.description, '')), 'B') ||
+					setweight(to_tsvector('simple', coalesce(j.requirements, '')), 'B') ||
+					setweight(to_tsvector('simple', coalesce(j.perks, '')), 'C') ||
+					setweight(to_tsvector('simple', coalesce(e.name, '') || ' ' || coalesce(e."contactName", '')), 'C') ||
+					setweight(to_tsvector('simple', coalesce(r.name, '') || ' ' || coalesce(r.category, '')), 'A')
+				) @@ search_query.term
+			ORDER BY rank DESC, j."postedAt" DESC
+			LIMIT ${MAX_SEARCH_IDS}
+		`;
 	}
 }

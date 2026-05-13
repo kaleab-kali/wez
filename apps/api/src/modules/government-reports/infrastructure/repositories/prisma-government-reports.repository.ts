@@ -89,9 +89,14 @@ export class PrismaGovernmentReportsRepository implements GovernmentReportsRepos
 		return row ? toGovernmentReport(row) : null;
 	}
 
-	async findByTypeAndPeriod(type: GovernmentReportType, periodStart: Date, periodEnd: Date) {
+	async findByTypePeriodAndFormat(
+		type: GovernmentReportType,
+		periodStart: Date,
+		periodEnd: Date,
+		format: GovernmentReportFormat,
+	) {
 		const row = await this.prisma.governmentReport.findUnique({
-			where: { type_periodStart_periodEnd: { type, periodStart, periodEnd } },
+			where: { type_periodStart_periodEnd_format: { type, periodStart, periodEnd, format } },
 		});
 		return row ? toGovernmentReport(row) : null;
 	}

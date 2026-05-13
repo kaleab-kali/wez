@@ -3,7 +3,7 @@ import { api } from "#shared/lib/api-client";
 
 export type GovernmentReportType = "erca_monthly" | "mols_quarterly";
 export type GovernmentReportStatus = "pending" | "ready" | "filed" | "error";
-export type GovernmentReportFormat = "csv";
+export type GovernmentReportFormat = "csv" | "pdf";
 
 export type GovernmentReport = {
 	readonly id: string;

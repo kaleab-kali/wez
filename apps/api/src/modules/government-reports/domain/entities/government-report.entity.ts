@@ -1,5 +1,5 @@
 export const GOVERNMENT_REPORT_TYPES = ["erca_monthly", "mols_quarterly"] as const;
-export const GOVERNMENT_REPORT_FORMATS = ["csv"] as const;
+export const GOVERNMENT_REPORT_FORMATS = ["csv", "pdf"] as const;
 export const GOVERNMENT_REPORT_STATUSES = ["pending", "ready", "filed", "error"] as const;
 
 export type GovernmentReportType = (typeof GOVERNMENT_REPORT_TYPES)[number];
