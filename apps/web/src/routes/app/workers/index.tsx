@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 import { useLookupKind } from "#features/lookups/api/lookup.queries";
 import { usePublicRoles } from "#features/role-catalog/api/role.queries";
 import { useWorkers, type Worker, type WorkerFilter } from "#features/workers/api/worker.queries";
-import { WorkerDirectoryCard } from "#features/workers/components/WorkerDirectoryCard";
+import { WorkerProfilePhoto } from "#features/workers/components/WorkerProfilePhoto";
 import { LocationHierarchySelect, type LocationHierarchySelection } from "#shared/components/LocationHierarchySelect";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -14,10 +15,59 @@ export const Route = createFileRoute("/app/workers/")({
 	component: CustomerWorkersPage,
 });
 
+const TIER_VARIANT: Record<Worker["tier"], "default" | "secondary" | "outline"> = {
+	basic: "outline",
+	verified: "secondary",
+	trained: "default",
+	trusted: "default",
+};
+
+const formatRoleId = (roleId: string) =>
+	roleId
+		.split("_")
+		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+		.join(" ");
+
 const CustomerWorkerCard = React.memo(({ worker }: { readonly worker: Worker }) => {
+	const { t } = useTranslation();
+	const primaryRole = worker.roles[0] ? formatRoleId(worker.roles[0]) : t("workers.profile.skillsTitle");
+	const stationLabel = worker.registeredAtStationName ?? t("hireRequests.workerStationPending");
+	const ratingLabel = worker.ratingAverage !== null ? worker.ratingAverage.toFixed(1) : t("workers.ratingNone");
+
 	return (
 		<Link to="/app/workers/$id" params={{ id: worker.id }} className="block group">
-			<WorkerDirectoryCard worker={worker} variant="customer" />
+			<Card className="h-full overflow-hidden transition group-hover:border-primary/40 group-hover:shadow-sm">
+				<CardContent className="p-4">
+					<div className="flex min-w-0 items-start gap-4">
+						<WorkerProfilePhoto worker={worker} className="size-16 shrink-0 text-xl sm:size-20 sm:text-2xl" />
+						<div className="min-w-0 flex-1 space-y-2">
+							<div className="min-w-0">
+								<CardTitle className="text-base leading-snug break-words [overflow-wrap:anywhere]">
+									{worker.fullName}
+								</CardTitle>
+								<p className="mt-1 text-sm leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+									{primaryRole} / {worker.gender === "M" ? t("workers.genderM") : t("workers.genderF")} /{" "}
+									{t("workers.expYearsShort", { n: worker.experienceYears })}
+								</p>
+							</div>
+							<div className="flex flex-wrap items-center gap-1.5">
+								<Badge variant={TIER_VARIANT[worker.tier]}>{worker.tier}</Badge>
+								<Badge variant="outline" className="font-normal">
+									{t("workers.ratingLabel")}: {ratingLabel}
+								</Badge>
+								{!worker.available && (
+									<Badge variant="secondary" className="font-normal">
+										{t("workers.busy")}
+									</Badge>
+								)}
+							</div>
+							<p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">
+								{t("hireRequests.station")}: {stationLabel}
+							</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 		</Link>
 	);
 });
@@ -132,7 +182,7 @@ function CustomerWorkersPage() {
 				{isLoading ? t("common.loading") : t("workers.count", { count: data?.meta.total ?? 0 })}
 			</p>
 
-			<div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
+			<div className="grid gap-3 md:grid-cols-2">
 				{data?.data.map((worker) => (
 					<CustomerWorkerCard key={worker.id} worker={worker} />
 				))}
