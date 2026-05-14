@@ -2,7 +2,7 @@ services:
   - type: web
     name: wez-investor-demo
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
     branch: main
     buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm render:build
@@ -13,10 +13,6 @@ services:
     autoDeployTrigger: checksPass
     maxShutdownDelaySeconds: 60
     renderSubdomainPolicy: enabled
-    disk:
-      name: wez-demo-data
-      mountPath: /var/data/wez
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -27,7 +23,7 @@ services:
       - key: FRONTEND_DIST_DIR
         value: apps/web/dist
       - key: STORAGE_ROOT
-        value: /var/data/wez/uploads
+        value: /tmp/wez/uploads
       - key: LOG_LEVEL
         value: info
       - key: SLOW_QUERY_THRESHOLD_MS
