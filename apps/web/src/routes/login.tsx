@@ -29,9 +29,8 @@ const LoginPage = React.memo(() => {
 		<div className="min-h-screen bg-background">
 			<header className="border-b">
 				<div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-					<Link to="/" className="flex items-center gap-2 text-primary">
-						<WezLogo variant="mark" className="size-8" />
-						<span className="text-xl font-bold tracking-tight">Wez</span>
+					<Link to="/" className="flex items-center text-primary" aria-label="Wez">
+						<WezLogo className="h-10 w-28" />
 					</Link>
 					<LanguageSwitcher />
 				</div>
@@ -155,7 +154,6 @@ const EmailLoginForm = React.memo(({ submitLabel }: { readonly submitLabel: stri
 					<Input
 						id="password"
 						type="password"
-						placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
 						value={password}
 						onChange={handlePasswordChange}
 						required

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React from "react";
+import { WezLogo } from "#components/branding/WezLogo";
 import { adminAuthApi } from "#shared/lib/admin-auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,9 +46,7 @@ const AdminLoginForm = React.memo(
 			<Card className="w-full max-w-sm">
 				<CardHeader className="space-y-1">
 					<div className="flex items-center justify-center mb-2">
-						<div className="rounded-lg bg-primary/10 p-2">
-							<div className="text-primary text-sm font-bold">WEZ STAFF</div>
-						</div>
+						<WezLogo className="h-12 w-32" />
 					</div>
 					<CardTitle className="text-2xl font-bold text-center">Staff sign-in</CardTitle>
 					<CardDescription className="text-center">Station agents, supervisors, and HQ staff</CardDescription>
@@ -73,7 +72,6 @@ const AdminLoginForm = React.memo(
 							<Input
 								id="admin-password"
 								type="password"
-								placeholder={"••••••••"}
 								value={password}
 								onChange={handlePasswordChange}
 								required

@@ -56,10 +56,9 @@ const CustomerAppLayout = React.memo(() => {
 		<div className="min-h-screen bg-background">
 			<header className="border-b bg-background/95">
 				<div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-					<div className="flex items-center gap-2 text-primary">
-						<WezLogo variant="mark" className="size-8" />
+					<div className="flex items-center gap-3 text-primary">
+						<WezLogo className="h-8 w-24" />
 						<div className="leading-tight">
-							<div className="font-bold tracking-tight">Wez</div>
 							<div className="text-xs text-muted-foreground">{t("app.shell")}</div>
 						</div>
 					</div>

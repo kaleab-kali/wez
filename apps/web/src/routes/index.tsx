@@ -49,12 +49,8 @@ const RootIndex = React.memo(() => {
 		<div className="min-h-dvh bg-background text-foreground">
 			<header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
 				<div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 md:px-8">
-					<Link to="/" className="flex min-h-11 items-center gap-2 text-primary">
-						<WezLogo variant="mark" className="size-9" />
-						<div className="leading-tight">
-							<div className="text-xl font-bold tracking-tight">Wez</div>
-							<div className="hidden text-xs text-muted-foreground sm:block">{t("brand.tagline")}</div>
-						</div>
+					<Link to="/" className="flex min-h-11 items-center text-primary" aria-label="Wez">
+						<WezLogo className="h-10 w-28" />
 					</Link>
 
 					<nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex" aria-label="Primary">
@@ -246,9 +242,8 @@ const RootIndex = React.memo(() => {
 			<footer className="border-t bg-muted/25">
 				<div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 text-sm md:grid-cols-[1.2fr_0.8fr_0.8fr] md:px-8">
 					<div>
-						<div className="flex items-center gap-2 text-primary">
-							<WezLogo variant="mark" className="size-8" />
-							<span className="text-lg font-bold tracking-tight">Wez</span>
+						<div className="flex items-center text-primary">
+							<WezLogo className="h-10 w-28" />
 						</div>
 						<p className="mt-3 max-w-sm text-muted-foreground">{t("landing.footerBody")}</p>
 					</div>

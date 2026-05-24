@@ -237,11 +237,10 @@ export const AppSidebar = React.memo(
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<SidebarMenuButton size="lg" className="hover:bg-transparent cursor-default">
-								<div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-primary/10 text-primary p-1.5">
-									<WezLogo variant="mark" className="size-full" />
+								<div className="flex h-9 w-24 shrink-0 items-center text-primary group-data-[collapsible=icon]:w-8">
+									<WezLogo className="h-8 w-24 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-8" />
 								</div>
-								<div className="flex flex-col gap-0 text-left leading-tight">
-									<span className="font-bold text-base tracking-tight">Wez</span>
+								<div className="flex flex-col gap-0 text-left leading-tight group-data-[collapsible=icon]:hidden">
 									<span className="text-[11px] text-muted-foreground">
 										{showAdministration ? t("admin.platformAdmin") : t("brand.tagline")}
 									</span>
