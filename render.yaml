@@ -5,13 +5,11 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm render:build
-    preDeployCommand: pnpm render:db:deploy
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm render:build && pnpm render:db:deploy
     startCommand: pnpm render:start
     initialDeployHook: pnpm render:seed:demo
     healthCheckPath: /health
     autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 60
     renderSubdomainPolicy: enabled
     envVars:
       - key: NODE_ENV
