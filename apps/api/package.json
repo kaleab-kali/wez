@@ -23,7 +23,8 @@
 		"db:deploy": "prisma db push",
 		"db:push": "prisma db push",
 		"db:studio": "prisma studio",
-		"db:seed": "tsx prisma/seed.ts"
+		"db:seed": "tsx prisma/seed.ts",
+		"db:bootstrap-admin": "tsx prisma/bootstrap-admin.ts"
 	},
 	"dependencies": {
 		"@nestjs/common": "^11.0.1",

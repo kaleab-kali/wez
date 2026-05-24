@@ -22,6 +22,7 @@
 		"db:seed": "pnpm --filter api db:seed",
 		"render:build": "pnpm db:generate && pnpm build:web && pnpm build:api",
 		"render:db:deploy": "pnpm --filter api db:deploy",
+		"render:bootstrap-admin": "pnpm --filter api db:bootstrap-admin",
 		"render:seed:demo": "pnpm --filter api db:seed",
 		"render:start": "pnpm --filter api start:prod",
 		"pm2:start": "pm2 start ecosystem.config.cjs",
