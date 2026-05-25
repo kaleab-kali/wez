@@ -5,7 +5,7 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm render:build && pnpm render:db:deploy && pnpm render:bootstrap-admin
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm render:build && pnpm render:db:deploy && pnpm render:bootstrap-admin && pnpm render:bootstrap-demo-data
     startCommand: pnpm render:start
     healthCheckPath: /health
     autoDeployTrigger: checksPass
